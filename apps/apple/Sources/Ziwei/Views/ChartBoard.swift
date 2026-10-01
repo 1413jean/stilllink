@@ -34,7 +34,7 @@ struct ChartBoard: View, Equatable {
                     let (r, c) = ZW.grid[i]
                     PalaceCell(model: model, index: i, level: level, fs: fs,
                                selected: selected == i, inSF: sf.contains(i) && selected != i,
-                               isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
+                               isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i, comparing: locked != nil,
                                taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart) },
                                flyStars: Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
                         .frame(width: cw, height: ch, alignment: .top)
@@ -178,6 +178,7 @@ private struct PalaceCell: View {
     let inSF: Bool
     let isLocked: Bool
     let inLockedSF: Bool
+    let comparing: Bool   // 有鎖定時，第二次點的宮位要更明顯
     let taijiLabel: String?
     let flyStars: [String: Mutagen]
 
@@ -278,12 +279,11 @@ private struct PalaceCell: View {
         .padding(.horizontal, 5)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(selected ? Color.wmSel : inSF ? Color.wmSF : inLockedSF ? Color.zAccent.opacity(0.13) : Color.clear)
+        .background(selected ? Color.wmSel : inSF ? Color.wmSF : inLockedSF ? Color.zAccent.opacity(0.07) : Color.clear)
         .overlay(Rectangle().stroke(Color.zGrid, lineWidth: 0.5))
-        // 鎖定的宮位：粗實線；它的三方四正：細一點的強調色邊框
-        .overlay(isLocked ? Rectangle().strokeBorder(Color.zAccent, lineWidth: 3) : nil)
-        .overlay(inLockedSF ? Rectangle().strokeBorder(Color.zAccent.opacity(0.8), lineWidth: 1.6) : nil)
-        .overlay(selected ? Rectangle().stroke(Color.wmRed, lineWidth: 1.5) : nil)
+        // 鎖定的宮位細邊框；鎖定後第二次點的宮位用粗紅框
+        .overlay(isLocked ? Rectangle().strokeBorder(Color.zAccent, lineWidth: 1.2) : nil)
+        .overlay(selected ? Rectangle().strokeBorder(Color.wmRed, lineWidth: comparing ? 3 : 1.5) : nil)
         .overlay(alignment: .topLeading) {
             if isLocked {
                 Image(systemName: "lock.fill").font(.system(size: max(8, fs * 0.6))).foregroundStyle(Color.zAccent).padding(3)
@@ -401,11 +401,11 @@ private struct CenterInfo: View {
         let flies = model.flying[selected]
         ZStack {
             SanFangShape(points: Quad(ZW.sanFang(selected).map { ZW.anchor[$0] }))
-                .stroke(Color.zText3.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                .stroke(locked == nil ? Color.zText3.opacity(0.7) : Color.wmRed,
+                        style: StrokeStyle(lineWidth: locked == nil ? 1 : 2.4, lineCap: .round, dash: locked == nil ? [5, 4] : [8, 4]))
                 .opacity(settings.showSanfang ? 1 : 0)
             if let locked {
-                SanFangShape(points: Quad(ZW.sanFang(locked).map { ZW.anchor[$0] }))
-                    .stroke(Color.zAccent, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, dash: [7, 4]))
+                MarchingSanFang(points: Quad(ZW.sanFang(locked).map { ZW.anchor[$0] }))
                     .transition(.opacity)
             }
             VStack(spacing: fs * 0.32) {
@@ -548,6 +548,20 @@ struct SanFangShape: Shape {
         p.addLines([a, b, c, a])
         p.move(to: a); p.addLine(to: d)
         return p
+    }
+}
+
+/// 鎖定的三方四正：細線＋虛線一直往前流動，表示「鎖住了」
+struct MarchingSanFang: View {
+    let points: Quad
+    @State private var phase: CGFloat = 0
+    var body: some View {
+        SanFangShape(points: points)
+            .stroke(Color.zAccent, style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [5, 5], dashPhase: phase))
+            .onAppear {
+                guard !Motion.reduce else { return }
+                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) { phase = -20 }
+            }
     }
 }
 
