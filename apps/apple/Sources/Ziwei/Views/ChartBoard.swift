@@ -278,9 +278,11 @@ private struct PalaceCell: View {
         .padding(.horizontal, 5)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(selected ? Color.wmSel : inSF ? Color.wmSF : inLockedSF ? Color.zAccent.opacity(0.07) : Color.clear)
+        .background(selected ? Color.wmSel : inSF ? Color.wmSF : inLockedSF ? Color.zAccent.opacity(0.13) : Color.clear)
         .overlay(Rectangle().stroke(Color.zGrid, lineWidth: 0.5))
-        .overlay(isLocked ? Rectangle().stroke(Color.zAccent, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])) : nil)
+        // 鎖定的宮位：粗實線；它的三方四正：細一點的強調色邊框
+        .overlay(isLocked ? Rectangle().strokeBorder(Color.zAccent, lineWidth: 3) : nil)
+        .overlay(inLockedSF ? Rectangle().strokeBorder(Color.zAccent.opacity(0.8), lineWidth: 1.6) : nil)
         .overlay(selected ? Rectangle().stroke(Color.wmRed, lineWidth: 1.5) : nil)
         .overlay(alignment: .topLeading) {
             if isLocked {
@@ -403,7 +405,7 @@ private struct CenterInfo: View {
                 .opacity(settings.showSanfang ? 1 : 0)
             if let locked {
                 SanFangShape(points: Quad(ZW.sanFang(locked).map { ZW.anchor[$0] }))
-                    .stroke(Color.zAccent.opacity(0.85), style: StrokeStyle(lineWidth: 1.4, dash: [2, 3]))
+                    .stroke(Color.zAccent, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, dash: [7, 4]))
                     .transition(.opacity)
             }
             VStack(spacing: fs * 0.32) {
