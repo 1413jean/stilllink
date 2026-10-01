@@ -158,21 +158,23 @@ enum TempChart {
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: level))
     }
 
-    /// 報數起卦：一個 0–9999 的數字，依序拆出農曆月（÷12 的餘數）、日（再 ÷30 的餘數）、時辰（再 ÷12 的餘數，0＝子）。
-    /// 年用今年農曆年；陰陽也由數字決定：奇數為陽（男盤）、偶數為陰（女盤）。同一個數字每次都排出同一張盤。
+    /// 報數起卦：報的數字（0–9999）加上起卦當下的時間當種子，亂數產生年月日時與陰陽。
+    /// 文墨天機沒有公開公式；這裡的做法是「數＋時」起卦——同一分鐘報同一個數會得到同一張盤，換個時間再報就不一定。
     static func openBaoshu(_ n: Int) {
-        let g: Gender = n % 2 == 1 ? .male : .female
-        let today = Pick.today()
-        let m = n % 12 + 1
-        var d = (n / 12) % 30 + 1
-        if d == 30 && Lunar.monthLength(today.year, m) == 29 { d = 29 }
-        let branch = (n / 360) % 12
-        guard let s = Lunar.toSolar(today.year, m, d) else { return }
+        let minute = UInt64(Date().timeIntervalSince1970 / 60)
+        var rng = SeededRandom(seed: UInt64(n) &* 0x9E3779B97F4A7C15 ^ minute)
+        let year = Int.random(in: 1930...2025, using: &rng)
+        let month = Int.random(in: 1...12, using: &rng)
+        var day = Int.random(in: 1...30, using: &rng)
+        if day == 30 && Lunar.monthLength(year, month) == 29 { day = 29 }
+        let branch = Int.random(in: 0...11, using: &rng)
+        let g: Gender = Bool.random(using: &rng) ? .male : .female
+        guard let s = Lunar.toSolar(year, month, day) else { return }
         var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Asia/Taipei")!
         let date = cal.date(from: DateComponents(year: s.0, month: s.1, day: s.2, hour: branch == 0 ? 0 : branch * 2, minute: branch == 0 ? 30 : 0))!
         let p = make(date, g, name: "報數 \(n)")
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: 2))
-        Toast.show("報數 \(n) → 農曆\(ZW.lunarMonths[m - 1])\(ZW.lunarDays[d - 1]) \(ZW.branches[branch])時 · \(g == .male ? "陽男" : "陰女")")
+        Toast.show("報數 \(n) → 農曆\(year)年\(ZW.lunarMonths[month - 1])\(ZW.lunarDays[day - 1]) \(ZW.branches[branch])時 · \(g.rawValue)")
     }
 
     static func make(_ d: Date, _ g: Gender, name: String) -> Person {
@@ -255,5 +257,18 @@ struct PillarSearchPage: View {
         }
         .padding(.vertical, 12)
         .overlay(alignment: .bottom) { if !last { Rectangle().fill(Color.zLine).frame(height: 0.5) } }
+    }
+}
+
+/// 可指定種子的亂數（SplitMix64）
+struct SeededRandom: RandomNumberGenerator {
+    private var state: UInt64
+    init(seed: UInt64) { state = seed }
+    mutating func next() -> UInt64 {
+        state &+= 0x9E3779B97F4A7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
     }
 }
