@@ -94,21 +94,24 @@ extension Font {
 
 /// 命盤字級：跟著盤面大小縮放，fs 是宮位基準字級（主星大小）
 enum ChartType {
-    static func base(cellWidth cw: CGFloat) -> CGFloat { max(10, min(14, cw / 12.5)) }
+    static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
 
     static func star(_ fs: CGFloat) -> CGFloat { fs }                       // 主星、輔星
     static func adj(_ fs: CGFloat) -> CGFloat { max(9, fs - 2) }            // 雜曜
     static func meta(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.68) }        // 亮度、長生
-    static func tag(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.72) }         // 四化方塊、運限宮名、自化
+    static func tag(_ fs: CGFloat) -> CGFloat { max(9, fs * 0.8) }         // 四化方塊、運限宮名、自化
     static func gods(_ fs: CGFloat) -> CGFloat { fs * 0.74 }                // 博士／將前／歲前
     static func ages(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.58) }        // 流年／小限歲數
     static func range(_ fs: CGFloat) -> CGFloat { fs * 0.88 }               // 大限歲數
     static func palace(_ fs: CGFloat) -> CGFloat { fs }                     // 宮名
     static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.3 }               // 宮干支
-    static func centerTitle(_ fs: CGFloat) -> CGFloat { fs * 1.4 }
+    static func centerTitle(_ fs: CGFloat) -> CGFloat { fs * 1.15 }
     static func centerBody(_ fs: CGFloat) -> CGFloat { fs * 0.9 }
     static func centerSmall(_ fs: CGFloat) -> CGFloat { fs * 0.75 }
     static func pillar(_ fs: CGFloat) -> CGFloat { fs * 1.35 }
+    static func pillarSmall(_ fs: CGFloat) -> CGFloat { fs * 1.1 }          // 中宮兩組四柱
+    static func dayun(_ fs: CGFloat) -> CGFloat { fs * 0.95 }               // 大運干支
+    static func godLabel(_ fs: CGFloat) -> CGFloat { max(7.5, fs * 0.55) }  // 十神小字、大運歲數
 
     static func font(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .system(size: size, weight: weight) }
 }

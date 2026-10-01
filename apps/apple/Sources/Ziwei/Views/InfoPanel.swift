@@ -34,6 +34,7 @@ struct InfoPanel: View {
     @AppStorage("nowGender") private var nowGender: Gender = .male
     private var current: Person { store.people.first { $0.id == person.id } ?? person }
     private var isNow: Bool { person.id == NowChart.id }
+    private var isTemp: Bool { !isNow && !store.people.contains { $0.id == person.id } }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -67,7 +68,15 @@ struct InfoPanel: View {
                     }
                 }
 
-                if isNow {
+                if isTemp {
+                    card("暫時命盤") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("紫占或反查產生的命盤，不會自動存檔。").font(Font.zCallout).foregroundStyle(Color.zText3)
+                            Button("存入命盤") { withAnimation(Motion.base) { store.add(person) } }
+                                .buttonStyle(.borderedProminent)
+                        }
+                    }
+                } else if isNow {
                     card("此刻盤") {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("以當下時間排盤，每分鐘自動更新，不會存檔。")

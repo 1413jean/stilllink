@@ -97,7 +97,10 @@ struct PeriodTable: View {
     }
 
     private func cell(_ main: String, _ sub: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
-        Button { Sound.tap(settings); withAnimation(Motion.snap) { action() } } label: {
+        Button {
+            Sound.tap(settings, ["dec": .decade, "year": .year, "month": .month, "day": .day, "hour": .hour][group] ?? .palace)
+            withAnimation(Motion.snap) { action() }
+        } label: {
             VStack(spacing: 1) {
                 Text(main).font(Font.zCaption)
                 if let sub { Text(sub).font(Font.zMicro).opacity(0.7) }

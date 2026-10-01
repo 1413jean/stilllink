@@ -135,7 +135,6 @@ struct NewChartSheet: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.zBg)
         .navigationTitle("")
-        .toolbar { BackToolbar(action: onClose) }
         .onAppear { load(); nameFocused = true }
     }
 
@@ -241,20 +240,6 @@ struct NewChartSheet: View {
         store.add(p)
         onClose()
         onCreated(p)
-    }
-}
-
-/// 左上角「‹ 返回」
-struct BackToolbar: ToolbarContent {
-    let action: () -> Void
-    var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            Button(action: action) {
-                Label("返回", systemImage: "chevron.left").labelStyle(.titleAndIcon)
-            }
-            .keyboardShortcut(.cancelAction)
-            .help("返回")
-        }
     }
 }
 

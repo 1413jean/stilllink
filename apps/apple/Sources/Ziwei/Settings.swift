@@ -31,6 +31,8 @@ struct ZSettings: Codable, Equatable {
     // 音效與動畫
     var motion = true
     var sound = true
+    var haptics = true
+    var cues: [String: String] = [:]     // Sound.Event → 音效 id
     var soundStyle = "minimal"
     var volume = 0.6
 

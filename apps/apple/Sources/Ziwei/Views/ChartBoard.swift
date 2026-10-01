@@ -152,8 +152,12 @@ private struct PalaceCell: View {
                                 .font(ChartType.font(ChartType.tag(fs), .semibold))
                                 .foregroundStyle(Color.scopeColors[lv - 1])
                         }
-                        Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
                     }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    // 宮名單獨一行，不會被運限標籤擠成直排
+                    Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
+                        .lineLimit(1).fixedSize()
                 }
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
@@ -227,9 +231,9 @@ private struct StarColumn: View {
 
     private func box(_ t: String, fill: Color) -> some View {
         Text(t)
-            .font(ChartType.font(ChartType.tag(fs), .semibold))
+            .font(ChartType.font(fs * 0.84, .semibold))
             .foregroundStyle(Color.zOnColor)
-            .frame(width: fs * 1.0, height: fs * 1.0)
+            .frame(width: fs * 1.12, height: fs * 1.12)
             .background(fill)
     }
 }
@@ -252,9 +256,9 @@ private struct CenterInfo: View {
             SanFangShape(points: Quad(ZW.sanFang(selected).map { ZW.anchor[$0] }))
                 .stroke(Color.zText3.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
                 .opacity(settings.showSanfang ? 1 : 0)
-            VStack(spacing: fs * 0.55) {
+            VStack(spacing: fs * 0.32) {
                 Text("紫微斗數").font(ChartType.font(ChartType.centerTitle(fs), .semibold)).tracking(2)
-                Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {
+                Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 1) {
                     GridRow { label("姓名"); Text("\(person.name)　　\(yang ? "陽" : "陰")\(person.gender.rawValue)　\(chart.fiveElementsClass)") }
                     if let ts = person.trueSolar {
                         GridRow { label("真太陽時"); Text(ts) }
@@ -263,57 +267,105 @@ private struct CenterInfo: View {
                         GridRow { label("國曆"); Text("\(chart.solarDate) \(ZW.hours[person.hour])時（\(chart.timeRange)）") }
                     }
                     GridRow { label("農曆"); Text("\(chart.lunarDate) \(chart.time)") }
-                    GridRow { label("命主"); Text("\(chart.soul)　身主: \(chart.body)　生肖: \(chart.zodiac)") }
-                    if let pl = person.place {
-                        GridRow { label("出生地"); Text(pl.name.components(separatedBy: "，").first ?? pl.name).lineLimit(1) }
-                    }
+                    GridRow { label("命主"); Text("\(chart.soul)　身主: \(chart.body)　子斗: \(ziDou)") }
                 }
                 .font(ChartType.font(ChartType.centerBody(fs)))
-                HStack(spacing: fs * 0.9) {
-                    ForEach(Array(pillars.enumerated()), id: \.offset) { k, gz in
+
+                // 節氣四柱／非節氣四柱
+                HStack(alignment: .top, spacing: fs * 1.6) {
+                    pillarSet("節氣四柱", pillars)
+                    pillarSet("非節氣四柱", lunarPillars)
+                }
+
+                // 八字起運與大運
+                Text("出生後 \(qy.years)年 \(qy.months)月 \(qy.days)天 八字起運")
+                    .font(ChartType.font(ChartType.centerSmall(fs), .medium))
+                HStack(alignment: .top, spacing: fs * 0.32) {
+                    ForEach(Array(dayun.enumerated()), id: \.offset) { k, gz in
+                        let age = qy.years + 1 + k * 10
                         VStack(spacing: 0) {
-                            ForEach(Array(gz.enumerated()), id: \.offset) { _, ch in
-                                Text(String(ch)).font(ChartType.font(ChartType.pillar(fs))).foregroundStyle(ZW.wuxing(String(ch)).color)
+                            HStack(alignment: .top, spacing: 0) {
+                                Text(String(gz.prefix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.prefix(1))).color)
+                                VerticalText(Bazi.tenGod(day: dayStem, other: String(gz.prefix(1))), size: ChartType.godLabel(fs), color: .mQuan)
                             }
-                            Text(["年", "月", "日", "時"][k]).font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
+                            Text(String(gz.suffix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.suffix(1))).color)
+                            Text("\(age)歲").font(ChartType.font(ChartType.godLabel(fs))).foregroundStyle(Color.zText2)
+                            Text(verbatim: "\(birthYear + age - 1)").font(ChartType.font(ChartType.godLabel(fs)).monospacedDigit()).foregroundStyle(Color.zText3)
                         }
                     }
                 }
-                VStack(spacing: 3) {
-                    Text("\(chart.palaces[selected].name)（\(chart.palaces[selected].stem)）飛化")
+
+                // 點選宮位的宮干飛化（一行）
+                HStack(spacing: 6) {
+                    Text("\(chart.palaces[selected].name)\(chart.palaces[selected].stem)干：")
                         .font(ChartType.font(ChartType.centerSmall(fs))).foregroundStyle(Color.zText2)
-                    HStack(spacing: 8) {
-                        ForEach(flies, id: \.m) { f in
-                            Text("\(f.star)\(f.m.rawValue)→\(f.to.map { chart.palaces[$0].name } ?? "—")")
-                                .font(ChartType.font(ChartType.centerSmall(fs), .medium)).foregroundStyle(f.m.color)
-                        }
+                    ForEach(flies, id: \.m) { f in
+                        Text("\(f.star)\(f.m.rawValue)→\(f.to.map { chart.palaces[$0].name } ?? "—")")
+                            .font(ChartType.font(ChartType.centerSmall(fs), .medium)).foregroundStyle(f.m.color)
                     }
                 }
+                .lineLimit(1).minimumScaleFactor(0.7)
                 HStack(spacing: 4) {
-                    Text("宮干四化:").font(ChartType.font(ChartType.centerSmall(fs)))
                     ForEach(Mutagen.allCases, id: \.self) { m in
                         Text(m.rawValue).font(ChartType.font(ChartType.centerSmall(fs), .semibold)).foregroundStyle(Color.zOnColor)
                             .padding(.horizontal, 3).background(m.color)
                     }
-                    Text("↑離心自化　↓向心自化").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
-                }
-                if level > 0 {
-                    Button(action: onResetLevel) {
-                        Label("回本命盤", systemImage: "arrow.uturn.backward")
-                            .font(ChartType.font(ChartType.centerSmall(fs)))
-                            .padding(.horizontal, 10).padding(.vertical, 4)
-                            .background(Capsule().fill(Color.zHover))
+                    Text("↑離心 ↓向心自化").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
+                    if level > 0 {
+                        Button(action: onResetLevel) {
+                            Label("回本命盤", systemImage: "arrow.uturn.backward")
+                                .font(ChartType.font(ChartType.meta(fs)))
+                                .padding(.horizontal, 8).padding(.vertical, 2)
+                                .background(Capsule().fill(Color.zHover))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.leading, 4)
                     }
-                    .buttonStyle(.plain)
                 }
             }
-            .padding(fs)
+            .padding(.horizontal, fs * 0.6)
+            .padding(.vertical, fs * 0.4)
+            .minimumScaleFactor(0.8)
         }
         .overlay(Rectangle().stroke(Color.zGrid, lineWidth: 0.5))
     }
 
     private func label(_ s: String) -> some View {
         Text(s + ":").foregroundStyle(Color.zText2)
+    }
+
+    private var pillars: [String] { model.chart.chineseDate.split(separator: " ").map(String.init) }
+    private var lunarPillars: [String] { Bazi.lunarPillars(lunarYear: model.chart.lunarYear, lunarMonth: model.chart.lunarMonth, jieqi: pillars) }
+    private var dayStem: String { String(pillars.count > 2 ? pillars[2].prefix(1) : "") }
+    private var hourBranch: Int { person.hour == 12 ? 0 : person.hour }
+    private var ziDou: String { Bazi.ziDou(lunarMonth: model.chart.lunarMonth, hourBranch: hourBranch) }
+
+    /// 出生的絕對時間：有鐘錶時間＋出生地就照用，否則以時辰中間點、台北時區估算
+    private var birthDate: Date {
+        let tz = TimeZone(identifier: person.place?.timeZoneID ?? "Asia/Taipei") ?? .current
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
+        let src = person.clock ?? "\(person.solar) \(person.hour == 12 ? 23 : person.hour * 2):00"
+        let n = src.split(whereSeparator: { " -:".contains($0) }).compactMap { Int($0) }
+        guard n.count >= 5 else { return Date() }
+        return cal.date(from: DateComponents(year: n[0], month: n[1], day: n[2], hour: n[3], minute: n[4])) ?? Date()
+    }
+    private var birthYear: Int { Int(person.clock?.prefix(4) ?? person.solar.prefix(4)) ?? person.birthYear }
+    private var qy: Bazi.Qiyun { Bazi.qiyun(birth: birthDate, yearStem: String(pillars.first?.prefix(1) ?? ""), male: person.gender == .male) }
+    private var dayun: [String] { Bazi.dayun(monthPillar: pillars.count > 1 ? pillars[1] : "", forward: qy.forward) }
+
+    private func pillarSet(_ title: String, _ p: [String]) -> some View {
+        VStack(spacing: 1) {
+            Text(title).font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zText2)
+            HStack(spacing: fs * 0.35) {
+                ForEach(Array(p.enumerated()), id: \.offset) { _, gz in
+                    VStack(spacing: 0) {
+                        ForEach(Array(gz.enumerated()), id: \.offset) { _, ch in
+                            Text(String(ch)).font(ChartType.font(ChartType.pillarSmall(fs))).foregroundStyle(ZW.wuxing(String(ch)).color)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

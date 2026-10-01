@@ -40,6 +40,8 @@ struct Chart: Codable {
     let body: String
     let fiveElementsClass: String
     let yearBranch: String
+    let lunarYear: Int
+    let lunarMonth: Int
     let palaces: [Palace]
 
     var soulIndex: Int { palaces.firstIndex { $0.name == "命宮" } ?? 0 }

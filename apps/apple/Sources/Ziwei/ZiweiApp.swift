@@ -2,9 +2,9 @@ import SwiftUI
 import AppKit
 
 enum Route: Hashable {
-    case home, person(UUID), new, edit(UUID), settings
+    case home, person(UUID), new, edit(UUID), settings, pillars, temp(Person, Int)
     /// 新增、編輯、設定這類「頁面」（返回時不回到它們）
-    var isPage: Bool { switch self { case .new, .edit, .settings: true; default: false } }
+    var isPage: Bool { switch self { case .new, .edit, .settings, .pillars: true; default: false } }
 }
 
 @main
@@ -39,6 +39,8 @@ extension Notification.Name {
     static let newChart = Notification.Name("zw.newChart")
     static let editChart = Notification.Name("zw.editChart")
     static let openSettings = Notification.Name("zw.openSettings")
+    static let openPillars = Notification.Name("zw.openPillars")
+    static let openTemp = Notification.Name("zw.openTemp")
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -70,7 +72,11 @@ enum Snapshot {
 struct RootView: View {
     @EnvironmentObject var store: Store
     @State private var route: Route? = .home
-    @State private var back: Route = .home   // 從新增／編輯／設定返回時回到這頁
+    @State private var back: Route = .home   // 取消新增／編輯時回到這頁
+    // 瀏覽紀錄（像瀏覽器的上一頁／下一頁）
+    @State private var history: [Route] = [.home]
+    @State private var cursor = 0
+    @State private var stepping = false
 
     var body: some View {
         NavigationSplitView {
@@ -92,6 +98,10 @@ struct RootView: View {
                         .id(id)
                 case .settings:
                     SettingsPage(onClose: { goBack() })
+                case .pillars:
+                    PillarSearchPage(onClose: { goBack() })
+                case .temp(let p, let lv):
+                    ChartScreen(person: p, level: lv).id(p.id)
                 default:
                     NowChart()
                 }
@@ -99,11 +109,30 @@ struct RootView: View {
             .transition(.opacity)
         }
         .environment(\.zSettings, store.settings)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigation) {
+                Button { step(-1) } label: { Image(systemName: "arrow.left") }
+                    .disabled(cursor == 0).help("上一頁 ⌘[").keyboardShortcut("[", modifiers: .command)
+                Button { step(1) } label: { Image(systemName: "arrow.right") }
+                    .disabled(cursor >= history.count - 1).help("下一頁 ⌘]").keyboardShortcut("]", modifiers: .command)
+            }
+        }
+        .onChange(of: route) { _, r in
+            guard let r else { return }
+            if stepping { stepping = false; return }
+            if history.indices.contains(cursor), history[cursor] == r { return }
+            history = Array(history.prefix(cursor + 1)) + [r]
+            cursor = history.count - 1
+        }
         .onReceive(NotificationCenter.default.publisher(for: .newChart)) { _ in go(.new) }
         .onReceive(NotificationCenter.default.publisher(for: .editChart)) { n in
             if let id = n.object as? UUID { go(.edit(id)) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { _ in go(.settings) }
+        .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
+        .onReceive(NotificationCenter.default.publisher(for: .openTemp)) { n in
+            if let r = n.object as? TempRequest { withAnimation(Motion.base) { route = .temp(r.person, r.level) } }
+        }
         .onAppear(perform: applyDebugEnv)
     }
 
@@ -112,6 +141,14 @@ struct RootView: View {
         withAnimation(Motion.base) { route = r }
     }
     private func goBack() { withAnimation(Motion.base) { route = back } }
+
+    private func step(_ d: Int) {
+        let i = cursor + d
+        guard history.indices.contains(i) else { return }
+        cursor = i
+        stepping = true
+        withAnimation(Motion.base) { route = history[i] }
+    }
 
     /// 驗證用：ZIWEI_ROUTE=<姓名> 直接打開那張盤；ZIWEI_THEME=dark/light
     private func applyDebugEnv() {

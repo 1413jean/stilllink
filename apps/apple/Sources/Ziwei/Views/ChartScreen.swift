@@ -34,15 +34,32 @@ struct NowChart: View {
 }
 
 /// 盤面寬度上限（約文墨天機的比例）
-let boardMaxWidth: CGFloat = 700
+let boardMaxWidth: CGFloat = 780
 let infoPanelWidth: CGFloat = 300
 
 struct ChartScreen: View {
     @EnvironmentObject var store: Store
     let person: Person
-    @State private var pick = Pick.today()
+    @State private var pick: Pick
     @State private var showInfo = true
     @State private var model: ChartModel?
+    @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
+    @State private var zoomBase: CGFloat = 1
+
+    init(person: Person, level: Int = 2) {
+        self.person = person
+        var p = Pick.today(); p.level = level
+        _pick = State(initialValue: p)
+    }
+
+    private var magnify: some Gesture {
+        MagnifyGesture()
+            .onChanged { v in zoom = min(2.5, max(1, zoomBase * v.magnification)) }
+            .onEnded { _ in
+                if zoom < 1.05 { withAnimation(Motion.snap) { zoom = 1 } }
+                zoomBase = zoom
+            }
+    }
 
     var body: some View {
         // 捲動區佔滿整個寬度（捲軸貼在視窗最右邊）；右側資訊卡固定浮在右上角，不跟著捲
@@ -51,7 +68,7 @@ struct ChartScreen: View {
             let usable = geo.size.width - panelSpace
             let boardW = min(usable - 48, boardMaxWidth, max(460, geo.size.height - 180))
             ZStack(alignment: .bottom) {
-                ScrollView {
+                ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                     VStack(spacing: 12) {
                         Group {
                             if let model {
@@ -62,6 +79,9 @@ struct ChartScreen: View {
                             }
                         }
                         .frame(width: boardW, height: boardW)
+                        .scaleEffect(zoom, anchor: .top)
+                        .frame(width: boardW * zoom, height: boardW * zoom, alignment: .top)
+                        .gesture(magnify)
 
                         if let model {
                             PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
@@ -71,10 +91,10 @@ struct ChartScreen: View {
                         }
 
                     }
-                    .frame(width: boardW)
+                    .frame(width: boardW * zoom)
                     .padding(.top, 14)
                     .padding(.bottom, 150)
-                    .frame(width: usable)
+                    .frame(width: max(usable, boardW * zoom + 48))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .defaultScrollAnchor(.top)
@@ -90,6 +110,25 @@ struct ChartScreen: View {
                             .padding(.trailing, 16) // 不蓋到捲軸
                             .allowsHitTesting(false)
                     )
+            }
+            .overlay(alignment: .bottomTrailing) {
+                VStack(alignment: .trailing, spacing: 10) {
+                    if zoom > 1 {
+                        Button { withAnimation(Motion.snap) { zoom = 1; zoomBase = 1 } } label: {
+                            Label("\(Int(zoom * 100))%", systemImage: "arrow.down.right.and.arrow.up.left")
+                                .font(Font.zCaptionStrong).foregroundStyle(Color.zText)
+                                .padding(.horizontal, 10).frame(height: 30)
+                                .background(Capsule().fill(Color.zCard).shadow(color: Color.zShadow, radius: 6, y: 2))
+                        }
+                        .buttonStyle(PressStyle())
+                        .help("還原大小")
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    }
+                    QuickMenu(pick: $pick)
+                }
+                .padding(.trailing, (showInfo ? infoPanelWidth + 36 : 0) + 24)
+                .padding(.bottom, 24)
+                .animation(Motion.base, value: zoom > 1)
             }
             .dimmedBlur()
             .overlay(alignment: .topTrailing) {

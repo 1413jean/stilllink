@@ -31,6 +31,7 @@ function zwChart(solar, t, gender) {
     time: a.time, timeRange: a.timeRange, sign: a.sign, zodiac: a.zodiac,
     soul: a.soul, body: a.body, fiveElementsClass: a.fiveElementsClass,
     yearBranch: a.rawDates.chineseDate.yearly[1],
+    lunarYear: a.rawDates.lunarDate.lunarYear, lunarMonth: a.rawDates.lunarDate.lunarMonth,
     palaces: a.palaces.map(function (p) {
       return {
         name: __pn(p.name), stem: p.heavenlyStem, branch: p.earthlyBranch, isBody: p.isBodyPalace,

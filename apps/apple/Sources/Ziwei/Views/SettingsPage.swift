@@ -62,7 +62,6 @@ struct SettingsPage: View {
         }
         .background(Color.zBg)
         .navigationTitle("")
-        .toolbar { BackToolbar(action: onClose) }
     }
 
     @ViewBuilder
@@ -104,24 +103,31 @@ struct SettingsPage: View {
         case .feel:
             title("音效與動畫")
             toggle("介面動畫", "關閉後所有轉場改為瞬間切換", s.motion)
+            toggle("觸控板回饋", "點宮位、點運限時觸控板輕微震動", s.haptics)
             toggle("介面音效", "點宮位、點運限時播放", s.sound)
-            row("音效風格", "來自 uisfx.com（CC0）") {
-                HStack(spacing: 8) {
+            Group {
+                row("音色", "來自 uisfx.com（CC0）") {
                     ZMenuField(options: Sound.styles.map(\.name),
                                selection: Binding(get: { Sound.styles.first { $0.id == store.settings.soundStyle }?.name ?? "" },
-                                                  set: { n in if let id = Sound.styles.first(where: { $0.name == n })?.id { store.settings.soundStyle = id; Sound.play(id, volume: store.settings.volume) } }))
-                    Button { Sound.play(store.settings.soundStyle, volume: store.settings.volume) } label: {
-                        Image(systemName: "play.fill").font(Font.zIcon).frame(width: 38, height: 38)
-                            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zHover))
-                    }
-                    .buttonStyle(PressStyle())
-                    .help("試聽")
+                                                  set: { n in if let id = Sound.styles.first(where: { $0.name == n })?.id { store.settings.soundStyle = id; Sound.tap(store.settings, .palace) } }))
                 }
-            }
-            .disabled(!store.settings.sound).opacity(store.settings.sound ? 1 : 0.4)
-            row("音量", "", last: true) {
-                Slider(value: s.volume, in: 0.1...1) { editing in
-                    if !editing { Sound.play(store.settings.soundStyle, volume: store.settings.volume) }
+                ForEach(Sound.Event.allCases, id: \.self) { e in
+                    row(e.label, "這個操作的音效") {
+                        HStack(spacing: 8) {
+                            ZMenuField(options: Sound.cues.map(\.name), selection: cueBinding(e))
+                            Button { Sound.tap(store.settings, e) } label: {
+                                Image(systemName: "play.fill").font(Font.zIcon).frame(width: 38, height: 38)
+                                    .background(RoundedRectangle(cornerRadius: 9).fill(Color.zHover))
+                            }
+                            .buttonStyle(PressStyle())
+                            .help("試聽")
+                        }
+                    }
+                }
+                row("音量", "", last: true) {
+                    Slider(value: s.volume, in: 0.1...1) { editing in
+                        if !editing { Sound.tap(store.settings, .palace) }
+                    }
                 }
             }
             .disabled(!store.settings.sound).opacity(store.settings.sound ? 1 : 0.4)
@@ -154,6 +160,15 @@ struct SettingsPage: View {
         }
         .padding(.vertical, 12)
         .overlay(alignment: .bottom) { if !last { Rectangle().fill(Color.zLine).frame(height: 0.5) } }
+    }
+
+    private func cueBinding(_ e: Sound.Event) -> Binding<String> {
+        Binding(get: { let id = store.settings.cues[e.rawValue] ?? e.defaultCue
+                       return Sound.cues.first { $0.id == id }?.name ?? "" },
+                set: { n in if let id = Sound.cues.first(where: { $0.name == n })?.id {
+                    store.settings.cues[e.rawValue] = id
+                    Sound.tap(store.settings, e)
+                } })
     }
 
     private func toggle(_ t: String, _ n: String, _ b: Binding<Bool>, last: Bool = false) -> some View {
