@@ -3,25 +3,26 @@ import SwiftUI
 /// 照文墨天機排的十二宮盤面（純 SwiftUI 繪製）
 struct ChartBoard: View {
     let person: Person
-    let chart: Chart
-    let horo: Horoscope
+    let model: ChartModel
     let level: Int
+    var onResetLevel: () -> Void = {}
     @State private var sel: Int?
 
     var body: some View {
+        let chart = model.chart
         let selected = sel ?? chart.soulIndex
         let sf = ZW.sanFang(selected)
         GeometryReader { geo in
             let m: CGFloat = 18
             let cw = (geo.size.width - m * 2) / 4
             let ch = (geo.size.height - m * 2) / 4
-            let fs = max(10, min(16, cw / 13.5))
+            let fs = max(10, min(14, cw / 12.5))
             ZStack(alignment: .topLeading) {
                 ForEach(0..<12, id: \.self) { i in
                     let (r, c) = ZW.grid[i]
-                    PalaceCell(chart: chart, horo: horo, index: i, level: level, fs: fs,
+                    PalaceCell(model: model, index: i, level: level, fs: fs,
                                selected: selected == i, inSF: sf.contains(i) && selected != i,
-                               flyIn: ZW.flying(chart, selected).filter { $0.to == i }.map(\.m))
+                               flyIn: model.flying[selected].filter { $0.to == i }.map(\.m))
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipped()
                         .contentShape(Rectangle())
@@ -29,7 +30,7 @@ struct ChartBoard: View {
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
                     compassLabel(i, r: r, c: c, cw: cw, ch: ch, m: m)
                 }
-                CenterInfo(person: person, chart: chart, selected: selected, fs: fs)
+                CenterInfo(person: person, model: model, selected: selected, fs: fs, level: level, onResetLevel: onResetLevel)
                     .frame(width: cw * 2, height: ch * 2)
                     .offset(x: m + cw, y: m + ch)
             }
@@ -72,8 +73,7 @@ struct VerticalText: View {
 }
 
 private struct PalaceCell: View {
-    let chart: Chart
-    let horo: Horoscope
+    let model: ChartModel
     let index: Int
     let level: Int
     let fs: CGFloat
@@ -82,8 +82,9 @@ private struct PalaceCell: View {
     let flyIn: [Mutagen]
 
     var body: some View {
+        let chart = model.chart, horo = model.horo
         let p = chart.palaces[index]
-        let selfs = ZW.selfTransforms(chart, index)
+        let selfs = model.selfs[index]
         let curDecade = level >= 1 && horo.decadal.index == index
         VStack(alignment: .leading, spacing: 2) {
             FlowLayout(spacing: 1, lineSpacing: 4) {
@@ -94,14 +95,14 @@ private struct PalaceCell: View {
                                })
                 }
                 ForEach(p.adj, id: \.name) { s in
-                    VerticalText(s.name, size: fs - 3, color: .wmBlue)
+                    VerticalText(s.name, size: max(9, fs - 2), color: .wmBlue)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
             .layoutPriority(-1)
             VStack(spacing: 0) {
-                Text("流年: " + ZW.yearlyAges(chart, index).map(String.init).joined(separator: ","))
+                Text("流年: " + model.yearlyAges[index].map(String.init).joined(separator: ","))
                 Text("小限: " + p.ages.prefix(5).map(String.init).joined(separator: ","))
             }
             .font(.system(size: max(8.5, fs * 0.6)))
@@ -210,14 +211,17 @@ private struct StarColumn: View {
 
 private struct CenterInfo: View {
     let person: Person
-    let chart: Chart
+    let model: ChartModel
     let selected: Int
     let fs: CGFloat
+    let level: Int
+    let onResetLevel: () -> Void
 
     var body: some View {
+        let chart = model.chart
         let pillars = chart.chineseDate.split(separator: " ").map(String.init)
         let yang = ["甲", "丙", "戊", "庚", "壬"].contains(String(pillars.first?.prefix(1) ?? ""))
-        let flies = ZW.flying(chart, selected)
+        let flies = model.flying[selected]
         ZStack {
             Canvas { ctx, size in
                 let pts = ZW.sanFang(selected).map { CGPoint(x: ZW.anchor[$0].0 * size.width, y: ZW.anchor[$0].1 * size.height) }
@@ -230,9 +234,17 @@ private struct CenterInfo: View {
                 Text("紫微斗數").font(.serif(fs * 1.45, .semibold)).tracking(2)
                 Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {
                     GridRow { label("姓名"); Text("\(person.name)　　\(yang ? "陽" : "陰")\(person.gender.rawValue)　\(chart.fiveElementsClass)") }
-                    GridRow { label("國曆"); Text("\(chart.solarDate) \(ZW.hours[person.hour])時（\(chart.timeRange)）") }
+                    if let ts = person.trueSolar {
+                        GridRow { label("真太陽時"); Text(ts) }
+                        GridRow { label("鐘錶時間"); Text(person.clock ?? "") }
+                    } else {
+                        GridRow { label("國曆"); Text("\(chart.solarDate) \(ZW.hours[person.hour])時（\(chart.timeRange)）") }
+                    }
                     GridRow { label("農曆"); Text("\(chart.lunarDate) \(chart.time)") }
                     GridRow { label("命主"); Text("\(chart.soul)　身主: \(chart.body)　生肖: \(chart.zodiac)") }
+                    if let pl = person.place {
+                        GridRow { label("出生地"); Text(pl.name.components(separatedBy: "，").first ?? pl.name).lineLimit(1) }
+                    }
                 }
                 .font(.system(size: fs * 0.9))
                 HStack(spacing: fs * 0.9) {
@@ -262,6 +274,15 @@ private struct CenterInfo: View {
                             .padding(.horizontal, 3).background(m.color)
                     }
                     Text("實底＝離心　框線＝向心").font(.system(size: fs * 0.66)).foregroundStyle(Color.zText3)
+                }
+                if level > 0 {
+                    Button(action: onResetLevel) {
+                        Label("回本命盤", systemImage: "arrow.uturn.backward")
+                            .font(.system(size: fs * 0.8))
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(Capsule().fill(Color.zHover))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(fs)

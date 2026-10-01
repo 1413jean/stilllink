@@ -35,8 +35,8 @@ function zwHoro(solar, t, gender, date, hour) {
   return JSON.stringify({ decadal: sc(h.decadal), yearly: sc(h.yearly), monthly: sc(h.monthly), daily: sc(h.daily), hourly: sc(h.hourly) });
 }
 
-function zwLunarToSolar(y, m, d) {
-  return iztro.astro.byLunar(y + '-' + m + '-' + d, 0, '女', false, true, 'zh-TW').solarDate;
+function zwLunarToSolar(y, m, d, leap) {
+  return iztro.astro.byLunar(y + '-' + m + '-' + d, 0, '女', !!leap, true, 'zh-TW').solarDate;
 }
 
 function zwSolarToLunar(solar) {

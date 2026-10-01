@@ -62,9 +62,9 @@ struct PeriodTable: View {
 
     private func head(_ t: String) -> some View {
         Text(t)
-            .font(.system(size: 13, weight: .medium))
+            .font(.system(size: 12, weight: .medium))
             .multilineTextAlignment(.center)
-            .frame(width: 60)
+            .frame(width: 52)
             .frame(maxHeight: .infinity)
             .background(Color.zHover)
     }
@@ -82,14 +82,14 @@ struct PeriodTable: View {
         }
     }
 
-    private func cell(_ main: String, _ sub: String? = nil, on: Bool, minW: CGFloat = 76, action: @escaping () -> Void) -> some View {
+    private func cell(_ main: String, _ sub: String? = nil, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 1) {
-                Text(main).font(.system(size: 12.5))
-                if let sub { Text(sub).font(.system(size: 10.5)).opacity(0.7) }
+                Text(main).font(.system(size: 11.5))
+                if let sub { Text(sub).font(.system(size: 9.5)).opacity(0.7) }
             }
             .foregroundStyle(on ? Color.zBg : Color.zText)
-            .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 34 : 42)
+            .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)
             .padding(.horizontal, 4)
             .background(on ? Color.zText : Color.clear)
             .overlay(alignment: .trailing) { Rectangle().fill(Color.zLine).frame(width: 0.5) }

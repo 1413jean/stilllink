@@ -1,21 +1,14 @@
 import SwiftUI
 
-/// 首頁：照 Claude 的「Let's noodle」——大標題＋一張輸入卡，直接輸入生辰就排盤
+/// 首頁：照 Claude 的「Let's noodle」——大標題＋一張可點的輸入卡（點了開新增彈窗）＋最近的人
 struct HomeView: View {
     @EnvironmentObject var store: Store
     @Binding var route: Route?
-
-    @State private var name = ""
-    @State private var gender: Gender = .female
-    @State private var date = Calendar.current.date(from: DateComponents(year: 1995, month: 1, day: 1))!
-    @State private var hour = 6
-    @State private var group = "客人"
-    @FocusState private var focused: Bool
-
-    private var canSubmit: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
+    var onNew: () -> Void
+    @State private var hover = false
 
     var body: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 26) {
             Spacer()
             HStack(spacing: 12) {
                 Image(systemName: "sparkle")
@@ -24,59 +17,32 @@ struct HomeView: View {
                 (Text("今天想幫誰排盤").font(.serif(36, .medium)) + Text("?").font(.system(size: 32, weight: .light)))
             }
 
-            VStack(alignment: .leading, spacing: 14) {
-                TextField("輸入姓名，例如：林小姐", text: $name)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 15))
-                    .focused($focused)
-                    .onSubmit(submit)
-
-                HStack(spacing: 10) {
-                    Picker("", selection: $gender) {
-                        ForEach(Gender.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-
-                    DatePicker("", selection: $date, displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
-                        .environment(\.locale, Locale(identifier: "zh_TW"))
-
-                    Picker("", selection: $hour) {
-                        ForEach(0..<13, id: \.self) { Text(ZW.hours[$0] + "時").tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-
-                    Picker("", selection: $group) {
-                        ForEach(groupOptions, id: \.self) { Text($0).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-
-                    Spacer()
-
-                    Button(action: submit) {
+            Button(action: onNew) {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("輸入姓名、生辰與出生地…")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.zText3)
+                    HStack(spacing: 8) {
+                        chip("calendar", "國曆／農曆")
+                        chip("clock", "出生時間")
+                        chip("mappin.and.ellipse", "出生地・真太陽時")
+                        Spacer()
                         Image(systemName: "arrow.up")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(width: 30, height: 30)
-                            .background(Circle().fill(canSubmit ? Color.zAccent : Color.zText3.opacity(0.5)))
+                            .background(Circle().fill(Color.zAccent))
                     }
-                    .buttonStyle(.plain)
-                    .disabled(!canSubmit)
-                    .keyboardShortcut(.return, modifiers: .command)
                 }
+                .padding(18)
+                .frame(maxWidth: 660, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(hover ? Color.zGrid : Color.zLine))
+                .shadow(color: .black.opacity(hover ? 0.07 : 0.04), radius: 14, y: 4)
+                .contentShape(RoundedRectangle(cornerRadius: 18))
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 18)
-            .padding(.bottom, 12)
-            .frame(maxWidth: 660)
-            .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.zLine))
-            .shadow(color: .black.opacity(0.04), radius: 12, y: 4)
+            .buttonStyle(.plain)
+            .onHover { hover = $0 }
 
             let recent = Array(store.people.prefix(5))
             if !recent.isEmpty {
@@ -101,22 +67,13 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.zBg)
         .navigationTitle("")
-        .onAppear { focused = true }
     }
 
-    private var groupOptions: [String] {
-        var g = ["客人", "家人", "朋友"]
-        for p in store.people where !g.contains(p.group) { g.append(p.group) }
-        return g
-    }
-
-    private func submit() {
-        guard canSubmit else { return }
-        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
-        let p = Person(name: name.trimmingCharacters(in: .whitespaces), gender: gender,
-                       solar: "\(c.year!)-\(c.month!)-\(c.day!)", hour: hour, group: group)
-        store.add(p)
-        name = ""
-        route = .person(p.id)
+    private func chip(_ icon: String, _ text: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.system(size: 12))
+            .foregroundStyle(Color.zText2)
+            .padding(.horizontal, 9).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.zHover))
     }
 }

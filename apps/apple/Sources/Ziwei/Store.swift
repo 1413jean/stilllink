@@ -9,18 +9,31 @@ struct Note: Codable, Identifiable, Hashable {
     var at = Date()
 }
 
+struct BirthPlace: Codable, Hashable {
+    var name: String
+    var latitude: Double
+    var longitude: Double
+    var timeZoneID: String
+}
+
 struct Person: Codable, Identifiable, Hashable {
     var id = UUID()
     var name: String
     var gender: Gender
-    var solar: String // yyyy-M-d
-    var hour: Int     // 0 早子 … 12 晚子
+    var solar: String // 排盤用的國曆日期 yyyy-M-d（有出生地時是真太陽時的日期）
+    var hour: Int     // 排盤用的時辰：0 早子 … 12 晚子
     var group: String
     var pinned = false
     var notes: [Note] = []
     var createdAt = Date()
+    // 新增命盤時填的原始資料（舊資料沒有，所以是選填）
+    var clock: String? = nil      // 鐘錶時間 yyyy-M-d HH:mm
+    var trueSolar: String? = nil  // 真太陽時 yyyy-M-d HH:mm
+    var place: BirthPlace? = nil
+    var photos: [String]? = nil   // 附件照片檔名（存在 Application Support/Ziwei/media）
 
     var birthYear: Int { Int(solar.split(separator: "-").first ?? "0") ?? 0 }
+    var chartKey: String { "\(solar)|\(hour)|\(gender.rawValue)" }
 }
 
 enum Appearance: String, Codable, CaseIterable {
@@ -32,7 +45,9 @@ enum Appearance: String, Codable, CaseIterable {
 /// 命盤資料：先存在本機 JSON（~/Library/Application Support/Ziwei），之後換 SQLite＋雲端同步
 @MainActor
 final class Store: ObservableObject {
-    @Published var people: [Person] = [] { didSet { save() } }
+    @Published var people: [Person] = [] { didSet { save(); refreshSoulStars() } }
+    /// 側欄顯示的命宮主星，背景算好放這裡
+    @Published var soulStars: [UUID: String] = [:]
     @AppStorage("appearance") var appearance: Appearance = .system
 
     private let url: URL = {
@@ -47,6 +62,20 @@ final class Store: ObservableObject {
             people = list
         } else {
             people = Store.samples
+        }
+        refreshSoulStars()
+    }
+
+    private func refreshSoulStars() {
+        let list = people
+        Task {
+            await Engine.shared.warm(list, pick: Pick.today())
+            var out: [UUID: String] = [:]
+            for p in list {
+                let c = await Engine.shared.chart(for: p)
+                out[p.id] = c.palaces.first { $0.name == "命宮" }?.major.map(\.name).joined() ?? ""
+            }
+            soulStars = out
         }
     }
 

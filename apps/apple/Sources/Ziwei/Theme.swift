@@ -13,6 +13,7 @@ extension Color {
 
     static let zBg = dynamic(0xFAF9F6, 0x262624)
     static let zCard = dynamic(0xFFFFFF, 0x30302E)
+    static let zSide = dynamic(0xF3F2EE, 0x1F1F1D)
     static let zLine = dynamic(0xE7E5DF, 0x3D3C39)
     static let zGrid = dynamic(0xCFCCC4, 0x4A4946)
     static let zText = dynamic(0x1F1E1C, 0xECEAE4)

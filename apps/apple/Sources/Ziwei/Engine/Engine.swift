@@ -69,21 +69,26 @@ struct Horoscope: Codable {
 struct LunarDate: Codable { let year: Int; let month: Int; let day: Int }
 
 // MARK: - 排盤引擎：iztro 跑在 JavaScriptCore（純計算，沒有任何網頁畫面）
+// JSContext 不能跨執行緒同時用，所有呼叫都排進同一條背景 queue，主執行緒不會被卡住。
 
-final class Engine {
+final class Engine: @unchecked Sendable {
     static let shared = Engine()
-    private let ctx: JSContext
+    private let queue = DispatchQueue(label: "zw.engine", qos: .userInitiated)
+    private var ctx: JSContext!
     private var chartCache: [String: Chart] = [:]
+    private var horoCache: [String: Horoscope] = [:]
 
     private init() {
-        ctx = JSContext()!
-        ctx.exceptionHandler = { _, e in NSLog("[engine] JS error: \(e?.toString() ?? "?")") }
-        ctx.evaluateScript("var window = this, self = this;")
-        for name in ["iztro.min", "bridge"] {
-            guard let url = Engine.resource(name, "js"), let src = try? String(contentsOf: url, encoding: .utf8) else {
-                fatalError("找不到 \(name).js")
+        queue.sync {
+            ctx = JSContext()!
+            ctx.exceptionHandler = { _, e in NSLog("[engine] JS error: \(e?.toString() ?? "?")") }
+            ctx.evaluateScript("var window = this, self = this;")
+            for name in ["iztro.min", "bridge"] {
+                guard let url = Engine.resource(name, "js"), let src = try? String(contentsOf: url, encoding: .utf8) else {
+                    fatalError("找不到 \(name).js")
+                }
+                ctx.evaluateScript(src, withSourceURL: url)
             }
-            ctx.evaluateScript(src, withSourceURL: url)
         }
     }
 
@@ -99,31 +104,71 @@ final class Engine {
         return nil
     }
 
-    private func call(_ fn: String, _ args: [Any]) -> String {
+    // 以下 _ 開頭的只能在 queue 上呼叫
+    private func _call(_ fn: String, _ args: [Any]) -> String {
         ctx.objectForKeyedSubscript(fn).call(withArguments: args)?.toString() ?? ""
     }
 
-    private func decode<T: Decodable>(_ s: String) -> T {
-        try! JSONDecoder().decode(T.self, from: Data(s.utf8))
-    }
-
-    func chart(for p: Person) -> Chart {
-        let key = "\(p.solar)|\(p.hour)|\(p.gender.rawValue)"
+    private func _chart(_ p: Person) -> Chart {
+        let key = p.chartKey
         if let c = chartCache[key] { return c }
-        let c: Chart = decode(call("zwChart", [p.solar, p.hour, p.gender.rawValue]))
+        let c = try! JSONDecoder().decode(Chart.self, from: Data(_call("zwChart", [p.solar, p.hour, p.gender.rawValue]).utf8))
         chartCache[key] = c
         return c
     }
 
-    func horoscope(for p: Person, date: String, hour: Int) -> Horoscope {
-        decode(call("zwHoro", [p.solar, p.hour, p.gender.rawValue, date, hour]))
+    private func _horo(_ p: Person, _ pick: Pick) -> Horoscope? {
+        let key = "\(p.chartKey)|\(pick.year)-\(pick.lm)-\(pick.ld)|\(pick.hour)"
+        if let h = horoCache[key] { return h }
+        var day = pick.ld
+        var solar = _call("zwLunarToSolar", [pick.year, pick.lm, day])
+        while !solar.contains("-") && day > 28 { day -= 1; solar = _call("zwLunarToSolar", [pick.year, pick.lm, day]) } // 小月沒有三十
+        guard let h = try? JSONDecoder().decode(Horoscope.self, from: Data(_call("zwHoro", [p.solar, p.hour, p.gender.rawValue, solar, pick.hour]).utf8)) else { return nil }
+        horoCache[key] = h
+        return h
     }
 
-    func lunarToSolar(_ y: Int, _ m: Int, _ d: Int) -> String {
-        call("zwLunarToSolar", [y, m, d])
+    private func run<T>(_ work: @escaping () -> T) async -> T {
+        await withCheckedContinuation { cont in queue.async { cont.resume(returning: work()) } }
     }
+
+    // MARK: 對外 API
+
+    func model(for p: Person, pick: Pick) async -> ChartModel? {
+        await run {
+            let c = self._chart(p)
+            guard let h = self._horo(p, pick) else { return nil }
+            return ChartModel(chart: c, horo: h)
+        }
+    }
+
+    func chart(for p: Person) async -> Chart { await run { self._chart(p) } }
+
+    /// 開 app 時把所有人的命盤先算好
+    func warm(_ people: [Person], pick: Pick) async {
+        await run { for p in people { _ = self._chart(p); _ = self._horo(p, pick) } }
+    }
+
+    func lunarToSolar(_ y: Int, _ m: Int, _ d: Int, leap: Bool = false) -> String { queue.sync { _call("zwLunarToSolar", [y, m, d, leap]) } }
 
     func solarToLunar(_ solar: String) -> LunarDate {
-        decode(call("zwSolarToLunar", [solar]))
+        queue.sync { try! JSONDecoder().decode(LunarDate.self, from: Data(_call("zwSolarToLunar", [solar]).utf8)) }
+    }
+}
+
+/// 一張盤畫面需要的所有資料，背景算好再交給畫面
+struct ChartModel {
+    let chart: Chart
+    let horo: Horoscope
+    let selfs: [(out: [String: Mutagen], into: [String: Mutagen])]
+    let flying: [[(star: String, m: Mutagen, to: Int?)]]
+    let yearlyAges: [[Int]]
+
+    init(chart: Chart, horo: Horoscope) {
+        self.chart = chart
+        self.horo = horo
+        selfs = (0..<12).map { ZW.selfTransforms(chart, $0) }
+        flying = (0..<12).map { ZW.flying(chart, $0) }
+        yearlyAges = (0..<12).map { ZW.yearlyAges(chart, $0) }
     }
 }

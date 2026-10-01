@@ -55,11 +55,11 @@ enum Snapshot {
 struct RootView: View {
     @EnvironmentObject var store: Store
     @State private var route: Route? = .home
-    @State private var search = ""
+    @State private var creating = false
 
     var body: some View {
         NavigationSplitView {
-            Sidebar(route: $route, search: $search)
+            Sidebar(route: $route, onNew: { creating = true })
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
         } detail: {
             switch route {
@@ -67,13 +67,16 @@ struct RootView: View {
                 if let p = store.people.first(where: { $0.id == id }) {
                     ChartScreen(person: p).id(id)
                 } else {
-                    HomeView(route: $route)
+                    HomeView(route: $route, onNew: { creating = true })
                 }
             default:
-                HomeView(route: $route)
+                HomeView(route: $route, onNew: { creating = true })
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .newChart)) { _ in route = .home }
+        .sheet(isPresented: $creating) {
+            NewChartSheet { p in route = .person(p.id) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .newChart)) { _ in creating = true }
         .onAppear(perform: applyDebugEnv)
     }
 
@@ -82,5 +85,6 @@ struct RootView: View {
         let env = ProcessInfo.processInfo.environment
         if let t = env["ZIWEI_THEME"], let a = Appearance(rawValue: t) { store.appearance = a }
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
+        if env["ZIWEI_NEW"] != nil { creating = true }
     }
 }
