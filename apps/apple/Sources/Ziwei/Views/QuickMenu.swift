@@ -103,7 +103,7 @@ struct PillarSearchPage: View {
                         results = Bazi.search(pillars)
                         withAnimation(Motion.base) { searched = true }
                     }
-                    .buttonStyle(.borderedProminent).controlSize(.large)
+                    .buttonStyle(ZPrimaryButton())
                     .keyboardShortcut(.defaultAction)
                 }
                 .padding(.vertical, 16)

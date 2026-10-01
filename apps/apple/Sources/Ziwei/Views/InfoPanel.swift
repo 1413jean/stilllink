@@ -73,7 +73,7 @@ struct InfoPanel: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("紫占或反查產生的命盤，不會自動存檔。").font(Font.zCallout).foregroundStyle(Color.zText3)
                             Button("存入命盤") { withAnimation(Motion.base) { store.add(person) } }
-                                .buttonStyle(.borderedProminent)
+                                .buttonStyle(ZPrimaryButton(small: true))
                         }
                     }
                 } else if isNow {
@@ -101,7 +101,7 @@ struct InfoPanel: View {
                             HStack {
                                 Spacer()
                                 Button("新增備註", action: addNote)
-                                    .buttonStyle(.borderedProminent).tint(Color.zAccent).controlSize(.small)
+                                    .buttonStyle(ZPrimaryButton(small: true))
                             }
                         }
                         ForEach(current.notes.reversed()) { n in

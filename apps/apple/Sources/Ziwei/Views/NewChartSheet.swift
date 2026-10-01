@@ -21,7 +21,13 @@ struct NewChartSheet: View {
     @State private var region: PlaceRegion = Places.taiwan
     @State private var city: PlaceCity? = Places.taiwan.cities.first
     @State private var loaded = false
+    @State private var placeQuery = ""
     @FocusState private var nameFocused: Bool
+    @State private var addingGroup = false
+    @State private var newGroup = ""
+    @State private var extraGroups: [String] = []
+    @FocusState private var groupFocused: Bool
+    private static let addGroupLabel = "＋ 新增分組…"
 
     private let controlWidth: CGFloat = 340
     private var canSubmit: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -44,8 +50,27 @@ struct NewChartSheet: View {
                     row("性別", "影響大限順逆") {
                         ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
                     }
-                    row("分組", "顯示在側欄的資料夾", last: true) {
-                        ZMenuField(options: groupOptions, selection: $group)
+                    row("分組", "顯示在側欄的資料夾，可自己新增", last: true) {
+                        if addingGroup {
+                            HStack(spacing: 8) {
+                                TextField("新分組名稱，例如：VIP", text: $newGroup).textFieldStyle(.plain)
+                                    .focused($groupFocused)
+                                    .onSubmit(commitGroup)
+                                    .inputBox()
+                                Button("完成", action: commitGroup).buttonStyle(ZSecondaryButton())
+                                    .disabled(newGroup.trimmingCharacters(in: .whitespaces).isEmpty)
+                            }
+                            .transition(.opacity)
+                        } else {
+                            ZMenuField(options: groupOptions + [Self.addGroupLabel], selection: Binding(
+                                get: { group },
+                                set: { v in
+                                    if v == Self.addGroupLabel {
+                                        withAnimation(Motion.base) { addingGroup = true }
+                                        DispatchQueue.main.async { groupFocused = true }
+                                    } else { group = v }
+                                }))
+                        }
                     }
 
                     sectionTitle("出生時間")
@@ -89,13 +114,37 @@ struct NewChartSheet: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("用經緯度換算真太陽時。上下捲動選擇國家／地區與城市。")
                             .font(Font.zCallout).foregroundStyle(Color.zText3)
-                        HStack(spacing: 10) {
-                            ZColumnList(items: Places.all, id: \.id, label: \.name, selected: region.id) { r in
-                                region = r
-                                city = r.cities.first
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass").font(Font.zIcon).foregroundStyle(Color.zText3)
+                            TextField("搜尋國家或城市，例如：高雄、東京、New York", text: $placeQuery).textFieldStyle(.plain)
+                            if !placeQuery.isEmpty {
+                                Button { placeQuery = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3) }
+                                    .buttonStyle(.plain)
                             }
-                            .frame(width: 220)
-                            ZColumnList(items: region.cities, id: \.id, label: \.name, selected: city?.id) { c in city = c }
+                        }
+                        .inputBox()
+                        Group {
+                            if placeHits.isEmpty && !placeQuery.isEmpty {
+                                Text("找不到「\(placeQuery)」，試試其他寫法或改用下方清單。")
+                                    .font(Font.zCallout).foregroundStyle(Color.zText3)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background(RoundedRectangle(cornerRadius: 9).fill(Color.zCard))
+                                    .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
+                            } else if !placeQuery.isEmpty {
+                                ZColumnList(items: placeHits, id: \.city.id, label: { "\($0.region.name) · \($0.city.name)" }, selected: city?.id) { h in
+                                    region = h.region; city = h.city
+                                    placeQuery = ""
+                                }
+                            } else {
+                                HStack(spacing: 10) {
+                                    ZColumnList(items: Places.all, id: \.id, label: \.name, selected: region.id) { r in
+                                        region = r
+                                        city = r.cities.first
+                                    }
+                                    .frame(width: 220)
+                                    ZColumnList(items: region.cities, id: \.id, label: \.name, selected: city?.id) { c in city = c }
+                                }
+                            }
                         }
                         .frame(height: 220)
                         if let city {
@@ -120,11 +169,10 @@ struct NewChartSheet: View {
 
             HStack(spacing: 10) {
                 Spacer()
-                Button("取消", action: onClose).controlSize(.large)
+                Button("取消", action: onClose).buttonStyle(ZSecondaryButton())
                 Button(editing == nil ? "排盤" : "儲存", action: submit)
                     .keyboardShortcut(.defaultAction)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .buttonStyle(ZPrimaryButton())
                     .disabled(!canSubmit)
             }
             .padding(.horizontal, 32)
@@ -189,10 +237,35 @@ struct NewChartSheet: View {
 
     // MARK: 資料
 
+    struct PlaceHit: Hashable { let region: PlaceRegion; let city: PlaceCity }
+
+    /// 出生地搜尋：比對國家名、城市名、時區（不分大小寫）
+    private var placeHits: [PlaceHit] {
+        let q = placeQuery.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return [] }
+        var out: [PlaceHit] = []
+        for r in Places.all {
+            let regionHit = r.name.lowercased().contains(q)
+            for c in r.cities where regionHit || c.name.lowercased().contains(q) || c.tz.lowercased().contains(q) {
+                out.append(PlaceHit(region: r, city: c))
+            }
+        }
+        return Array(out.prefix(80))
+    }
+
     private var groupOptions: [String] {
         var g = ["客人", "家人", "朋友"]
         for p in store.people where !g.contains(p.group) { g.append(p.group) }
+        for x in extraGroups where !g.contains(x) { g.append(x) }
+        if !g.contains(group) { g.append(group) }
         return g
+    }
+
+    private func commitGroup() {
+        let t = newGroup.trimmingCharacters(in: .whitespaces)
+        if !t.isEmpty { extraGroups.append(t); group = t }
+        newGroup = ""
+        withAnimation(Motion.base) { addingGroup = false }
     }
 
     private var place: BirthPlace? {

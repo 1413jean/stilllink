@@ -46,6 +46,14 @@
 - 宮名用「交友宮」（不用僕役），在 `bridge.js` 統一轉換。
 - 四柱依五行上色（`ZW.Wuxing.color`）。
 
+## 控制項（`Controls.swift`）
+- 輸入框 `inputBox()`、分段 `ZSegmented`、選單 `ZMenuField` 的高度一律 38。
+- 按鈕有兩種，都是 40 高、圓角 10、字級 `zBodyStrong`：
+  - `ZPrimaryButton`：強調色實心，用在主要動作。
+  - `ZSecondaryButton`：卡片底色加細框，用在取消、完成這類次要動作。
+  - 兩種都有 `small: true` 版本，32 高，放在卡片裡用。
+- 不使用系統的 `.borderedProminent`。
+
 ## 版面（照 Claude／Codex）
 - 左邊是自訂側欄，依序是新增命盤、搜尋、釘選，下面的分組做成可收合的資料夾；左下角是帳號列。
 - 中間是命盤，大小接近文墨天機的比例，上限 700，下面接運限表。捲動區佔滿整個寬度，捲軸貼在視窗最右邊。

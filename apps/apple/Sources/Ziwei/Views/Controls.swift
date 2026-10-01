@@ -98,3 +98,41 @@ struct ZColumnList<Item: Hashable, ID: Hashable>: View {
         .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
     }
 }
+
+// MARK: 按鈕（設計系統）：高度 40、圓角 10、字 13 medium；small 為 32 高
+
+/// 主要按鈕：強調色實心
+struct ZPrimaryButton: ButtonStyle {
+    var small = false
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(small ? Font.zCalloutStrong : Font.zBodyStrong)
+            .foregroundStyle(enabled ? Color.zOnColor : Color.zText3)
+            .padding(.horizontal, small ? 14 : 22)
+            .frame(minWidth: small ? 0 : 88, minHeight: small ? 32 : 40)
+            .background(RoundedRectangle(cornerRadius: small ? 8 : 10).fill(enabled ? Color.zAccent : Color.zHover))
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .scaleEffect(configuration.isPressed && !Motion.reduce ? 0.97 : 1)
+            .animation(Motion.fast, value: configuration.isPressed)
+    }
+}
+
+/// 次要按鈕：淺底細框
+struct ZSecondaryButton: ButtonStyle {
+    var small = false
+    @State private var hover = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(small ? Font.zCalloutStrong : Font.zBodyStrong)
+            .foregroundStyle(Color.zText)
+            .padding(.horizontal, small ? 14 : 22)
+            .frame(minWidth: small ? 0 : 88, minHeight: small ? 32 : 40)
+            .background(RoundedRectangle(cornerRadius: small ? 8 : 10).fill(hover ? Color.zHover : Color.zCard))
+            .overlay(RoundedRectangle(cornerRadius: small ? 8 : 10).stroke(Color.zLine))
+            .scaleEffect(configuration.isPressed && !Motion.reduce ? 0.97 : 1)
+            .animation(Motion.fast, value: configuration.isPressed)
+            .animation(Motion.fast, value: hover)
+            .onHover { hover = $0 }
+    }
+}
