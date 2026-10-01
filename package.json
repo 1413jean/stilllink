@@ -1,1 +1,0 @@
-{ "name": "ziwei-app", "private": true, "scripts": { "dev": "pnpm -F desktop dev", "build": "pnpm -F desktop build" } }
