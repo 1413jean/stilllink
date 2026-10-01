@@ -153,7 +153,7 @@ enum TempChart {
             var cal = Calendar(identifier: .gregorian); cal.timeZone = .current
             let d = cal.date(from: DateComponents(year: Int.random(in: 1940...2015), month: Int.random(in: 1...12),
                                                   day: Int.random(in: 1...28), hour: Int.random(in: 0...23), minute: Int.random(in: 0...59)))!
-            p = make(d, g, name: "紫占 · 亂序"); level = 2
+            p = make(d, g, name: "匿名"); level = 2
         }
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: level))
     }
@@ -172,7 +172,7 @@ enum TempChart {
         guard let s = Lunar.toSolar(year, month, day) else { return }
         var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Asia/Taipei")!
         let date = cal.date(from: DateComponents(year: s.0, month: s.1, day: s.2, hour: branch == 0 ? 0 : branch * 2, minute: branch == 0 ? 30 : 0))!
-        let p = make(date, g, name: "報數 \(n)")
+        let p = make(date, g, name: "匿名")
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: 2))
         Toast.show("報數 \(n) → 農曆\(year)年\(ZW.lunarMonths[month - 1])\(ZW.lunarDays[day - 1]) \(ZW.branches[branch])時 · \(g.rawValue)")
     }
