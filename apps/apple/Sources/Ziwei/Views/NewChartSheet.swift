@@ -23,6 +23,8 @@ struct NewChartSheet: View {
     @State private var region: PlaceRegion = Places.taiwan
     @State private var city: PlaceCity? = Places.taiwan.cities.first
     @State private var loaded = false
+    @State private var saved = false        // 已按儲存／排盤
+    @State private var discarded = false    // 按了取消（不要自動儲存）
     @State private var regionQuery = ""
     @State private var cityQuery = ""
     @FocusState private var nameFocused: Bool
@@ -59,8 +61,9 @@ struct NewChartSheet: View {
                                 TextField("新分組名稱，例如：VIP", text: $newGroup).textFieldStyle(.plain)
                                     .focused($groupFocused)
                                     .onSubmit(commitGroup)
+                                    .onChange(of: groupFocused) { _, f in if !f && addingGroup { commitGroup() } }
                                     .inputBox()
-                                Button("完成", action: commitGroup).buttonStyle(ZSecondaryButton())
+                                Button("完成", action: commitGroup).buttonStyle(ZPrimaryButton())
                             }
                             .transition(.opacity)
                         } else {
@@ -163,7 +166,7 @@ struct NewChartSheet: View {
 
             HStack(spacing: 10) {
                 Spacer()
-                Button("取消", action: onClose).buttonStyle(ZSecondaryButton())
+                Button("取消") { discarded = true; onClose() }.buttonStyle(ZSecondaryButton())
                 Button(editing == nil ? "排盤" : "儲存", action: submit)
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(ZPrimaryButton())
@@ -177,6 +180,7 @@ struct NewChartSheet: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.zBg)
         .navigationTitle("")
+        .onDisappear(perform: autosave)
         .onAppear {
             load()
             if editing == nil, let g = defaultGroup { group = g }
@@ -304,13 +308,30 @@ struct NewChartSheet: View {
         return "\(r.clock) · \(sc)"
     }
 
+    /// 離開頁面時：編輯中的命盤沒按儲存也自動存（按取消除外）
+    private func autosave() {
+        guard editing != nil, !saved, !discarded, canSubmit else { return }
+        if addingGroup { commitGroup() }
+        writeEdit()
+        Toast.show("已自動儲存")
+    }
+
+    private func writeEdit() {
+        guard var p = editing else { return }
+        let r = resolved()
+        p.name = name.trimmingCharacters(in: .whitespaces); p.gender = gender; p.group = group
+        p.solar = r.solar; p.hour = r.hour; p.clock = r.clock; p.trueSolar = r.trueSolar; p.place = place
+        store.update(p)
+        if p.id == store.selfID { store.userName = p.name }
+    }
+
     private func submit() {
         guard canSubmit else { return }
+        if addingGroup { commitGroup() }
+        saved = true
         let r = resolved()
-        if var p = editing {
-            p.name = name.trimmingCharacters(in: .whitespaces); p.gender = gender; p.group = group
-            p.solar = r.solar; p.hour = r.hour; p.clock = r.clock; p.trueSolar = r.trueSolar; p.place = place
-            store.update(p)
+        if let p = editing {
+            writeEdit()
             onClose()
             onCreated(p)
             return
@@ -333,22 +354,24 @@ private struct NumberField: View {
     let range: ClosedRange<Int>
     let width: CGFloat
     var pad = false
-    @State private var text = ""
+    @State private var draft: String?      // 只有輸入中才有值
+    @FocusState private var focused: Bool
 
     var body: some View {
-        TextField("", text: $text)
+        TextField("", text: Binding(
+            get: { draft ?? format(value) },
+            set: { t in
+                let digits = String(t.filter(\.isNumber).prefix(String(range.upperBound).count))
+                draft = digits
+                if let v = Int(digits), range.contains(v) { value = v }
+            }))
             .textFieldStyle(.plain)
             .multilineTextAlignment(.center)
             .font(Font.zInput.monospacedDigit())
             .frame(width: width)
-            .onAppear { text = format(value) }
-            .onChange(of: value) { _, v in if Int(text) != v { text = format(v) } }
-            .onChange(of: text) { _, t in
-                let digits = t.filter(\.isNumber)
-                if digits != t { text = digits }
-                if let v = Int(digits), range.contains(v) { value = v }
-            }
-            .onSubmit { text = format(value) }
+            .focused($focused)
+            .onChange(of: focused) { _, f in if !f { draft = nil } }
+            .onSubmit { draft = nil }
     }
 
     private func format(_ v: Int) -> String { pad ? String(format: "%02d", v) : String(v) }

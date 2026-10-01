@@ -178,6 +178,7 @@ struct RootView: View {
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
         if env["ZIWEI_NEW"] != nil { go(.new) }
         if env["ZIWEI_SETTINGS"] != nil { go(.settings) }
+        if let name = env["ZIWEI_EDIT"], let p = store.people.first(where: { $0.name == name }) { go(.edit(p.id)) }
         if let t = env["ZIWEI_NEW_AFTER"].flatMap(Double.init) {
             DispatchQueue.main.asyncAfter(deadline: .now() + t) { go(.new) }
         }

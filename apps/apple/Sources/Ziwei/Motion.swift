@@ -104,7 +104,7 @@ struct ToastHost: View {
                     .transition(.opacity.combined(with: .offset(y: 12)))
             }
         }
-        .padding(.bottom, 96)
+        .padding(.bottom, 150)
         .allowsHitTesting(false)
         .onReceive(NotificationCenter.default.publisher(for: .toast)) { n in
             guard let t = n.object as? String else { return }

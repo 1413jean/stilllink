@@ -71,6 +71,11 @@ struct Sidebar: View {
                                     if collapsed.contains(g) { collapsed.remove(g) } else { collapsed.insert(g) }
                                 }
                             }
+                            .draggable("g:" + g) {
+                                Label(g, systemImage: "folder").font(Font.zBody).padding(.horizontal, 10).frame(height: 28)
+                                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
+                            }
+                            .dropDestination(for: String.self) { items, _ in handleDrop(items, onFolder: g) }
                             if !collapsed.contains(g) {
                                 ForEach(list) { p in
                                     personRow(p, indent: true)
@@ -109,10 +114,33 @@ struct Sidebar: View {
         )
     }
 
+    /// 資料夾順序：先照使用者拖曳排好的順序，新出現的分組排在後面
     private var groupNames: [String] {
-        var order: [String] = []
-        for p in store.people where !p.pinned && p.id != store.selfID && !order.contains(p.group) { order.append(p.group) }
-        return order
+        var seen: [String] = []
+        for p in store.people where !p.pinned && p.id != store.selfID && !seen.contains(p.group) { seen.append(p.group) }
+        let saved = store.groupOrder.filter(seen.contains)
+        return saved + seen.filter { !saved.contains($0) }
+    }
+
+    /// 拖曳內容：命盤用 "p:<id>"、資料夾用 "g:<名稱>"
+    private func handleDrop(_ items: [String], onPerson target: Person) -> Bool {
+        guard let it = items.first, it.hasPrefix("p:"), let id = UUID(uuidString: String(it.dropFirst(2))) else { return false }
+        withAnimation(Motion.base) { store.movePerson(id, before: target.id) }
+        return true
+    }
+
+    private func handleDrop(_ items: [String], onFolder g: String) -> Bool {
+        guard let it = items.first else { return false }
+        if it.hasPrefix("p:"), let id = UUID(uuidString: String(it.dropFirst(2))) {
+            withAnimation(Motion.base) { store.movePerson(id, toGroup: g) }
+            Toast.show("已移到「\(g)」")
+            return true
+        }
+        if it.hasPrefix("g:") {
+            withAnimation(Motion.base) { store.moveGroup(String(it.dropFirst(2)), before: g, current: groupNames) }
+            return true
+        }
+        return false
     }
 
     private func matches(_ p: Person) -> Bool { q.isEmpty || p.name.contains(q) }
@@ -138,6 +166,11 @@ struct Sidebar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(RowButtonStyle(selected: on))
+        .draggable("p:" + p.id.uuidString) {
+            Text(p.name).font(Font.zBody).padding(.horizontal, 10).frame(height: 28)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
+        }
+        .dropDestination(for: String.self) { items, _ in handleDrop(items, onPerson: p) }
         .contextMenu {
             Button("重新命名…") { newName = p.name; renaming = p }
             Button(p.pinned ? "取消釘選" : "釘選") { var q = p; q.pinned.toggle(); store.update(q) }
@@ -276,8 +309,9 @@ private struct AccountBar: View {
                     .keyboardShortcut(",")
             } label: {
                 HStack(spacing: 8) {
-                    Text(String(store.userName.prefix(1)).uppercased())
-                        .font(Font.zMicroStrong)
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.zText3)
                         .frame(width: 20, height: 20)
                         .background(Circle().fill(Color.zSel))
                     Text(store.userName).font(Font.zCallout).foregroundStyle(Color.zText).lineLimit(1)

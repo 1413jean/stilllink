@@ -41,8 +41,9 @@ struct InfoPanel: View {
                 card("命主資料", action: isNow ? nil : ("square.and.pencil", { NotificationCenter.default.post(name: .editChart, object: person.id) })) {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(spacing: 10) {
-                            Text(String(current.name.prefix(1)))
-                                .font(.zHeadline)
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color.zText3)
                                 .frame(width: 34, height: 34)
                                 .background(Circle().fill(Color.zSel))
                             VStack(alignment: .leading, spacing: 1) {

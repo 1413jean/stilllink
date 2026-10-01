@@ -89,8 +89,10 @@ final class Store: ObservableObject {
     }
 
     private let url: URL = {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Ziwei", isDirectory: true)
+        // ZIWEI_DATA_DIR：驗證／測試用的另一份資料夾，不會動到正式資料
+        let dir = ProcessInfo.processInfo.environment["ZIWEI_DATA_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Ziwei", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("people.json")
     }()
@@ -148,6 +150,44 @@ final class Store: ObservableObject {
     func add(_ p: Person) { people.insert(p, at: 0) }
     func update(_ p: Person) { if let i = people.firstIndex(where: { $0.id == p.id }) { people[i] = p } }
     func delete(_ id: UUID) { people.removeAll { $0.id == id } }
+
+    // MARK: 側欄排序（拖曳）
+
+    /// 資料夾順序（存在偏好設定）
+    @AppStorage("groupOrder") private var groupOrderRaw: String = ""
+    var groupOrder: [String] {
+        get { groupOrderRaw.isEmpty ? [] : groupOrderRaw.components(separatedBy: "\u{1F}") }
+        set { groupOrderRaw = newValue.joined(separator: "\u{1F}"); objectWillChange.send() }
+    }
+
+    /// 把命盤拖到另一張命盤前面：順序跟著變，分組／釘選也跟目標一樣
+    func movePerson(_ id: UUID, before target: UUID) {
+        guard id != target, let from = people.firstIndex(where: { $0.id == id }),
+              let t = people.first(where: { $0.id == target }) else { return }
+        var p = people.remove(at: from)
+        p.group = t.group
+        p.pinned = t.pinned
+        let to = people.firstIndex(where: { $0.id == target }) ?? people.count
+        people.insert(p, at: to)
+    }
+
+    /// 把命盤拖到資料夾上：移進這個分組（放在最後）
+    func movePerson(_ id: UUID, toGroup g: String) {
+        guard let from = people.firstIndex(where: { $0.id == id }) else { return }
+        var p = people.remove(at: from)
+        p.group = g
+        p.pinned = false
+        people.append(p)
+    }
+
+    /// 資料夾拖到另一個資料夾前面
+    func moveGroup(_ g: String, before target: String, current: [String]) {
+        guard g != target else { return }
+        var order = current
+        order.removeAll { $0 == g }
+        order.insert(g, at: order.firstIndex(of: target) ?? order.count)
+        groupOrder = order
+    }
 
     static let samples: [Person] = [
         Person(name: "Jean", gender: .female, solar: "1990-6-15", hour: 6, group: "自己", pinned: true),
