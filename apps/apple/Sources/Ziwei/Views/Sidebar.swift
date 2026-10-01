@@ -20,6 +20,17 @@ struct Sidebar: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
                     NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { withAnimation(Motion.snap) { route = .home } }
+                    if store.showSelfInSidebar {
+                        NavRow(icon: "person.crop.circle", title: store.me == nil ? "我（尚未設定）" : "我 · \(store.userName)",
+                               selected: store.me.map { route == .person($0.id) } ?? false) {
+                            if let me = store.me { route = .person(me.id) }
+                            else { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
+                        }
+                        .contextMenu {
+                            Button("從側欄隱藏") { store.showSelfInSidebar = false; Toast.show("已隱藏，可在設定 → 個人檔案重新打開") }
+                            Button("個人檔案…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
+                        }
+                    }
                     NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", selected: route == .new, action: onNew)
                     if searching {
                         HStack(spacing: 8) {
@@ -44,7 +55,7 @@ struct Sidebar: View {
                         }
                     }
 
-                    let pinned = store.people.filter { $0.pinned && matches($0) }
+                    let pinned = store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID }
                     if !pinned.isEmpty {
                         SectionLabel("釘選").padding(.top, 18)
                         ForEach(pinned) { p in personRow(p, indent: false) }
@@ -52,7 +63,7 @@ struct Sidebar: View {
 
                     SectionLabel("命盤", action: onNew).padding(.top, 18)
                     ForEach(groupNames, id: \.self) { g in
-                        let list = store.people.filter { !$0.pinned && $0.group == g && matches($0) }
+                        let list = store.people.filter { !$0.pinned && $0.group == g && matches($0) && $0.id != store.selfID }
                         if !list.isEmpty {
                             FolderRow(name: g, count: list.count, open: !collapsed.contains(g)) {
                                 withAnimation(Motion.base) {
@@ -99,7 +110,7 @@ struct Sidebar: View {
 
     private var groupNames: [String] {
         var order: [String] = []
-        for p in store.people where !p.pinned && !order.contains(p.group) { order.append(p.group) }
+        for p in store.people where !p.pinned && p.id != store.selfID && !order.contains(p.group) { order.append(p.group) }
         return order
     }
 
@@ -230,8 +241,6 @@ private struct SectionLabel: View {
 /// 左下角帳號列：點開是外觀、登入與設定
 private struct AccountBar: View {
     @EnvironmentObject var store: Store
-    @State private var editing = false
-    @State private var draft = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -245,7 +254,7 @@ private struct AccountBar: View {
                 Button { } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
                 Button { } label: { Label("使用 Google 登入", systemImage: "g.circle") }
                 Divider()
-                Button("修改名稱…") { draft = store.userName; editing = true }
+                Button("個人檔案…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
                 Button("設定…") { NotificationCenter.default.post(name: .openSettings, object: nil) }
                     .keyboardShortcut(",")
             } label: {
@@ -267,16 +276,6 @@ private struct AccountBar: View {
             .menuIndicator(.hidden)
             .padding(.horizontal, 14)
             .frame(height: 44)
-        }
-        .alert("修改名稱", isPresented: $editing) {
-            TextField("你的名字", text: $draft)
-            Button("取消", role: .cancel) {}
-            Button("儲存") {
-                let t = draft.trimmingCharacters(in: .whitespaces)
-                if !t.isEmpty { store.userName = t; Toast.show("已改名為「\(t)」") }
-            }
-        } message: {
-            Text("顯示在左下角的名字")
         }
     }
 }

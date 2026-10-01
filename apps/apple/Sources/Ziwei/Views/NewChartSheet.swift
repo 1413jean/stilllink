@@ -4,6 +4,7 @@ import SwiftUI
 struct NewChartSheet: View {
     @EnvironmentObject var store: Store
     var editing: Person? = nil      // 有值＝編輯既有命盤
+    var asSelf = false              // 填自己的命盤（個人檔案）
     var onClose: () -> Void
     var onCreated: (Person) -> Void
 
@@ -35,7 +36,7 @@ struct NewChartSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(editing == nil ? "新增命盤" : "編輯命主資料").font(.zTitle).foregroundStyle(Color.zText)
+            Text(asSelf ? "我的命盤" : editing == nil ? "新增命盤" : "編輯命主資料").font(.zTitle).foregroundStyle(Color.zText)
                 .padding(.horizontal, 32)
                 .padding(.top, 20)
                 .padding(.bottom, 4)
@@ -175,7 +176,11 @@ struct NewChartSheet: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.zBg)
         .navigationTitle("")
-        .onAppear { load(); nameFocused = true }
+        .onAppear {
+            load()
+            if asSelf && name.isEmpty { name = store.userName }
+            nameFocused = true
+        }
     }
 
     /// 編輯時把原本的資料帶進表單
@@ -309,8 +314,12 @@ struct NewChartSheet: View {
             return
         }
         let p = Person(name: name.trimmingCharacters(in: .whitespaces), gender: gender, solar: r.solar, hour: r.hour,
-                       group: group, clock: r.clock, trueSolar: r.trueSolar, place: place)
+                       group: asSelf ? "自己" : group, clock: r.clock, trueSolar: r.trueSolar, place: place)
         store.add(p)
+        if asSelf {
+            store.selfIDString = p.id.uuidString
+            store.userName = p.name
+        }
         onClose()
         onCreated(p)
     }

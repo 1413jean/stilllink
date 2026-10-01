@@ -4,13 +4,20 @@ import SwiftUI
 struct SettingsPage: View {
     @EnvironmentObject var store: Store
     var onClose: () -> Void
-    @State private var section: Section = .chart
+    @State private var section: Section
+    @State private var nameDraft = ""
+
+    init(initial: Section = .profile, onClose: @escaping () -> Void) {
+        self.onClose = onClose
+        _section = State(initialValue: initial)
+    }
 
     enum Section: String, CaseIterable, Identifiable {
-        case chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀"
+        case profile = "個人檔案", chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀"
         var id: String { rawValue }
         var icon: String {
             switch self {
+            case .profile: "person.crop.circle"
             case .chart: "square.grid.3x3"
             case .mutagen: "sparkle"
             case .display: "eye"
@@ -68,6 +75,33 @@ struct SettingsPage: View {
     private var content: some View {
         let s = $store.settings
         switch section {
+        case .profile:
+            title("個人檔案")
+            row("名字", "顯示在左下角，也是你自己命盤的名字") {
+                TextField("你的名字", text: $nameDraft)
+                    .textFieldStyle(.plain)
+                    .inputBox()
+                    .onAppear { nameDraft = store.userName }
+                    .onSubmit(saveName)
+            }
+            .onDisappear(perform: saveName)
+            if let me = store.me {
+                row("我的命盤", "\(me.gender.rawValue) · \(me.clock ?? me.solar)\(me.place.map { " · " + $0.name } ?? "")") {
+                    HStack(spacing: 8) {
+                        Spacer()
+                        Button("查看") { NotificationCenter.default.post(name: .openSelf, object: nil) }
+                            .buttonStyle(ZSecondaryButton(small: true))
+                        Button("編輯生辰與出生地") { NotificationCenter.default.post(name: .editChart, object: me.id) }
+                            .buttonStyle(ZPrimaryButton(small: true))
+                    }
+                }
+            } else {
+                row("我的命盤", "填入自己的生辰八字與出生地，側欄會出現「我」可以直接點開") {
+                    HStack { Spacer(); Button("填寫我的生辰") { NotificationCenter.default.post(name: .newSelfChart, object: nil) }
+                        .buttonStyle(ZPrimaryButton(small: true)) }
+                }
+            }
+            toggle("在側欄顯示我的命盤", "關閉後側欄不會出現「我」", $store.showSelfInSidebar, last: true)
         case .chart:
             title("排盤")
             row("安星派別", "影響部分雜曜與流曜的安法") {
@@ -161,6 +195,11 @@ struct SettingsPage: View {
         }
         .padding(.vertical, 12)
         .overlay(alignment: .bottom) { if !last { Rectangle().fill(Color.zLine).frame(height: 0.5) } }
+    }
+
+    private func saveName() {
+        let t = nameDraft.trimmingCharacters(in: .whitespaces)
+        if !t.isEmpty && t != store.userName { store.renameUser(t); Toast.show("已改名為「\(t)」") }
     }
 
     private func cueBinding(_ e: Sound.Event) -> Binding<String> {

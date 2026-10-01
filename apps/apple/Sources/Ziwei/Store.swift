@@ -57,6 +57,19 @@ final class Store: ObservableObject {
     @AppStorage("appearance") var appearance: Appearance = .system
     /// 使用者（左下角帳號列）顯示的名字
     @AppStorage("userName") var userName: String = "Jean"
+    /// 自己的命盤（個人檔案）
+    @AppStorage("selfID") var selfIDString: String = ""
+    /// 側欄是否顯示「我」
+    @AppStorage("showSelfInSidebar") var showSelfInSidebar = true
+
+    var selfID: UUID? { UUID(uuidString: selfIDString) }
+    var me: Person? { selfID.flatMap { id in people.first { $0.id == id } } }
+
+    /// 改使用者名稱時，自己的命盤也一起改名
+    func renameUser(_ name: String) {
+        userName = name
+        if var p = me { p.name = name; update(p) }
+    }
     /// 命盤設定：變了就重新設定引擎、重算側欄
     @Published var settings: ZSettings = Store.loadSettings() {
         didSet {
@@ -91,6 +104,11 @@ final class Store: ObservableObject {
             people = Store.samples
         }
         refreshSoulStars()
+        // 舊資料：還沒設定自己的命盤，但有「自己」分組的命盤，就當成自己的
+        if selfID == nil, let mine = people.first(where: { $0.group == "自己" }) {
+            selfIDString = mine.id.uuidString
+            userName = mine.name
+        }
     }
 
     private func refreshSoulStars() {

@@ -2,9 +2,9 @@ import SwiftUI
 import AppKit
 
 enum Route: Hashable {
-    case home, person(UUID), new, edit(UUID), settings, pillars, temp(Person, Int)
+    case home, person(UUID), new, newSelf, edit(UUID), settings, pillars, temp(Person, Int)
     /// 新增、編輯、設定這類「頁面」（返回時不回到它們）
-    var isPage: Bool { switch self { case .new, .edit, .settings, .pillars: true; default: false } }
+    var isPage: Bool { switch self { case .new, .newSelf, .edit, .settings, .pillars: true; default: false } }
 }
 
 @main
@@ -41,6 +41,8 @@ extension Notification.Name {
     static let openSettings = Notification.Name("zw.openSettings")
     static let openPillars = Notification.Name("zw.openPillars")
     static let openTemp = Notification.Name("zw.openTemp")
+    static let newSelfChart = Notification.Name("zw.newSelfChart")
+    static let openSelf = Notification.Name("zw.openSelf")
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -78,6 +80,7 @@ struct RootView: View {
     @State private var history: [Route] = [.home]
     @State private var cursor = 0
     @State private var stepping = false
+    @State private var settingsSection: SettingsPage.Section = .profile
 
     var body: some View {
         NavigationSplitView {
@@ -97,8 +100,11 @@ struct RootView: View {
                 case .edit(let id):
                     NewChartSheet(editing: store.people.first { $0.id == id }, onClose: { goBack() }) { p in route = .person(p.id) }
                         .id(id)
+                case .newSelf:
+                    NewChartSheet(asSelf: true, onClose: { goBack() }) { p in route = .person(p.id) }
                 case .settings:
-                    SettingsPage(onClose: { goBack() })
+                    SettingsPage(initial: settingsSection, onClose: { goBack() })
+                        .id(settingsSection)
                 case .pillars:
                     PillarSearchPage(onClose: { goBack() })
                 case .temp(let p, let lv):
@@ -133,7 +139,12 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .editChart)) { n in
             if let id = n.object as? UUID { go(.edit(id)) }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { _ in go(.settings) }
+        .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { n in
+            settingsSection = (n.object as? SettingsPage.Section) ?? .profile
+            go(.settings)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .newSelfChart)) { _ in go(.newSelf) }
+        .onReceive(NotificationCenter.default.publisher(for: .openSelf)) { _ in if let me = store.me { route = .person(me.id) } }
         .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
         .onReceive(NotificationCenter.default.publisher(for: .openTemp)) { n in
             if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
