@@ -112,15 +112,15 @@ private struct AIComposer: View {
             TextField("問問這張盤…", text: $text, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...6)
-                .font(.system(size: 13.5))
+                .font(Font.zBody)
             HStack(spacing: 10) {
-                Image(systemName: "plus").font(.system(size: 13)).foregroundStyle(Color.zText2)
+                Image(systemName: "plus").font(Font.zBody).foregroundStyle(Color.zText2)
                 Label("AI 解盤 · 即將推出", systemImage: "sparkle")
-                    .font(.system(size: 11.5))
+                    .font(Font.zCaption)
                     .foregroundStyle(Color.zText3)
                 Spacer()
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
+                    .font(Font.zIconBold).foregroundStyle(Color.zOnColor)
                     .frame(width: 28, height: 28)
                     .background(Circle().fill(Color.zText3.opacity(0.45)))
                     .help("AI 解盤即將推出")
@@ -129,7 +129,7 @@ private struct AIComposer: View {
         .padding(.horizontal, 16).padding(.vertical, 12)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.zLine))
-        .shadow(color: .black.opacity(0.08), radius: 18, y: 6)
+        .shadow(color: Color.zShadow, radius: 18, y: 6)
     }
 }
 

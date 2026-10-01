@@ -57,8 +57,51 @@ extension ZW.Wuxing {
     }
 }
 
+extension Color {
+    /// 色塊上的文字（四化方塊、強調色按鈕）
+    static let zOnColor = Color.white
+    /// 浮層陰影
+    static let zShadow = Color.black.opacity(0.07)
+}
+
+// MARK: - 字級（全部 SF Pro；中文由系統自動以蘋方補字）
+
 extension Font {
-    static func serif(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
-        .custom("Songti TC", size: size).weight(weight)
-    }
+    static let zDisplay = Font.system(size: 32, weight: .medium)        // 首頁大標
+    static let zTitle = Font.system(size: 20, weight: .semibold)        // 彈窗標題
+    static let zHeadline = Font.system(size: 14, weight: .medium)       // 卡片內人名
+    static let zBody = Font.system(size: 13)                            // 內文、輸入框、側欄列
+    static let zBodyStrong = Font.system(size: 13, weight: .medium)
+    static let zCallout = Font.system(size: 12)                         // 次要內文、資料列
+    static let zCalloutStrong = Font.system(size: 12, weight: .medium)  // 卡片標題、表頭
+    static let zCaption = Font.system(size: 11)                         // 說明、標籤
+    static let zCaptionStrong = Font.system(size: 11, weight: .medium)
+    static let zMicro = Font.system(size: 10)                           // 時間戳、方位、計數
+    static let zMicroStrong = Font.system(size: 10, weight: .semibold)
+
+    static let zIcon = Font.system(size: 12)                            // 列表圖示
+    static let zIconBold = Font.system(size: 12, weight: .bold)         // 送出箭頭
+    static let zIconLarge = Font.system(size: 20, weight: .light)       // 空狀態圖示
+    static let zIconHero = Font.system(size: 28, weight: .light)        // 首頁星形
+}
+
+/// 命盤字級：跟著盤面大小縮放，fs 是宮位基準字級（主星大小）
+enum ChartType {
+    static func base(cellWidth cw: CGFloat) -> CGFloat { max(10, min(14, cw / 12.5)) }
+
+    static func star(_ fs: CGFloat) -> CGFloat { fs }                       // 主星、輔星
+    static func adj(_ fs: CGFloat) -> CGFloat { max(9, fs - 2) }            // 雜曜
+    static func meta(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.68) }        // 亮度、長生
+    static func tag(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.72) }         // 四化方塊、運限宮名、自化
+    static func gods(_ fs: CGFloat) -> CGFloat { fs * 0.74 }                // 博士／將前／歲前
+    static func ages(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.58) }        // 流年／小限歲數
+    static func range(_ fs: CGFloat) -> CGFloat { fs * 0.88 }               // 大限歲數
+    static func palace(_ fs: CGFloat) -> CGFloat { fs }                     // 宮名
+    static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.3 }               // 宮干支
+    static func centerTitle(_ fs: CGFloat) -> CGFloat { fs * 1.4 }
+    static func centerBody(_ fs: CGFloat) -> CGFloat { fs * 0.9 }
+    static func centerSmall(_ fs: CGFloat) -> CGFloat { fs * 0.75 }
+    static func pillar(_ fs: CGFloat) -> CGFloat { fs * 1.35 }
+
+    static func font(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .system(size: size, weight: weight) }
 }

@@ -12,15 +12,15 @@ struct HomeView: View {
             Spacer()
             HStack(spacing: 12) {
                 Image(systemName: "sparkle")
-                    .font(.system(size: 30, weight: .light))
+                    .font(Font.zIconHero)
                     .foregroundStyle(Color.zAccent)
-                (Text("今天想幫誰排盤").font(.serif(36, .medium)) + Text("?").font(.system(size: 32, weight: .light)))
+                Text("今天想幫誰排盤？").font(.zDisplay)
             }
 
             Button(action: onNew) {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("輸入姓名、生辰與出生地…")
-                        .font(.system(size: 15))
+                        .font(Font.zBody)
                         .foregroundStyle(Color.zText3)
                     HStack(spacing: 8) {
                         chip("calendar", "國曆／農曆")
@@ -28,8 +28,8 @@ struct HomeView: View {
                         chip("mappin.and.ellipse", "出生地・真太陽時")
                         Spacer()
                         Image(systemName: "arrow.up")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
+                            .font(Font.zIconBold)
+                            .foregroundStyle(Color.zOnColor)
                             .frame(width: 30, height: 30)
                             .background(Circle().fill(Color.zAccent))
                     }
@@ -38,7 +38,7 @@ struct HomeView: View {
                 .frame(maxWidth: 660, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(hover ? Color.zGrid : Color.zLine))
-                .shadow(color: .black.opacity(hover ? 0.07 : 0.04), radius: 14, y: 4)
+                .shadow(color: Color.zShadow.opacity(hover ? 1 : 0.6), radius: 14, y: 4)
                 .contentShape(RoundedRectangle(cornerRadius: 18))
             }
             .buttonStyle(.plain)
@@ -50,7 +50,7 @@ struct HomeView: View {
                     ForEach(recent) { p in
                         Button { route = .person(p.id) } label: {
                             Label(p.name, systemImage: "person.crop.circle")
-                                .font(.system(size: 12.5))
+                                .font(Font.zCallout)
                                 .padding(.horizontal, 11)
                                 .padding(.vertical, 6)
                                 .background(RoundedRectangle(cornerRadius: 9).fill(Color.zCard))
@@ -71,7 +71,7 @@ struct HomeView: View {
 
     private func chip(_ icon: String, _ text: String) -> some View {
         Label(text, systemImage: icon)
-            .font(.system(size: 12))
+            .font(Font.zCallout)
             .foregroundStyle(Color.zText2)
             .padding(.horizontal, 9).padding(.vertical, 5)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.zHover))

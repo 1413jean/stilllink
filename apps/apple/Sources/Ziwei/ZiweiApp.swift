@@ -13,6 +13,7 @@ struct ZiweiApp: App {
             RootView()
                 .environmentObject(store)
                 .preferredColorScheme(store.appearance.scheme)
+                .tint(Color.zAccent)
                 .frame(minWidth: 900, minHeight: 640)
         }
         .defaultSize(width: 1440, height: 920)

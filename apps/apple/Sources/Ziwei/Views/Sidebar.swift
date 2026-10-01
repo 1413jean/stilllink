@@ -19,10 +19,10 @@ struct Sidebar: View {
                     NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", action: onNew)
                     if searching {
                         HStack(spacing: 8) {
-                            Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundStyle(Color.zText2).frame(width: 16)
+                            Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
                             TextField("搜尋姓名", text: $search)
                                 .textFieldStyle(.plain)
-                                .font(.system(size: 13))
+                                .font(Font.zBody)
                                 .focused($searchFocused)
                                 .onExitCommand { searching = false; search = "" }
                             Button { searching = false; search = "" } label: {
@@ -90,10 +90,10 @@ struct Sidebar: View {
                     .stroke(Color.zText3, lineWidth: 1)
                     .frame(width: 6, height: 6)
                     .padding(.leading, indent ? 18 : 2)
-                Text(p.name).font(.system(size: 13)).foregroundStyle(Color.zText).lineLimit(1)
+                Text(p.name).font(Font.zBody).foregroundStyle(Color.zText).lineLimit(1)
                 Spacer(minLength: 6)
                 Text(store.soulStars[p.id] ?? "")
-                    .font(.system(size: 11)).foregroundStyle(Color.zText3).lineLimit(1)
+                    .font(Font.zCaption).foregroundStyle(Color.zText3).lineLimit(1)
             }
             .padding(.horizontal, 8)
             .frame(height: 30)
@@ -131,10 +131,10 @@ private struct NavRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 9) {
-                Image(systemName: icon).font(.system(size: 12.5)).foregroundStyle(Color.zText2).frame(width: 16)
-                Text(title).font(.system(size: 13)).foregroundStyle(Color.zText)
+                Image(systemName: icon).font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
+                Text(title).font(Font.zBody).foregroundStyle(Color.zText)
                 Spacer()
-                if hover, let shortcut { Text(shortcut).font(.system(size: 11)).foregroundStyle(Color.zText3) }
+                if hover, let shortcut { Text(shortcut).font(Font.zCaption).foregroundStyle(Color.zText3) }
             }
             .padding(.horizontal, 10)
             .frame(height: 30)
@@ -156,10 +156,10 @@ private struct FolderRow: View {
         Button(action: action) {
             HStack(spacing: 9) {
                 Image(systemName: open ? "folder" : "folder.fill")
-                    .font(.system(size: 12)).foregroundStyle(Color.zText2).frame(width: 16)
-                Text(name).font(.system(size: 13)).foregroundStyle(open ? Color.zText : Color.zText2)
+                    .font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
+                Text(name).font(Font.zBody).foregroundStyle(open ? Color.zText : Color.zText2)
                 Spacer()
-                Text("\(count)").font(.system(size: 11)).foregroundStyle(Color.zText3)
+                Text("\(count)").font(Font.zCaption).foregroundStyle(Color.zText3)
             }
             .padding(.horizontal, 10)
             .frame(height: 30)
@@ -175,7 +175,7 @@ private struct SectionLabel: View {
     let text: String
     init(_ t: String) { text = t }
     var body: some View {
-        Text(text).font(.system(size: 11.5)).foregroundStyle(Color.zText3)
+        Text(text).font(Font.zCaption).foregroundStyle(Color.zText3)
             .padding(.horizontal, 10).padding(.bottom, 4)
     }
 }
@@ -200,12 +200,12 @@ private struct AccountBar: View {
             } label: {
                 HStack(spacing: 8) {
                     Text("J")
-                        .font(.system(size: 10.5, weight: .semibold))
+                        .font(Font.zMicroStrong)
                         .frame(width: 20, height: 20)
                         .background(Circle().fill(Color.zSel))
-                    Text("Jean").font(.system(size: 12.5)).foregroundStyle(Color.zText)
-                    Text("· 本機").font(.system(size: 11.5)).foregroundStyle(Color.zText3)
-                    Image(systemName: "chevron.down").font(.system(size: 9)).foregroundStyle(Color.zText3)
+                    Text("Jean").font(Font.zCallout).foregroundStyle(Color.zText)
+                    Text("· 本機").font(Font.zCaption).foregroundStyle(Color.zText3)
+                    Image(systemName: "chevron.down").font(Font.zMicro).foregroundStyle(Color.zText3)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)

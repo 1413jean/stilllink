@@ -74,7 +74,7 @@ struct PeriodTable: View {
 
     private func head(_ t: String) -> some View {
         Text(t)
-            .font(.system(size: 12, weight: .medium))
+            .font(Font.zCalloutStrong)
             .multilineTextAlignment(.center)
             .frame(width: 52)
             .frame(maxHeight: .infinity)
@@ -97,8 +97,8 @@ struct PeriodTable: View {
     private func cell(_ main: String, _ sub: String? = nil, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 1) {
-                Text(main).font(.system(size: 11.5))
-                if let sub { Text(sub).font(.system(size: 9.5)).opacity(0.7) }
+                Text(main).font(Font.zCaption)
+                if let sub { Text(sub).font(Font.zMicro).opacity(0.7) }
             }
             .foregroundStyle(on ? Color.zBg : Color.zText)
             .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)

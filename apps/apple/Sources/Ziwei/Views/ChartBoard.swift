@@ -16,7 +16,7 @@ struct ChartBoard: View {
             let m: CGFloat = 18
             let cw = (geo.size.width - m * 2) / 4
             let ch = (geo.size.height - m * 2) / 4
-            let fs = max(10, min(14, cw / 12.5))
+            let fs = ChartType.base(cellWidth: cw)
             ZStack(alignment: .topLeading) {
                 ForEach(0..<12, id: \.self) { i in
                     let (r, c) = ZW.grid[i]
@@ -41,7 +41,7 @@ struct ChartBoard: View {
 
     @ViewBuilder
     private func compassLabel(_ i: Int, r: Int, c: Int, cw: CGFloat, ch: CGFloat, m: CGFloat) -> some View {
-        let text = Text(ZW.compass[i]).font(.system(size: 10)).foregroundStyle(Color.zText3)
+        let text = Text(ZW.compass[i]).font(Font.zMicro).foregroundStyle(Color.zText3)
         if r == 0 && (c == 1 || c == 2) {
             text.frame(width: cw, height: m).offset(x: m + CGFloat(c) * cw, y: 0)
         } else if r == 3 && (c == 1 || c == 2) {
@@ -95,49 +95,50 @@ private struct PalaceCell: View {
                                })
                 }
                 ForEach(p.adj, id: \.name) { s in
-                    VerticalText(s.name, size: max(9, fs - 2), color: .wmBlue)
+                    VerticalText(s.name, size: ChartType.adj(fs), color: .wmBlue)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
             .layoutPriority(-1)
-            VStack(spacing: 0) {
-                Text("流年: " + model.yearlyAges[index].map(String.init).joined(separator: ","))
-                Text("小限: " + p.ages.prefix(5).map(String.init).joined(separator: ","))
-            }
-            .font(.system(size: max(8.5, fs * 0.6)))
-            .foregroundStyle(Color.zText2)
-            .frame(maxWidth: .infinity)
-
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(p.boshi).foregroundStyle(Color.wmGreen)
                     Text(p.jiangqian)
                     Text(p.suiqian)
                 }
-                .font(.system(size: fs * 0.74))
+                .font(ChartType.font(ChartType.gods(fs)))
                 .foregroundStyle(Color.zText)
                 Spacer(minLength: 0)
                 VStack(spacing: 2) {
+                    VStack(spacing: 0) {
+                        Text("流年: " + model.yearlyAges[index].map(String.init).joined(separator: ","))
+                        Text("小限: " + p.ages.prefix(5).map(String.init).joined(separator: ","))
+                    }
+                    .font(ChartType.font(ChartType.ages(fs)))
+                    .foregroundStyle(Color.zText2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.bottom, 1)
                     Text("\(p.range[0])~\(p.range[1])")
-                        .font(curDecade ? .system(size: fs * 0.88).italic() : .system(size: fs * 0.88))
+                        .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
                         .underline(curDecade)
                         .foregroundStyle(curDecade ? Color.wmRed : Color.zText)
                     HStack(spacing: 3) {
                         ForEach(1..<(level + 1), id: \.self) { lv in
                             Text(ZW.scopeTags[lv - 1] + String(horo.scope(lv).palaceNames[index].prefix(1)))
-                                .font(.system(size: fs * 0.7, weight: .semibold))
+                                .font(ChartType.font(ChartType.tag(fs), .semibold))
                                 .foregroundStyle(Color.scopeColors[lv - 1])
                         }
-                        Text(p.name).font(.system(size: fs)).foregroundStyle(Color.wmRed)
+                        Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
                     }
                 }
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
-                    VerticalText(p.changsheng, size: fs * 0.68, color: .zText2)
+                    VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
                         .padding(.bottom, 2)
-                    Text(p.stem).font(.system(size: fs * 1.3))
-                    Text(p.branch).font(.system(size: fs * 1.3))
+                    Text(p.stem).font(ChartType.font(ChartType.ganzhi(fs)))
+                    Text(p.branch).font(ChartType.font(ChartType.ganzhi(fs)))
                 }
                 .foregroundStyle(Color.zText)
             }
@@ -150,7 +151,7 @@ private struct PalaceCell: View {
         .overlay(selected ? Rectangle().stroke(Color.wmRed, lineWidth: 1.5) : nil)
         .overlay(alignment: .trailing) {
             if p.isBody {
-                VerticalText("身宮", size: fs * 0.7, color: .wmRed)
+                VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
                     .padding(.vertical, 3).padding(.horizontal, 1)
                     .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
                     .padding(.trailing, 4)
@@ -161,7 +162,7 @@ private struct PalaceCell: View {
             if !marks.isEmpty {
                 VStack(alignment: .trailing, spacing: 1) {
                     ForEach(Array(marks.enumerated()), id: \.offset) { _, mk in
-                        Text(mk.0 + mk.1.rawValue).font(.system(size: fs * 0.72, weight: .semibold)).foregroundStyle(mk.1.color)
+                        Text(mk.0 + mk.1.rawValue).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(mk.1.color)
                     }
                 }
                 .padding(4)
@@ -179,14 +180,14 @@ private struct StarColumn: View {
 
     var body: some View {
         let tone = ZW.tone(star.type)
-        VStack(spacing: 1) {
-            VerticalText(star.name, size: fs, color: fly != nil ? .white : tone.color,
+        VStack(spacing: 0.5) {
+            VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,
                          weight: star.type == "major" ? .semibold : .regular)
                 .padding(.vertical, 1)
                 .frame(width: fs * 1.18)
                 .background(fly?.color ?? .clear)
             Text(star.brightness.isEmpty ? " " : star.brightness)
-                .font(.system(size: fs * 0.68))
+                .font(ChartType.font(ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
             if !star.mutagen.isEmpty {
                 box(star.mutagen, fill: .wmRed)
@@ -200,9 +201,9 @@ private struct StarColumn: View {
 
     private func box(_ t: String, fill: Color) -> some View {
         Text(t)
-            .font(.system(size: fs * 0.78, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: fs * 1.12, height: fs * 1.12)
+            .font(ChartType.font(ChartType.tag(fs), .semibold))
+            .foregroundStyle(Color.zOnColor)
+            .frame(width: fs * 1.0, height: fs * 1.0)
             .background(fill)
     }
 }
@@ -229,7 +230,7 @@ private struct CenterInfo: View {
                 ctx.stroke(tri, with: .color(Color.zText3.opacity(0.7)), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
             }
             VStack(spacing: fs * 0.55) {
-                Text("紫微斗數").font(.serif(fs * 1.45, .semibold)).tracking(2)
+                Text("紫微斗數").font(ChartType.font(ChartType.centerTitle(fs), .semibold)).tracking(2)
                 Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {
                     GridRow { label("姓名"); Text("\(person.name)　　\(yang ? "陽" : "陰")\(person.gender.rawValue)　\(chart.fiveElementsClass)") }
                     if let ts = person.trueSolar {
@@ -244,39 +245,39 @@ private struct CenterInfo: View {
                         GridRow { label("出生地"); Text(pl.name.components(separatedBy: "，").first ?? pl.name).lineLimit(1) }
                     }
                 }
-                .font(.system(size: fs * 0.9))
+                .font(ChartType.font(ChartType.centerBody(fs)))
                 HStack(spacing: fs * 0.9) {
                     ForEach(Array(pillars.enumerated()), id: \.offset) { k, gz in
                         VStack(spacing: 0) {
                             ForEach(Array(gz.enumerated()), id: \.offset) { _, ch in
-                                Text(String(ch)).font(.system(size: fs * 1.35)).foregroundStyle(ZW.wuxing(String(ch)).color)
+                                Text(String(ch)).font(ChartType.font(ChartType.pillar(fs))).foregroundStyle(ZW.wuxing(String(ch)).color)
                             }
-                            Text(["年", "月", "日", "時"][k]).font(.system(size: fs * 0.62)).foregroundStyle(Color.zText3)
+                            Text(["年", "月", "日", "時"][k]).font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
                         }
                     }
                 }
                 VStack(spacing: 3) {
                     Text("\(chart.palaces[selected].name)（\(chart.palaces[selected].stem)）飛化")
-                        .font(.system(size: fs * 0.75)).foregroundStyle(Color.zText2)
+                        .font(ChartType.font(ChartType.centerSmall(fs))).foregroundStyle(Color.zText2)
                     HStack(spacing: 8) {
                         ForEach(flies, id: \.m) { f in
                             Text("\(f.star)\(f.m.rawValue)→\(f.to.map { chart.palaces[$0].name } ?? "—")")
-                                .font(.system(size: fs * 0.75, weight: .medium)).foregroundStyle(f.m.color)
+                                .font(ChartType.font(ChartType.centerSmall(fs), .medium)).foregroundStyle(f.m.color)
                         }
                     }
                 }
                 HStack(spacing: 4) {
-                    Text("宮干四化:").font(.system(size: fs * 0.8))
+                    Text("宮干四化:").font(ChartType.font(ChartType.centerSmall(fs)))
                     ForEach(Mutagen.allCases, id: \.self) { m in
-                        Text(m.rawValue).font(.system(size: fs * 0.8, weight: .semibold)).foregroundStyle(.white)
+                        Text(m.rawValue).font(ChartType.font(ChartType.centerSmall(fs), .semibold)).foregroundStyle(Color.zOnColor)
                             .padding(.horizontal, 3).background(m.color)
                     }
-                    Text("↑離心自化　↓向心自化").font(.system(size: fs * 0.66)).foregroundStyle(Color.zText3)
+                    Text("↑離心自化　↓向心自化").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
                 }
                 if level > 0 {
                     Button(action: onResetLevel) {
                         Label("回本命盤", systemImage: "arrow.uturn.backward")
-                            .font(.system(size: fs * 0.8))
+                            .font(ChartType.font(ChartType.centerSmall(fs)))
                             .padding(.horizontal, 10).padding(.vertical, 4)
                             .background(Capsule().fill(Color.zHover))
                     }

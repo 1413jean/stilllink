@@ -65,10 +65,10 @@ struct NewChartSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("新增命盤").font(.serif(20, .medium))
+                Text("新增命盤").font(.zTitle)
                 Spacer()
                 Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.zText2)
+                    Image(systemName: "xmark").font(Font.zCaptionStrong).foregroundStyle(Color.zText2)
                         .frame(width: 24, height: 24).background(Circle().fill(Color.zHover))
                 }
                 .buttonStyle(.plain)
@@ -113,7 +113,7 @@ struct NewChartSheet: View {
                         DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
                             .datePickerStyle(.field).labelsHidden().disabled(unknownTime)
                         Toggle("時間不確定（以午時排）", isOn: $unknownTime).toggleStyle(.checkbox)
-                            .font(.system(size: 12))
+                            .font(Font.zCallout)
                     }
                 }
 
@@ -135,8 +135,8 @@ struct NewChartSheet: View {
                                         Task { place = await search.resolve(r) }
                                     } label: {
                                         VStack(alignment: .leading, spacing: 1) {
-                                            Text(r.title).font(.system(size: 12.5)).foregroundStyle(Color.zText)
-                                            if !r.subtitle.isEmpty { Text(r.subtitle).font(.system(size: 11)).foregroundStyle(Color.zText3) }
+                                            Text(r.title).font(Font.zCallout).foregroundStyle(Color.zText)
+                                            if !r.subtitle.isEmpty { Text(r.subtitle).font(Font.zCaption).foregroundStyle(Color.zText3) }
                                         }
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.horizontal, 10).padding(.vertical, 6)
@@ -153,7 +153,7 @@ struct NewChartSheet: View {
                         if let place {
                             Text(String(format: "經度 %.4f°%@　緯度 %.4f°%@　%@", abs(place.longitude), place.longitude >= 0 ? "E" : "W",
                                         abs(place.latitude), place.latitude >= 0 ? "N" : "S", place.timeZoneID))
-                                .font(.system(size: 11.5).monospacedDigit()).foregroundStyle(Color.zText2)
+                                .font(Font.zCaption.monospacedDigit()).foregroundStyle(Color.zText2)
                                 .padding(.top, 6)
                         }
                     }
@@ -162,7 +162,7 @@ struct NewChartSheet: View {
                 // 結果預覽：真太陽時與時辰
                 HStack(spacing: 8) {
                     Image(systemName: "sun.max").foregroundStyle(Color.zAccent)
-                    Text(previewText).font(.system(size: 12.5).monospacedDigit()).foregroundStyle(Color.zText2)
+                    Text(previewText).font(Font.zCallout.monospacedDigit()).foregroundStyle(Color.zText2)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -235,7 +235,7 @@ struct NewChartSheet: View {
 
     private func field<C: View>(_ label: String, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.system(size: 11.5, weight: .medium)).foregroundStyle(Color.zText2)
+            Text(label).font(Font.zCaptionStrong).foregroundStyle(Color.zText2)
             content()
         }
     }
@@ -252,7 +252,7 @@ private struct HoverRowStyle: ButtonStyle {
 
 extension View {
     func inputBox() -> some View {
-        self.font(.system(size: 13))
+        self.font(Font.zBody)
             .padding(.horizontal, 10)
             .frame(height: 32)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))

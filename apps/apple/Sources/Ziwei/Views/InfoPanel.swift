@@ -38,13 +38,13 @@ struct InfoPanel: View {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(spacing: 10) {
                             Text(String(current.name.prefix(1)))
-                                .font(.serif(16, .medium))
+                                .font(.zHeadline)
                                 .frame(width: 34, height: 34)
                                 .background(Circle().fill(Color.zSel))
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(current.name).font(.system(size: 14, weight: .medium))
+                                Text(current.name).font(Font.zHeadline)
                                 Text("\(current.gender.rawValue) · \(current.group)\(chart.map { " · " + $0.fiveElementsClass } ?? "")")
-                                    .font(.system(size: 11.5)).foregroundStyle(Color.zText3)
+                                    .font(Font.zCaption).foregroundStyle(Color.zText3)
                             }
                         }
                         .padding(.bottom, 4)
@@ -74,7 +74,7 @@ struct InfoPanel: View {
                         TextField("記下客人的問題或你的觀察…", text: $draft, axis: .vertical)
                             .textFieldStyle(.plain)
                             .lineLimit(2...5)
-                            .font(.system(size: 12.5))
+                            .font(Font.zCallout)
                             .focused($draftFocused)
                             .padding(10)
                             .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
@@ -89,10 +89,10 @@ struct InfoPanel: View {
                         }
                         ForEach(current.notes.reversed()) { n in
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(n.text).font(.system(size: 12.5)).foregroundStyle(Color.zText).textSelection(.enabled)
+                                Text(n.text).font(Font.zCallout).foregroundStyle(Color.zText).textSelection(.enabled)
                                     .fixedSize(horizontal: false, vertical: true)
                                 Text(n.at.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.system(size: 10.5)).foregroundStyle(Color.zText3)
+                                    .font(Font.zMicro).foregroundStyle(Color.zText3)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.top, 8)
@@ -106,8 +106,8 @@ struct InfoPanel: View {
                     let photos = current.photos ?? []
                     if photos.isEmpty {
                         VStack(spacing: 6) {
-                            Image(systemName: "photo.on.rectangle.angled").font(.system(size: 20, weight: .light))
-                            Text("拖曳照片到這裡，或按＋加入").font(.system(size: 11.5))
+                            Image(systemName: "photo.on.rectangle.angled").font(Font.zIconLarge)
+                            Text("拖曳照片到這裡，或按＋加入").font(Font.zCaption)
                         }
                         .foregroundStyle(Color.zText3)
                         .frame(maxWidth: .infinity, minHeight: 86)
@@ -135,7 +135,7 @@ struct InfoPanel: View {
                 }
         }
         .frame(width: infoPanelWidth)
-        .shadow(color: .black.opacity(0.06), radius: 16, y: 4)
+        .shadow(color: Color.zShadow, radius: 16, y: 4)
         .sheet(item: Binding(get: { preview.map { PreviewItem(name: $0) } }, set: { preview = $0?.name })) { item in
             VStack {
                 if let img = NSImage(contentsOf: Media.url(item.name)) {
@@ -152,10 +152,10 @@ struct InfoPanel: View {
     private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(title).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.zText2)
+                Text(title).font(Font.zCalloutStrong).foregroundStyle(Color.zText2)
                 Spacer()
                 if let action {
-                    Button(action: action.1) { Image(systemName: action.0).font(.system(size: 12)).foregroundStyle(Color.zText2) }
+                    Button(action: action.1) { Image(systemName: action.0).font(Font.zCallout).foregroundStyle(Color.zText2) }
                         .buttonStyle(.plain)
                 }
             }
@@ -168,9 +168,9 @@ struct InfoPanel: View {
 
     private func row(_ icon: String, _ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: icon).font(.system(size: 11)).foregroundStyle(Color.zText3).frame(width: 14)
-            Text(label).font(.system(size: 12)).foregroundStyle(Color.zText3).frame(width: 62, alignment: .leading)
-            Text(value).font(.system(size: 12.5).monospacedDigit()).foregroundStyle(Color.zText).textSelection(.enabled)
+            Image(systemName: icon).font(Font.zCaption).foregroundStyle(Color.zText3).frame(width: 14)
+            Text(label).font(Font.zCallout).foregroundStyle(Color.zText3).frame(width: 62, alignment: .leading)
+            Text(value).font(Font.zCallout.monospacedDigit()).foregroundStyle(Color.zText).textSelection(.enabled)
             Spacer(minLength: 0)
         }
     }
