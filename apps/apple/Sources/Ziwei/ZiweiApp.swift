@@ -81,10 +81,11 @@ struct RootView: View {
     @State private var cursor = 0
     @State private var stepping = false
     @State private var settingsSection: SettingsPage.Section = .profile
+    @State private var newGroup: String?
 
     var body: some View {
         NavigationSplitView {
-            Sidebar(route: $route, onNew: { go(.new) })
+            Sidebar(route: $route, onNew: { newGroup = nil; go(.new) })
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
         } detail: {
             Group {
@@ -96,7 +97,8 @@ struct RootView: View {
                         NowChart()
                     }
                 case .new:
-                    NewChartSheet(onClose: { goBack() }) { p in route = .person(p.id) }
+                    NewChartSheet(defaultGroup: newGroup, onClose: { goBack() }) { p in route = .person(p.id) }
+                        .id(newGroup ?? "")
                 case .edit(let id):
                     NewChartSheet(editing: store.people.first { $0.id == id }, onClose: { goBack() }) { p in route = .person(p.id) }
                         .id(id)
@@ -135,7 +137,10 @@ struct RootView: View {
             history = Array(history.prefix(cursor + 1)) + [r]
             cursor = history.count - 1
         }
-        .onReceive(NotificationCenter.default.publisher(for: .newChart)) { _ in go(.new) }
+        .onReceive(NotificationCenter.default.publisher(for: .newChart)) { n in
+            newGroup = n.object as? String   // 從資料夾的 ＋ 進來時帶分組
+            go(.new)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .editChart)) { n in
             if let id = n.object as? UUID { go(.edit(id)) }
         }

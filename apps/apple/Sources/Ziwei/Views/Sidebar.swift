@@ -65,7 +65,8 @@ struct Sidebar: View {
                     ForEach(groupNames, id: \.self) { g in
                         let list = store.people.filter { !$0.pinned && $0.group == g && matches($0) && $0.id != store.selfID }
                         if !list.isEmpty {
-                            FolderRow(name: g, count: list.count, open: !collapsed.contains(g)) {
+                            FolderRow(name: g, count: list.count, open: !collapsed.contains(g),
+                                      onAdd: { NotificationCenter.default.post(name: .newChart, object: g) }) {
                                 withAnimation(Motion.base) {
                                     if collapsed.contains(g) { collapsed.remove(g) } else { collapsed.insert(g) }
                                 }
@@ -191,8 +192,10 @@ private struct FolderRow: View {
     let name: String
     let count: Int
     let open: Bool
+    var onAdd: (() -> Void)? = nil   // 在這個資料夾下新增命盤
     let action: () -> Void
     @State private var hover = false
+    @State private var plusHover = false
     var body: some View {
         Button(action: action) {
             HStack(spacing: 9) {
@@ -200,7 +203,21 @@ private struct FolderRow: View {
                     .font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
                 Text(name).font(Font.zBody).foregroundStyle(open ? Color.zText : Color.zText2)
                 Spacer()
-                Text("\(count)").font(Font.zCaption).foregroundStyle(Color.zText3)
+                // 滑過時把數量換成 ＋，點了在這個資料夾下新增
+                if hover, let onAdd {
+                    Button(action: onAdd) {
+                        Image(systemName: "plus").font(Font.zCaptionStrong)
+                            .foregroundStyle(plusHover ? Color.zText : Color.zText2)
+                            .frame(width: 22, height: 22)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(plusHover ? Color.zSel : .clear))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPressStyle())
+                    .onHover { plusHover = $0 }
+                    .help("在「\(name)」新增命盤")
+                } else {
+                    Text("\(count)").font(Font.zCaption).foregroundStyle(Color.zText3)
+                }
             }
             .padding(.horizontal, 10)
             .frame(height: 30)

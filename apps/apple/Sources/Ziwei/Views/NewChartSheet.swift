@@ -5,6 +5,7 @@ struct NewChartSheet: View {
     @EnvironmentObject var store: Store
     var editing: Person? = nil      // 有值＝編輯既有命盤
     var asSelf = false              // 填自己的命盤（個人檔案）
+    var defaultGroup: String? = nil // 從側欄資料夾的 ＋ 進來時預設的分組
     var onClose: () -> Void
     var onCreated: (Person) -> Void
 
@@ -178,6 +179,7 @@ struct NewChartSheet: View {
         .navigationTitle("")
         .onAppear {
             load()
+            if editing == nil, let g = defaultGroup { group = g }
             if asSelf && name.isEmpty { name = store.userName }
             nameFocused = true
         }
