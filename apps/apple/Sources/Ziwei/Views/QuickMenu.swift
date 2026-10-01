@@ -6,7 +6,6 @@ struct QuickMenu: View {
     @State private var open = false
     @State private var sub: Sub?
     @State private var num = ""
-    @State private var gender: Gender = .female
     @State private var hover = false
 
     enum Sub { case zizhan, baoshu }
@@ -70,7 +69,6 @@ struct QuickMenu: View {
                     if d != v { num = d }
                 }
                 .onSubmit(submitBaoshu)
-            ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
             Button("起卦", action: submitBaoshu)
                 .buttonStyle(ZPrimaryButton(small: true))
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -116,7 +114,7 @@ struct QuickMenu: View {
     private func submitBaoshu() {
         guard let n = Int(num) else { return }
         close()
-        TempChart.openBaoshu(n, gender)
+        TempChart.openBaoshu(n)
     }
 
     private func toggle(_ s: Sub) { withAnimation(Motion.base) { sub = sub == s ? nil : s } }
@@ -161,8 +159,9 @@ enum TempChart {
     }
 
     /// 報數起卦：一個 0–9999 的數字，依序拆出農曆月（÷12 的餘數）、日（再 ÷30 的餘數）、時辰（再 ÷12 的餘數，0＝子）。
-    /// 年用今年農曆年；同一個數字每次都排出同一張盤。
-    static func openBaoshu(_ n: Int, _ g: Gender) {
+    /// 年用今年農曆年；陰陽也由數字決定：奇數為陽（男盤）、偶數為陰（女盤）。同一個數字每次都排出同一張盤。
+    static func openBaoshu(_ n: Int) {
+        let g: Gender = n % 2 == 1 ? .male : .female
         let today = Pick.today()
         let m = n % 12 + 1
         var d = (n / 12) % 30 + 1
@@ -173,7 +172,7 @@ enum TempChart {
         let date = cal.date(from: DateComponents(year: s.0, month: s.1, day: s.2, hour: branch == 0 ? 0 : branch * 2, minute: branch == 0 ? 30 : 0))!
         let p = make(date, g, name: "報數 \(n)")
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: 2))
-        Toast.show("報數 \(n) → 農曆\(ZW.lunarMonths[m - 1])\(ZW.lunarDays[d - 1]) \(ZW.branches[branch])時")
+        Toast.show("報數 \(n) → 農曆\(ZW.lunarMonths[m - 1])\(ZW.lunarDays[d - 1]) \(ZW.branches[branch])時 · \(g == .male ? "陽男" : "陰女")")
     }
 
     static func make(_ d: Date, _ g: Gender, name: String) -> Person {
