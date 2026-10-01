@@ -16,6 +16,7 @@ struct ChartBoard: View, Equatable {
     @State private var appeared = false
     @State private var locked: Int?    // 長按鎖定的宮位（比較兩組三方四正）
     @State private var taiji: Int?     // 轉宮：以這一宮為命
+    @State private var userPicked = false   // 使用者自己點的宮位（自動跳到運限命宮時不算）
     @Environment(\.zSettings) private var settings
 
     var body: some View {
@@ -41,7 +42,7 @@ struct ChartBoard: View, Equatable {
                         .contentShape(Rectangle())
                         // 長按：鎖定／解除；點一下：選宮位
                         .gesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in toggleLock(i, chart) }
-                            .exclusively(before: TapGesture().onEnded { Sound.tap(settings); withAnimation(Motion.snap) { sel = i } }))
+                            .exclusively(before: TapGesture().onEnded { Sound.tap(settings); userPicked = true; withAnimation(Motion.snap) { sel = i } }))
                         .contextMenu {
                             if taiji == i {
                                 Button("取消轉宮") { setTaiji(nil, chart) }
@@ -66,14 +67,24 @@ struct ChartBoard: View, Equatable {
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
-        .onAppear { appeared = true }
+        .onAppear { appeared = true; sel = focusIndex }
+        // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
+        .onChange(of: model.id) { _, _ in
+            userPicked = false
+            withAnimation(Motion.snap) { sel = focusIndex }
+        }
+    }
+
+    /// 目前層級的命宮所在宮位
+    private var focusIndex: Int {
+        level == 0 ? model.chart.soulIndex : model.horo.scope(level).index
     }
 
     /// 轉宮的太極：右鍵指定的優先；否則點選的宮位（命宮本身不用顯示「命之X」）
     private func effectiveTaiji(_ selected: Int, _ chart: Chart) -> Int? {
         guard settings.showTransfer else { return nil }
         if let taiji { return taiji }
-        return selected == chart.soulIndex ? nil : selected
+        return userPicked && selected != chart.soulIndex ? selected : nil
     }
 
     private func toggleLock(_ i: Int, _ chart: Chart) {
