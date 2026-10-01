@@ -25,7 +25,8 @@ struct ZSettings: Codable, Equatable {
     var showBody = true         // 身宮
     var showLaiyin = true       // 來因宮
     var showSanfang = true      // 三方四正連線
-    var showSelf = true         // 自化標記
+    var showSelf = true         // 自化箭頭
+    var showTransfer = true     // 轉宮宮名（點選宮位當太極，顯示 X之Y）
     var showCompass = true      // 方位
 
     // 音效與動畫

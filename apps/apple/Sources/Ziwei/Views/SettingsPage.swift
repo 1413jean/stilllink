@@ -98,7 +98,8 @@ struct SettingsPage: View {
             toggle("顯示身宮", "身宮標記", s.showBody)
             toggle("顯示來因宮", "生年天干所在的宮位", s.showLaiyin)
             toggle("三方四正指示線", "點宮位時在中宮畫連線", s.showSanfang)
-            toggle("自化標記", "宮位右上角 ↑離心／↓向心", s.showSelf)
+            toggle("自化箭頭", "星曜旁的彩色箭頭：↑ 離心自化、↓ 向心自化", s.showSelf)
+            toggle("轉宮宮名", "點選宮位時，各宮顯示「X之Y」（例：福之夫）", s.showTransfer)
             toggle("顯示地理方位", "盤面四周的方位文字", s.showCompass, last: true)
         case .feel:
             title("音效與動畫")

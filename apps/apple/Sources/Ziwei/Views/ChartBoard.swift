@@ -29,7 +29,7 @@ struct ChartBoard: View {
                     PalaceCell(model: model, index: i, level: level, fs: fs,
                                selected: selected == i, inSF: sf.contains(i) && selected != i,
                                isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
-                               taijiLabel: taiji.map { ZW.transferredName(taiji: $0, index: i, chart: chart) },
+                               taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart) },
                                flyStars: Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipped()
@@ -50,6 +50,7 @@ struct ChartBoard: View {
                         .enterFromBelow(appeared, index: r * 4 + c)
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
                     if settings.showCompass { compassLabel(i, r: r, c: c, cw: cw, ch: ch, m: m) }
+                    if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
                 CenterInfo(person: person, model: model, selected: selected, locked: locked, taiji: taiji,
                            fs: fs, level: level, onResetLevel: onResetLevel, onClearTaiji: { setTaiji(nil, chart) })
@@ -61,6 +62,13 @@ struct ChartBoard: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
         .onAppear { appeared = true }
+    }
+
+    /// 轉宮的太極：右鍵指定的優先；否則點選的宮位（命宮本身不用顯示「命之X」）
+    private func effectiveTaiji(_ selected: Int, _ chart: Chart) -> Int? {
+        guard settings.showTransfer else { return nil }
+        if let taiji { return taiji }
+        return selected == chart.soulIndex ? nil : selected
     }
 
     private func toggleLock(_ i: Int, _ chart: Chart) {
@@ -79,6 +87,34 @@ struct ChartBoard: View {
     private func setTaiji(_ i: Int?, _ chart: Chart) {
         withAnimation(Motion.base) { taiji = i }
         if let i { Toast.show("轉宮：以「\(chart.palaces[i].name)」為命") } else { Toast.show("已取消轉宮") }
+    }
+
+    /// 自化箭頭（照文墨天機）：畫在宮位外緣的留白處，離心朝外、向心朝內，顏色＝四化
+    @ViewBuilder
+    private func selfArrows(_ s: (out: [String: Mutagen], into: [String: Mutagen]), r: Int, c: Int, cw: CGFloat, ch: CGFloat, m: CGFloat) -> some View {
+        let marks = s.out.sorted { $0.key < $1.key }.map { ($0.value, true) } + s.into.sorted { $0.key < $1.key }.map { ($0.value, false) }
+        if !marks.isEmpty {
+            // 朝外的方向：上排往上、下排往下、左欄往左、右欄往右；角落斜向
+            let dx: CGFloat = c == 0 ? -1 : c == 3 ? 1 : 0
+            let dy: CGFloat = r == 0 ? -1 : r == 3 ? 1 : 0
+            let x0 = m + CGFloat(c) * cw, y0 = m + CGFloat(r) * ch
+            // 錨點：外緣上避開方位字（邊宮放在靠內的 1/4 處，角宮放在外角）
+            let ax = dx < 0 ? x0 : dx > 0 ? x0 + cw : x0 + cw * (c == 1 ? 0.78 : 0.22)
+            let ay = dy < 0 ? y0 : dy > 0 ? y0 + ch : y0 + ch * (r == 1 ? 0.78 : 0.22)
+            let angle = atan2(dy, dx)
+            // 沿外緣切線方向排開
+            let tx = dy == 0 ? 0 : 1.0, ty = dy == 0 ? 1.0 : 0
+            ForEach(Array(marks.enumerated()), id: \.offset) { k, mk in
+                let off = (CGFloat(k) - CGFloat(marks.count - 1) / 2) * 13
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(mk.0.color)
+                    .rotationEffect(.radians(Double(angle) + (mk.1 ? 0 : .pi)))
+                    .frame(width: 14, height: 14)
+                    .position(x: ax + dx * m * 0.5 + tx * off, y: ay + dy * m * 0.5 + ty * off)
+                    .help(mk.1 ? "離心自化\(mk.0.rawValue)" : "向心自化\(mk.0.rawValue)")
+            }
+        }
     }
 
     @ViewBuilder
@@ -135,7 +171,6 @@ private struct PalaceCell: View {
         let minor = level >= 2 && settings.showMinor
         // 來因宮：生年天干所在的宮（寅～亥，子丑與寅卯同干不算）
         let laiyin = settings.showLaiyin && index < 10 && p.stem == String(chart.chineseDate.prefix(1))
-        let hasMarks = settings.showSelf && !(selfs.out.isEmpty && selfs.into.isEmpty)
         VStack(alignment: .leading, spacing: 2) {
             // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
             ViewThatFits(in: .vertical) {
@@ -143,8 +178,6 @@ private struct PalaceCell: View {
                     starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1)
                 }
             }
-            // 有自化標記時，右邊留空給 ↑↓ 標記，星曜提早換行不會疊上去
-            .padding(.trailing, hasMarks ? fs * 1.9 : 0)
             .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
             .layoutPriority(-1)
@@ -171,33 +204,35 @@ private struct PalaceCell: View {
                     .minimumScaleFactor(0.8)
                     .padding(.bottom, 1)
                     }
-                    // 左：運限宮名直排並排（放不下換行，小限在最前）；右：大限歲數＋宮名
-                    HStack(alignment: .bottom, spacing: 3) {
-                        FlowLayout(spacing: 2, lineSpacing: 2) {
-                            if minor {
-                                VerticalText("小" + String(horo.age.palaceNames[index].prefix(1)), size: ChartType.tag(fs), color: .minorColor, weight: .semibold)
-                            }
-                            if laiyin {
-                                VerticalText("來因", size: ChartType.tag(fs), color: .wmRed, weight: .semibold)
-                            }
-                            ForEach(1..<(level + 1), id: \.self) { lv in
-                                VerticalText(ZW.scopeTags[lv - 1] + String(horo.scope(lv).palaceNames[index].prefix(1)),
-                                             size: ChartType.tag(fs), color: Color.scopeColors[lv - 1], weight: .semibold)
+                    Text("\(p.range[0])~\(p.range[1])")
+                        .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
+                        .underline(curDecade)
+                        .foregroundStyle(curDecade ? Color.wmRed : Color.zText)
+                        .lineLimit(1).fixedSize()
+                    // 運限宮名：一行一個往上疊（大福 在 命宮 上面），兩行一欄、多了往旁邊開新欄；小限自成一欄
+                    HStack(alignment: .bottom, spacing: 4) {
+                        if minor {
+                            tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
+                        }
+                        let tags: [(String, Color)] = (1..<(level + 1)).map { lv in (ZW.scopeTags[lv - 1] + String(horo.scope(lv).palaceNames[index].prefix(1)), Color.scopeColors[lv - 1]) }
+                        ForEach(Array(stride(from: 0, to: tags.count, by: 2).enumerated()), id: \.offset) { _, start in
+                            VStack(spacing: 0) {
+                                ForEach(start..<min(start + 2, tags.count), id: \.self) { k in tagLine(tags[k].0, tags[k].1) }
                             }
                         }
-                        .fixedSize(horizontal: false, vertical: true)
-                        VStack(spacing: 1) {
-                            Text("\(p.range[0])~\(p.range[1])")
-                                .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
-                                .underline(curDecade)
-                                .foregroundStyle(curDecade ? Color.wmRed : Color.zText)
+                    }
+                    // 轉宮宮名在宮名左邊同一行（福之夫 命宮）
+                    HStack(spacing: 3) {
+                        if let taijiLabel {
+                            Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
                                 .lineLimit(1).fixedSize()
-                            if let taijiLabel {
-                                Text(taijiLabel).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.zAccent)
-                                    .lineLimit(1).fixedSize()
-                            }
-                            Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
-                                .lineLimit(1).fixedSize()
+                        }
+                        Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
+                            .lineLimit(1).fixedSize()
+                        if laiyin {
+                            Text("來因").font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zOnColor)
+                                .padding(.horizontal, 2).background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
+                                .fixedSize()
                         }
                     }
                 }
@@ -231,26 +266,20 @@ private struct PalaceCell: View {
                     .padding(.trailing, 4)
             }
         }
-        .overlay(alignment: .topTrailing) {
-            let marks = !settings.showSelf ? [] : selfs.out.sorted { $0.key < $1.key }.map { ("↑", $0.value) } + selfs.into.sorted { $0.key < $1.key }.map { ("↓", $0.value) }
-            if !marks.isEmpty {
-                VStack(alignment: .trailing, spacing: 1) {
-                    ForEach(Array(marks.enumerated()), id: \.offset) { _, mk in
-                        Text(mk.0 + mk.1.rawValue).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(mk.1.color)
-                    }
-                }
-                .padding(4)
-            }
-        }
         .clipped()
     }
 }
 
 extension PalaceCell {
+    func tagLine(_ t: String, _ c: Color) -> some View {
+        Text(t).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(c).lineLimit(1).fixedSize()
+    }
+
     func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> some View {
         FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, fly: flyStars[s.name],
+
                            minor: minor ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                            scopes: (1...max(1, level)).compactMap { lv in
                                level >= lv ? ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) } : nil
@@ -281,6 +310,7 @@ private struct StarColumn: View {
             Text(star.brightness.isEmpty ? " " : star.brightness)
                 .font(ChartType.font(ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
+
             let boxes = allBoxes
             if boxes.count <= 2 {
                 ForEach(Array(boxes.enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1) }
@@ -383,7 +413,7 @@ private struct CenterInfo: View {
                     Text("\(chart.palaces[selected].name)\(chart.palaces[selected].stem)干：")
                         .font(ChartType.font(ChartType.centerSmall(fs))).foregroundStyle(Color.zText2)
                     ForEach(flies, id: \.m) { f in
-                        Text("\(f.star)\(f.m.rawValue)→\(f.to.map { chart.palaces[$0].name } ?? "—")")
+                        Text("\(f.star)\(f.m.rawValue)")
                             .font(ChartType.font(ChartType.centerSmall(fs), .medium)).foregroundStyle(f.m.color)
                     }
                 }
@@ -393,7 +423,7 @@ private struct CenterInfo: View {
                         Text(m.rawValue).font(ChartType.font(ChartType.centerSmall(fs), .semibold)).foregroundStyle(Color.zOnColor)
                             .padding(.horizontal, 3).background(m.color)
                     }
-                    Text("↑離心 ↓向心自化").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
+                    Text("自化：↑離心 ↓向心").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
                     if let taiji {
                         Button(action: onClearTaiji) {
                             Label("轉宮：\(chart.palaces[taiji].name)為命", systemImage: "xmark")

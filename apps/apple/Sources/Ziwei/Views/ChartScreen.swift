@@ -36,6 +36,8 @@ struct NowChart: View {
 /// 盤面寬度上限（約文墨天機的比例）
 let boardMaxWidth: CGFloat = 780
 let infoPanelWidth: CGFloat = 300
+/// 盤面高寬比：略高於正方形，宮位底部（歲數、運限宮名、宮名）才放得下又不擠星曜
+let boardAspect: CGFloat = 1.06
 
 struct ChartScreen: View {
     @EnvironmentObject var store: Store
@@ -79,9 +81,9 @@ struct ChartScreen: View {
                                 BoardSkeleton().transition(.opacity)
                             }
                         }
-                        .frame(width: boardW, height: boardW)
+                        .frame(width: boardW, height: boardW * boardAspect)
                         .scaleEffect(zoom, anchor: .top)
-                        .frame(width: boardW * zoom, height: boardW * zoom, alignment: .top)
+                        .frame(width: boardW * zoom, height: boardW * boardAspect * zoom, alignment: .top)
                         .gesture(magnify)
 
                         if let model {
