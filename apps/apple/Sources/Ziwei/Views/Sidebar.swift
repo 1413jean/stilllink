@@ -8,6 +8,8 @@ struct Sidebar: View {
     @State private var searching = false
     @State private var search = ""
     @State private var collapsed: Set<String> = []
+    @State private var renaming: Person?
+    @State private var newName = ""
     @FocusState private var searchFocused: Bool
     @Namespace private var selNS   // 選取底色在列之間滑動
 
@@ -75,6 +77,17 @@ struct Sidebar: View {
         .dimmedBlur()
         .background(Color.zSide)
         .overlay(alignment: .top) { TopFade(color: .zSide) }
+        .alert("重新命名", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField("名字", text: $newName)
+            Button("取消", role: .cancel) { renaming = nil }
+            Button("儲存") {
+                let t = newName.trimmingCharacters(in: .whitespaces)
+                if var p = renaming, !t.isEmpty { p.name = t; store.update(p); Toast.show("已改名為「\(t)」") }
+                renaming = nil
+            }
+        } message: {
+            Text("命盤的生辰不會改變")
+        }
         .onChange(of: route) { _, _ in
             if searching { searching = false; search = "" }
         }
@@ -114,6 +127,7 @@ struct Sidebar: View {
         }
         .buttonStyle(RowButtonStyle(selected: on))
         .contextMenu {
+            Button("重新命名…") { newName = p.name; renaming = p }
             Button(p.pinned ? "取消釘選" : "釘選") { var q = p; q.pinned.toggle(); store.update(q) }
             Divider()
             Button("刪除", role: .destructive) {
@@ -216,6 +230,8 @@ private struct SectionLabel: View {
 /// 左下角帳號列：點開是外觀、登入與設定
 private struct AccountBar: View {
     @EnvironmentObject var store: Store
+    @State private var editing = false
+    @State private var draft = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -229,15 +245,16 @@ private struct AccountBar: View {
                 Button { } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
                 Button { } label: { Label("使用 Google 登入", systemImage: "g.circle") }
                 Divider()
+                Button("修改名稱…") { draft = store.userName; editing = true }
                 Button("設定…") { NotificationCenter.default.post(name: .openSettings, object: nil) }
                     .keyboardShortcut(",")
             } label: {
                 HStack(spacing: 8) {
-                    Text("J")
+                    Text(String(store.userName.prefix(1)).uppercased())
                         .font(Font.zMicroStrong)
                         .frame(width: 20, height: 20)
                         .background(Circle().fill(Color.zSel))
-                    Text("Jean").font(Font.zCallout).foregroundStyle(Color.zText)
+                    Text(store.userName).font(Font.zCallout).foregroundStyle(Color.zText).lineLimit(1)
                     Text("· 本機").font(Font.zCaption).foregroundStyle(Color.zText3)
                     Image(systemName: "chevron.down").font(Font.zMicro).foregroundStyle(Color.zText3)
                     Spacer()
@@ -250,6 +267,16 @@ private struct AccountBar: View {
             .menuIndicator(.hidden)
             .padding(.horizontal, 14)
             .frame(height: 44)
+        }
+        .alert("修改名稱", isPresented: $editing) {
+            TextField("你的名字", text: $draft)
+            Button("取消", role: .cancel) {}
+            Button("儲存") {
+                let t = draft.trimmingCharacters(in: .whitespaces)
+                if !t.isEmpty { store.userName = t; Toast.show("已改名為「\(t)」") }
+            }
+        } message: {
+            Text("顯示在左下角的名字")
         }
     }
 }

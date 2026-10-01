@@ -55,6 +55,8 @@ final class Store: ObservableObject {
     /// 側欄顯示的命宮主星，背景算好放這裡
     @Published var soulStars: [UUID: String] = [:]
     @AppStorage("appearance") var appearance: Appearance = .system
+    /// 使用者（左下角帳號列）顯示的名字
+    @AppStorage("userName") var userName: String = "Jean"
     /// 命盤設定：變了就重新設定引擎、重算側欄
     @Published var settings: ZSettings = Store.loadSettings() {
         didSet {
