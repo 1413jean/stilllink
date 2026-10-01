@@ -209,30 +209,42 @@ private struct PalaceCell: View {
                         .underline(curDecade)
                         .foregroundStyle(curDecade ? Color.wmRed : Color.zText)
                         .lineLimit(1).fixedSize()
-                    // 運限宮名：一行一個往上疊（大福 在 命宮 上面），兩行一欄、多了往旁邊開新欄；小限自成一欄
-                    HStack(alignment: .bottom, spacing: 4) {
-                        if minor {
-                            tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
-                        }
-                        let tags: [(String, Color)] = (1..<(level + 1)).map { lv in (ZW.scopeTags[lv - 1] + String(horo.scope(lv).palaceNames[index].prefix(1)), Color.scopeColors[lv - 1]) }
-                        ForEach(Array(stride(from: 0, to: tags.count, by: 2).enumerated()), id: \.offset) { _, start in
-                            VStack(spacing: 0) {
-                                ForEach(start..<min(start + 2, tags.count), id: \.self) { k in tagLine(tags[k].0, tags[k].1) }
-                            }
-                        }
+                    // 運限宮名垂直往上疊在宮名上面（由下而上：宮名、大X、年X），一欄三行；
+                    // 疊滿往左開新欄（月X、日X、時X），由右至左。小限緊貼在宮名右邊。
+                    let tags: [(String, Color)] = (1..<(level + 1)).map { lv in
+                        (ZW.scopeTags[lv - 1] + String(horo.scope(lv).palaceNames[index].prefix(1)), Color.scopeColors[lv - 1])
                     }
-                    // 轉宮宮名在宮名左邊同一行（福之夫 命宮）
-                    HStack(spacing: 3) {
+                    let first = Array(tags.prefix(2))              // 跟宮名同一欄
+                    let rest = Array(tags.dropFirst(2))            // 往左的欄，每欄 3 個
+                    let restCols = stride(from: 0, to: rest.count, by: 3).map { Array(rest[$0..<min($0 + 3, rest.count)]) }
+                    HStack(alignment: .bottom, spacing: 4) {
                         if let taijiLabel {
                             Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
                                 .lineLimit(1).fixedSize()
                         }
-                        Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
-                            .lineLimit(1).fixedSize()
-                        if laiyin {
-                            Text("來因").font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zOnColor)
-                                .padding(.horizontal, 2).background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
-                                .fixedSize()
+                        // 越後面的欄越靠左
+                        ForEach(Array(restCols.enumerated().reversed()), id: \.offset) { _, col in
+                            VStack(spacing: 0) {
+                                ForEach(Array(col.enumerated().reversed()), id: \.offset) { _, t in tagLine(t.0, t.1) }
+                            }
+                        }
+                        VStack(alignment: .nameCenter, spacing: 0) {
+                            ForEach(Array(first.enumerated().reversed()), id: \.offset) { _, t in
+                                tagLine(t.0, t.1).alignmentGuide(.nameCenter) { $0[HorizontalAlignment.center] }
+                            }
+                            HStack(spacing: 3) {
+                                Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
+                                    .lineLimit(1).fixedSize()
+                                    .alignmentGuide(.nameCenter) { $0[HorizontalAlignment.center] }
+                                if minor {
+                                    tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
+                                }
+                                if laiyin {
+                                    Text("來因").font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zOnColor)
+                                        .padding(.horizontal, 2).background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
+                                        .fixedSize()
+                                }
+                            }
                         }
                     }
                 }
@@ -268,6 +280,14 @@ private struct PalaceCell: View {
         }
         .clipped()
     }
+}
+
+/// 讓運限宮名對齊宮名的中線
+extension HorizontalAlignment {
+    private enum NameCenter: AlignmentID {
+        static func defaultValue(in d: ViewDimensions) -> CGFloat { d[HorizontalAlignment.center] }
+    }
+    static let nameCenter = HorizontalAlignment(NameCenter.self)
 }
 
 extension PalaceCell {
