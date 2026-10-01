@@ -22,7 +22,7 @@ struct ChartBoard: View {
                     let (r, c) = ZW.grid[i]
                     PalaceCell(model: model, index: i, level: level, fs: fs,
                                selected: selected == i, inSF: sf.contains(i) && selected != i,
-                               flyIn: model.flying[selected].filter { $0.to == i }.map(\.m))
+                               flyStars: Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipped()
                         .contentShape(Rectangle())
@@ -79,7 +79,7 @@ private struct PalaceCell: View {
     let fs: CGFloat
     let selected: Bool
     let inSF: Bool
-    let flyIn: [Mutagen]
+    let flyStars: [String: Mutagen]
 
     var body: some View {
         let chart = model.chart, horo = model.horo
@@ -89,7 +89,7 @@ private struct PalaceCell: View {
         VStack(alignment: .leading, spacing: 2) {
             FlowLayout(spacing: 1, lineSpacing: 4) {
                 ForEach(p.stars, id: \.name) { s in
-                    StarColumn(star: s, fs: fs, selfOut: selfs.out[s.name], selfIn: selfs.into[s.name],
+                    StarColumn(star: s, fs: fs, fly: flyStars[s.name],
                                scopes: (1...max(1, level)).compactMap { lv in
                                    level >= lv ? ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) } : nil
                                })
@@ -157,10 +157,11 @@ private struct PalaceCell: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            if !flyIn.isEmpty {
+            let marks = selfs.out.sorted { $0.key < $1.key }.map { ("↑", $0.value) } + selfs.into.sorted { $0.key < $1.key }.map { ("↓", $0.value) }
+            if !marks.isEmpty {
                 VStack(alignment: .trailing, spacing: 1) {
-                    ForEach(flyIn, id: \.self) { m in
-                        Text("→" + m.rawValue).font(.system(size: fs * 0.72, weight: .semibold)).foregroundStyle(m.color)
+                    ForEach(Array(marks.enumerated()), id: \.offset) { _, mk in
+                        Text(mk.0 + mk.1.rawValue).font(.system(size: fs * 0.72, weight: .semibold)).foregroundStyle(mk.1.color)
                     }
                 }
                 .padding(4)
@@ -173,19 +174,17 @@ private struct PalaceCell: View {
 private struct StarColumn: View {
     let star: Star
     let fs: CGFloat
-    let selfOut: Mutagen?
-    let selfIn: Mutagen?
+    let fly: Mutagen?   // 點選宮位的宮干四化落在這顆星
     let scopes: [(Int, Mutagen)]
 
     var body: some View {
         let tone = ZW.tone(star.type)
         VStack(spacing: 1) {
-            VerticalText(star.name, size: fs, color: selfOut != nil ? .white : tone.color,
+            VerticalText(star.name, size: fs, color: fly != nil ? .white : tone.color,
                          weight: star.type == "major" ? .semibold : .regular)
                 .padding(.vertical, 1)
                 .frame(width: fs * 1.18)
-                .background(selfOut?.color ?? .clear)
-                .overlay(selfIn.map { Rectangle().stroke($0.color, lineWidth: 1.5) })
+                .background(fly?.color ?? .clear)
             Text(star.brightness.isEmpty ? " " : star.brightness)
                 .font(.system(size: fs * 0.68))
                 .foregroundStyle(Color.zText2)
@@ -193,19 +192,18 @@ private struct StarColumn: View {
                 box(star.mutagen, fill: .wmRed)
             }
             ForEach(scopes, id: \.0) { lv, m in
-                box(m.rawValue, stroke: Color.scopeColors[lv - 1])
+                box(m.rawValue, fill: Color.scopeColors[lv - 1])
             }
         }
         .frame(width: fs * 1.18)
     }
 
-    private func box(_ t: String, fill: Color? = nil, stroke: Color? = nil) -> some View {
+    private func box(_ t: String, fill: Color) -> some View {
         Text(t)
             .font(.system(size: fs * 0.78, weight: .semibold))
-            .foregroundStyle(fill != nil ? .white : (stroke ?? .zText))
+            .foregroundStyle(.white)
             .frame(width: fs * 1.12, height: fs * 1.12)
-            .background(fill ?? .clear)
-            .overlay(stroke.map { Rectangle().stroke($0, lineWidth: 1) })
+            .background(fill)
     }
 }
 
@@ -268,12 +266,12 @@ private struct CenterInfo: View {
                     }
                 }
                 HStack(spacing: 4) {
-                    Text("自化圖示:").font(.system(size: fs * 0.8))
+                    Text("宮干四化:").font(.system(size: fs * 0.8))
                     ForEach(Mutagen.allCases, id: \.self) { m in
                         Text(m.rawValue).font(.system(size: fs * 0.8, weight: .semibold)).foregroundStyle(.white)
                             .padding(.horizontal, 3).background(m.color)
                     }
-                    Text("實底＝離心　框線＝向心").font(.system(size: fs * 0.66)).foregroundStyle(Color.zText3)
+                    Text("↑離心自化　↓向心自化").font(.system(size: fs * 0.66)).foregroundStyle(Color.zText3)
                 }
                 if level > 0 {
                     Button(action: onResetLevel) {

@@ -26,15 +26,13 @@ struct ChartScreen: View {
     @State private var showInfo = true
     @State private var model: ChartModel?
 
-    private var notes: [Note] { store.people.first { $0.id == person.id }?.notes ?? [] }
-
     var body: some View {
         // 捲動區佔滿整個寬度（捲軸貼在視窗最右邊）；右側資訊卡固定浮在右上角，不跟著捲
         GeometryReader { geo in
             let panelSpace: CGFloat = showInfo ? infoPanelWidth + 24 : 0
             let usable = geo.size.width - panelSpace
             let boardW = min(usable - 48, boardMaxWidth, max(460, geo.size.height - 180))
-            ZStack(alignment: .bottom) {
+            ZStack(alignment: .top) {
                 ScrollView {
                     VStack(spacing: 12) {
                         Group {
@@ -53,34 +51,27 @@ struct ChartScreen: View {
                             RoundedRectangle(cornerRadius: 12).fill(Color.zHover).frame(height: 210).shimmer()
                         }
 
-                        NoteThread(notes: notes)
                     }
                     .frame(width: boardW)
                     .padding(.top, 14)
-                    .padding(.bottom, 150)
+                    .padding(.bottom, 24)
                     .frame(width: usable)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .defaultScrollAnchor(.top)
 
-                Composer(person: person)
-                    .frame(width: min(boardW, 720))
-                    .padding(.top, 28)
-                    .padding(.bottom, 16)
-                    .frame(width: usable)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        LinearGradient(colors: [Color.zBg.opacity(0), Color.zBg, Color.zBg], startPoint: .top, endPoint: .bottom)
-                            .padding(.trailing, 16) // 不蓋到捲軸
-                            .allowsHitTesting(false)
-                    )
             }
             .overlay(alignment: .topTrailing) {
                 if showInfo {
-                    InfoPanel(person: person, chart: model?.chart)
-                        .padding(.top, 12)
-                        .padding(.trailing, 20)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    ScrollView(showsIndicators: false) {
+                        InfoPanel(person: person, chart: model?.chart)
+                            .padding(.top, 12)
+                            .padding(.bottom, 16)
+                            .padding(.horizontal, 4)
+                    }
+                    .frame(width: infoPanelWidth + 8)
+                    .padding(.trailing, 16)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
         }
@@ -99,75 +90,6 @@ struct ChartScreen: View {
     }
 
     private struct TaskKey: Equatable { let person: String; let pick: Pick }
-}
-
-/// 筆記串：像 Codex 的對話，自己的筆記靠右
-private struct NoteThread: View {
-    let notes: [Note]
-    var body: some View {
-        if !notes.isEmpty {
-            VStack(alignment: .trailing, spacing: 14) {
-                ForEach(notes) { n in
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(n.text)
-                            .font(.system(size: 13))
-                            .textSelection(.enabled)
-                            .padding(.horizontal, 14).padding(.vertical, 9)
-                            .background(RoundedRectangle(cornerRadius: 16).fill(Color.zSel))
-                        Text(n.at.formatted(date: .abbreviated, time: .shortened))
-                            .font(.system(size: 10.5)).foregroundStyle(Color.zText3)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-            }
-            .padding(.top, 18)
-        }
-    }
-}
-
-/// 下方輸入框（Codex 式）：先存筆記，AI 解盤之後接上
-private struct Composer: View {
-    @EnvironmentObject var store: Store
-    let person: Person
-    @State private var text = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            TextField("記下客人的問題或你的觀察…", text: $text, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...6)
-                .font(.system(size: 13.5))
-                .onSubmit(send)
-            HStack(spacing: 10) {
-                Image(systemName: "plus").font(.system(size: 13)).foregroundStyle(Color.zText2)
-                Text("筆記")
-                    .font(.system(size: 11.5, weight: .medium))
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.zSel))
-                Text("AI 解盤 · 即將推出").font(.system(size: 11.5)).foregroundStyle(Color.zText3)
-                Spacer()
-                Button(action: send) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(text.trimmingCharacters(in: .whitespaces).isEmpty ? Color.zText3.opacity(0.5) : Color.zAccent))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 16).padding(.vertical, 12)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.zLine))
-        .shadow(color: .black.opacity(0.08), radius: 18, y: 6)
-    }
-
-    private func send() {
-        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty, var p = store.people.first(where: { $0.id == person.id }) else { return }
-        p.notes.append(Note(text: t))
-        store.update(p)
-        text = ""
-    }
 }
 
 /// 載入中的盤面骨架

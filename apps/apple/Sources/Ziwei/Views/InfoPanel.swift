@@ -27,6 +27,8 @@ struct InfoPanel: View {
     let chart: Chart?
     @State private var preview: String?
     @State private var dropping = false
+    @State private var draft = ""
+    @FocusState private var draftFocused: Bool
 
     private var current: Person { store.people.first { $0.id == person.id } ?? person }
 
@@ -63,6 +65,39 @@ struct InfoPanel: View {
                         }
                         if let chart {
                             row("sparkle", "命主／身主", "\(chart.soul)／\(chart.body)")
+                        }
+                    }
+                }
+
+                card("備註") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        TextField("記下客人的問題或你的觀察…", text: $draft, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .lineLimit(2...5)
+                            .font(.system(size: 12.5))
+                            .focused($draftFocused)
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
+                            .overlay(RoundedRectangle(cornerRadius: 9).stroke(draftFocused ? Color.zGrid : Color.zLine))
+                            .onSubmit(addNote)
+                        if !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            HStack {
+                                Spacer()
+                                Button("新增備註", action: addNote)
+                                    .buttonStyle(.borderedProminent).tint(Color.zAccent).controlSize(.small)
+                            }
+                        }
+                        ForEach(current.notes.reversed()) { n in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(n.text).font(.system(size: 12.5)).foregroundStyle(Color.zText).textSelection(.enabled)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(n.at.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.system(size: 10.5)).foregroundStyle(Color.zText3)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 8)
+                            .overlay(alignment: .top) { Rectangle().fill(Color.zLine).frame(height: 0.5) }
+                            .contextMenu { Button("刪除", role: .destructive) { deleteNote(n.id) } }
                         }
                     }
                 }
@@ -138,6 +173,21 @@ struct InfoPanel: View {
             Text(value).font(.system(size: 12.5).monospacedDigit()).foregroundStyle(Color.zText).textSelection(.enabled)
             Spacer(minLength: 0)
         }
+    }
+
+    private func addNote() {
+        let t = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        var p = current
+        p.notes.append(Note(text: t))
+        store.update(p)
+        draft = ""
+    }
+
+    private func deleteNote(_ id: UUID) {
+        var p = current
+        p.notes.removeAll { $0.id == id }
+        store.update(p)
     }
 
     private func pickPhotos() {
