@@ -10,7 +10,7 @@ struct Pick: Equatable, Hashable {
 
     static func today() -> Pick {
         let c = Calendar.current.dateComponents([.year, .month, .day, .hour], from: Date())
-        let l = Engine.shared.solarToLunar("\(c.year!)-\(c.month!)-\(c.day!)")
+        let l = Lunar.toLunar(c.year!, c.month!, c.day!)
         return Pick(year: l.year, lm: l.month, ld: l.day, hour: SolarTime.shichen(c.hour!) % 12)
     }
 }
@@ -72,7 +72,8 @@ struct ChartScreen: View {
                     VStack(spacing: 12) {
                         Group {
                             if let model {
-                                ChartBoard(person: person, model: model, level: pick.level) { withAnimation(Motion.snap) { pick.level = 0 } }
+                                ChartBoard(person: person, model: model, level: pick.level) { pick.level = 0 }
+                                    .transaction(value: pick) { $0.animation = nil }
                                     .transition(.opacity)
                             } else {
                                 BoardSkeleton().transition(.opacity)
@@ -157,7 +158,8 @@ struct ChartScreen: View {
         }
         .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
             let m = await Engine.shared.model(for: person, pick: pick)
-            withAnimation(model == nil ? Motion.enter : Motion.base) { model = m }
+            // 第一次淡入；之後換運限直接換，不讓整張盤一起動畫
+            if model == nil { withAnimation(Motion.enter) { model = m } } else { model = m }
         }
     }
 

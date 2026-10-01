@@ -74,6 +74,10 @@ struct Sidebar: View {
         }
         .dimmedBlur()
         .background(Color.zSide)
+        .overlay(alignment: .top) { TopFade(color: .zSide) }
+        .onChange(of: route) { _, _ in
+            if searching { searching = false; search = "" }
+        }
         .background(
             Button("") { searching = true; DispatchQueue.main.async { searchFocused = true } }
                 .keyboardShortcut("f").hidden()
@@ -126,9 +130,8 @@ private struct RowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background(RoundedRectangle(cornerRadius: 8).fill(!selected && hover ? Color.zHover : Color.clear))
-            .scaleEffect(configuration.isPressed && !Motion.reduce ? 0.98 : 1)
+            .opacity(configuration.isPressed ? 0.7 : 1)
             .animation(Motion.fast, value: hover)
-            .animation(Motion.fast, value: configuration.isPressed)
             .onHover { hover = $0 }
     }
 }
@@ -154,7 +157,7 @@ private struct NavRow: View {
             .contentShape(Rectangle())
             .animation(Motion.fast, value: hover)
         }
-        .buttonStyle(PressStyle())
+        .buttonStyle(RowPressStyle())
         .onHover { hover = $0 }
     }
 }
@@ -180,7 +183,7 @@ private struct FolderRow: View {
             .contentShape(Rectangle())
             .animation(Motion.fast, value: hover)
         }
-        .buttonStyle(PressStyle())
+        .buttonStyle(RowPressStyle())
         .onHover { hover = $0 }
     }
 }
@@ -201,7 +204,7 @@ private struct SectionLabel: View {
                         .background(RoundedRectangle(cornerRadius: 6).fill(hover ? Color.zHover : .clear))
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(PressStyle())
+                .buttonStyle(RowPressStyle())
                 .onHover { h in withAnimation(Motion.fast) { hover = h } }
                 .help("新增命盤")
             }

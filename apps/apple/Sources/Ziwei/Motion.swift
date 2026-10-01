@@ -53,11 +53,67 @@ extension View {
     func dimmedBlur() -> some View { modifier(DimmedBlur()) }
 }
 
+/// 列表的按壓回饋：不縮放，按下時變淡（側欄用）
+struct RowPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
 /// 按壓回饋：按下縮 0.97（hover 底色由各列自己處理）
 struct PressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed && !Motion.reduce ? 0.97 : 1)
             .animation(Motion.fast, value: configuration.isPressed)
+    }
+}
+
+/// 視窗頂端（工具列）漸層：底色 100% → 0%，整條寬度
+struct TopFade: View {
+    let color: Color
+    var body: some View {
+        LinearGradient(colors: [color, color.opacity(0.85), color.opacity(0)], startPoint: .top, endPoint: .bottom)
+            .frame(height: 64)
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+    }
+}
+
+// MARK: Snackbar 提示
+
+extension Notification.Name { static let toast = Notification.Name("zw.toast") }
+
+enum Toast {
+    static func show(_ text: String) { NotificationCenter.default.post(name: .toast, object: text) }
+}
+
+/// 畫面底部的提示條，2 秒後自動消失
+struct ToastHost: View {
+    @State private var text: String?
+    @State private var token = 0
+    var body: some View {
+        ZStack {
+            if let text {
+                Text(text)
+                    .font(Font.zCalloutStrong)
+                    .foregroundStyle(Color.zBg)
+                    .padding(.horizontal, 16).frame(height: 36)
+                    .background(Capsule().fill(Color.zText))
+                    .shadow(color: Color.zShadow, radius: 12, y: 4)
+                    .transition(.opacity.combined(with: .offset(y: 12)))
+            }
+        }
+        .padding(.bottom, 96)
+        .allowsHitTesting(false)
+        .onReceive(NotificationCenter.default.publisher(for: .toast)) { n in
+            guard let t = n.object as? String else { return }
+            token += 1
+            let mine = token
+            withAnimation(Motion.enter) { text = t }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                if mine == token { withAnimation(Motion.exit) { text = nil } }
+            }
+        }
     }
 }

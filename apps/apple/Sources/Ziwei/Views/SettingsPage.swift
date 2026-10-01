@@ -102,7 +102,7 @@ struct SettingsPage: View {
             toggle("顯示地理方位", "盤面四周的方位文字", s.showCompass, last: true)
         case .feel:
             title("音效與動畫")
-            toggle("介面動畫", "關閉後所有轉場改為瞬間切換", s.motion)
+            toggle("介面動畫", "電腦較慢或覺得卡時可關閉，所有轉場改為瞬間切換", s.motion)
             toggle("觸控板回饋", "點宮位、點運限時觸控板輕微震動", s.haptics)
             toggle("介面音效", "點宮位、點運限時播放", s.sound)
             Group {

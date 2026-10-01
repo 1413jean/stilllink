@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 出生地資料（解析 zone.tab＋中文排序）先在背景建好，否則第一次開「新增命盤」會卡約 0.2 秒
         DispatchQueue.global(qos: .utility).async { _ = Places.all }
         Snapshot.scheduleIfRequested()
+        Bench.runIfRequested()
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }
 }
@@ -106,8 +107,12 @@ struct RootView: View {
                     NowChart()
                 }
             }
-            .transition(.opacity)
+            // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
+            .transaction(value: route) { $0.animation = nil }
+            .overlay(alignment: .top) { TopFade(color: .zBg) }
         }
+        .toolbarBackground(.hidden, for: .windowToolbar)
+        .overlay(alignment: .bottom) { ToastHost() }
         .environment(\.zSettings, store.settings)
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
@@ -131,23 +136,23 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { _ in go(.settings) }
         .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
         .onReceive(NotificationCenter.default.publisher(for: .openTemp)) { n in
-            if let r = n.object as? TempRequest { withAnimation(Motion.base) { route = .temp(r.person, r.level) } }
+            if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
         }
         .onAppear(perform: applyDebugEnv)
     }
 
     private func go(_ r: Route) {
         if let cur = route, !cur.isPage { back = cur }
-        withAnimation(Motion.base) { route = r }
+        route = r
     }
-    private func goBack() { withAnimation(Motion.base) { route = back } }
+    private func goBack() { route = back }
 
     private func step(_ d: Int) {
         let i = cursor + d
         guard history.indices.contains(i) else { return }
         cursor = i
         stepping = true
-        withAnimation(Motion.base) { route = history[i] }
+        route = history[i]
     }
 
     /// 驗證用：ZIWEI_ROUTE=<姓名> 直接打開那張盤；ZIWEI_THEME=dark/light

@@ -70,8 +70,7 @@ struct PeriodTable: View {
     }
 
     private func jdnOf(_ y: Int, _ m: Int) -> Int? {
-        let s = Engine.shared.lunarToSolar(y, m, 1).split(separator: "-").compactMap { Int($0) }
-        return s.count == 3 ? ZW.jdn(s[0], s[1], s[2]) : nil
+        Lunar.toSolar(y, m, 1).map { ZW.jdn($0.0, $0.1, $0.2) }
     }
 
     private func head(_ t: String) -> some View {

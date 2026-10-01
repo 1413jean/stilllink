@@ -157,3 +157,30 @@ extension Bazi {
         return out
     }
 }
+
+/// 中宮要顯示的八字資訊：背景算好一次，畫面直接取用
+struct BaziInfo {
+    let pillars: [String]
+    let lunarPillars: [String]
+    let dayStem: String
+    let ziDou: String
+    let qiyun: Bazi.Qiyun
+    let dayun: [String]
+    let birthYear: Int
+
+    init(person p: Person, chart: Chart) {
+        pillars = chart.chineseDate.split(separator: " ").map(String.init)
+        lunarPillars = Bazi.lunarPillars(lunarYear: chart.lunarYear, lunarMonth: chart.lunarMonth, jieqi: pillars)
+        dayStem = String(pillars.count > 2 ? pillars[2].prefix(1) : "")
+        ziDou = Bazi.ziDou(lunarMonth: chart.lunarMonth, hourBranch: p.hour == 12 ? 0 : p.hour)
+        // 出生的絕對時間：有鐘錶時間＋出生地就照用，否則以時辰起點、台北時區估算
+        let tz = TimeZone(identifier: p.place?.timeZoneID ?? "Asia/Taipei") ?? .current
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
+        let src = p.clock ?? "\(p.solar) \(p.hour == 12 ? 23 : p.hour * 2):00"
+        let n = src.split(whereSeparator: { " -:".contains($0) }).compactMap { Int($0) }
+        let birth = n.count >= 5 ? cal.date(from: DateComponents(year: n[0], month: n[1], day: n[2], hour: n[3], minute: n[4])) ?? Date() : Date()
+        birthYear = n.first ?? p.birthYear
+        qiyun = Bazi.qiyun(birth: birth, yearStem: String(pillars.first?.prefix(1) ?? ""), male: p.gender == .male)
+        dayun = Bazi.dayun(monthPillar: pillars.count > 1 ? pillars[1] : "", forward: qiyun.forward)
+    }
+}

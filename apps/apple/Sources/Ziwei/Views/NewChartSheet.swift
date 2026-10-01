@@ -58,7 +58,6 @@ struct NewChartSheet: View {
                                     .onSubmit(commitGroup)
                                     .inputBox()
                                 Button("完成", action: commitGroup).buttonStyle(ZSecondaryButton())
-                                    .disabled(newGroup.trimmingCharacters(in: .whitespaces).isEmpty)
                             }
                             .transition(.opacity)
                         } else {
@@ -276,8 +275,7 @@ struct NewChartSheet: View {
     private func resolved() -> (solar: String, hour: Int, clock: String, trueSolar: String?) {
         let (sy, sm, sd): (Int, Int, Int) = {
             if calendar == 0 { return (y, m, d) }
-            let s = Engine.shared.lunarToSolar(y, m, d, leap: leap).split(separator: "-").compactMap { Int($0) }
-            return s.count == 3 ? (s[0], s[1], s[2]) : (y, m, d)
+            return Lunar.toSolar(y, m, d, leap: leap) ?? Lunar.toSolar(y, m, min(d, 29), leap: leap) ?? (y, m, d)
         }()
         let (h, mm) = unknownTime ? (12, 0) : (hh, mi)
         let clock = String(format: "%d-%d-%d %02d:%02d", sy, sm, sd, h, mm)

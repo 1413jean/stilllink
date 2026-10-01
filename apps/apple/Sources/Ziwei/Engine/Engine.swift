@@ -123,9 +123,8 @@ final class Engine: @unchecked Sendable {
     private func _horo(_ p: Person, _ pick: Pick) -> Horoscope? {
         let key = "\(p.chartKey)|\(pick.year)-\(pick.lm)-\(pick.ld)|\(pick.hour)"
         if let h = horoCache[key] { return h }
-        var day = pick.ld
-        var solar = _call("zwLunarToSolar", [pick.year, pick.lm, day])
-        while !solar.contains("-") && day > 28 { day -= 1; solar = _call("zwLunarToSolar", [pick.year, pick.lm, day]) } // 小月沒有三十
+        // 小月沒有三十就退一天
+        let solar = Lunar.solarString(pick.year, pick.lm, pick.ld) ?? Lunar.solarString(pick.year, pick.lm, min(pick.ld, 29)) ?? "\(pick.year)-1-1"
         guard let h = try? JSONDecoder().decode(Horoscope.self, from: Data(_call("zwHoro", [p.solar, p.hour, p.gender.rawValue, solar, pick.hour]).utf8)) else { return nil }
         horoCache[key] = h
         return h
@@ -141,7 +140,7 @@ final class Engine: @unchecked Sendable {
         await run {
             let c = self._chart(p)
             guard let h = self._horo(p, pick) else { return nil }
-            return ChartModel(chart: c, horo: h)
+            return ChartModel(person: p, chart: c, horo: h, pick: pick)
         }
     }
 
@@ -165,11 +164,8 @@ final class Engine: @unchecked Sendable {
         await run { for p in people { _ = self._chart(p); _ = self._horo(p, pick) } }
     }
 
-    func lunarToSolar(_ y: Int, _ m: Int, _ d: Int, leap: Bool = false) -> String { queue.sync { _call("zwLunarToSolar", [y, m, d, leap]) } }
+    // 國曆↔農曆一律走 Lunar（系統曆法），不在主執行緒同步等 JS
 
-    func solarToLunar(_ solar: String) -> LunarDate {
-        queue.sync { try! JSONDecoder().decode(LunarDate.self, from: Data(_call("zwSolarToLunar", [solar]).utf8)) }
-    }
 }
 
 /// 一張盤畫面需要的所有資料，背景算好再交給畫面
@@ -179,10 +175,12 @@ struct ChartModel {
     let selfs: [(out: [String: Mutagen], into: [String: Mutagen])]
     let flying: [[(star: String, m: Mutagen, to: Int?)]]
     let yearlyAges: [[Int]]
+    let bazi: BaziInfo
 
-    init(chart: Chart, horo: Horoscope) {
+    init(person: Person, chart: Chart, horo: Horoscope, pick: Pick? = nil) {
         self.chart = chart
         self.horo = horo
+        bazi = BaziInfo(person: person, chart: chart)
         selfs = (0..<12).map { ZW.selfTransforms(chart, $0) }
         flying = (0..<12).map { ZW.flying(chart, $0) }
         yearlyAges = (0..<12).map { ZW.yearlyAges(chart, $0) }

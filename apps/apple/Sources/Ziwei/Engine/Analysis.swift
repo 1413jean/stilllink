@@ -36,6 +36,19 @@ enum ZW {
     /// 中宮四邊錨點（0–1），畫三方四正連線
     static let anchor: [(Double, Double)] = [(0, 1), (0, 0.75), (0, 0.25), (0, 0), (0.25, 0), (0.75, 0), (1, 0), (1, 0.25), (1, 0.75), (1, 1), (0.75, 1), (0.25, 1)]
 
+    /// 十二宮簡稱（命宮起逆時針）
+    static let palaceShort = ["命", "兄", "夫", "子", "財", "疾", "遷", "友", "官", "田", "福", "父"]
+    static let palaceShortOf: [String: String] = [
+        "命宮": "命", "兄弟": "兄", "夫妻": "夫", "子女": "子", "財帛": "財", "疾厄": "疾",
+        "遷移": "遷", "交友": "友", "官祿": "官", "田宅": "田", "福德": "福", "父母": "父",
+    ]
+
+    /// 轉宮：以 taiji 宮為命，index 宮叫「X之Y」（例：夫之兄）
+    static func transferredName(taiji t: Int, index i: Int, chart: Chart) -> String {
+        let head = palaceShortOf[chart.palaces[t].name] ?? String(chart.palaces[t].name.prefix(1))
+        return head + "之" + palaceShort[(t - i + 12) % 12]
+    }
+
     static func sanFang(_ i: Int) -> [Int] { [i, (i + 4) % 12, (i + 8) % 12, (i + 6) % 12] }
 
     static func mutagen(in list: [String], star: String) -> Mutagen? {

@@ -45,7 +45,13 @@ enum Appearance: String, Codable, CaseIterable {
 /// 命盤資料：先存在本機 JSON（~/Library/Application Support/Ziwei），之後換 SQLite＋雲端同步
 @MainActor
 final class Store: ObservableObject {
-    @Published var people: [Person] = [] { didSet { save(); refreshSoulStars() } }
+    @Published var people: [Person] = [] {
+        didSet {
+            save()
+            // 只有影響排盤的資料（生辰、性別、人數）變了才重算側欄主星；改備註、照片不用
+            if people.map(\.chartKey) != oldValue.map(\.chartKey) || people.map(\.id) != oldValue.map(\.id) { refreshSoulStars() }
+        }
+    }
     /// 側欄顯示的命宮主星，背景算好放這裡
     @Published var soulStars: [UUID: String] = [:]
     @AppStorage("appearance") var appearance: Appearance = .system
@@ -98,10 +104,16 @@ final class Store: ObservableObject {
         }
     }
 
+    private let saveQueue = DispatchQueue(label: "zw.save", qos: .utility)
+    /// 存檔放到背景，不卡畫面
     private func save() {
-        guard let data = try? JSONEncoder().encode(people) else { return }
-        try? data.write(to: url, options: .atomic)
+        let snapshot = people, url = url
+        saveQueue.async {
+            guard let data = try? JSONEncoder().encode(snapshot) else { return }
+            try? data.write(to: url, options: .atomic)
+        }
     }
+
 
     var groups: [(String, [Person])] {
         var out: [(String, [Person])] = []

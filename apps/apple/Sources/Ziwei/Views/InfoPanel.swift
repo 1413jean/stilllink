@@ -97,18 +97,20 @@ struct InfoPanel: View {
                             .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
                             .overlay(RoundedRectangle(cornerRadius: 9).stroke(draftFocused ? Color.zGrid : Color.zLine))
                             .onSubmit(addNote)
-                        if !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            HStack {
-                                Spacer()
-                                Button("新增備註", action: addNote)
-                                    .buttonStyle(ZPrimaryButton(small: true))
+                        HStack {
+                            Spacer()
+                            Button("新增備註", action: addNote)
+                                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                .buttonStyle(ZPrimaryButton(small: true))
+                        }
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(current.notes.reversed()) { n in
+                                NoteRow(note: n) { deleteNote(n.id) }
+                                    .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: -6)),
+                                                            removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))))
                             }
                         }
-                        ForEach(current.notes.reversed()) { n in
-                            NoteRow(note: n) { deleteNote(n.id) }
-                                .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: -6)),
-                                                        removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))))
-                        }
+                        .animation(Motion.base, value: current.notes.map(\.id))
                     }
                 }
 
@@ -196,14 +198,14 @@ struct InfoPanel: View {
         guard !t.isEmpty else { return }
         var p = current
         p.notes.append(Note(text: t))
-        withAnimation(Motion.base) { store.update(p) }
+        store.update(p)
         draft = ""
     }
 
     private func deleteNote(_ id: UUID) {
         var p = current
         p.notes.removeAll { $0.id == id }
-        withAnimation(Motion.base) { store.update(p) }
+        store.update(p)
     }
 
     private func pickPhotos() {

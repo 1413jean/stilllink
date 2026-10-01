@@ -1,53 +1,143 @@
 import SwiftUI
 
-/// 右下角「快捷排盤」：新建命盤、四柱反查、紫占排盤、今年／本月／今日／此時流盤
+/// 右下角「快捷排盤」：點 ✦ 直接往上展開，每項都有圖示；紫占、報數在裡面再展開
 struct QuickMenu: View {
     @Binding var pick: Pick
+    @State private var open = false
+    @State private var sub: Sub?
+    @State private var nums = ["", "", ""]
+    @State private var gender: Gender = .female
     @State private var hover = false
 
+    enum Sub { case zizhan, baoshu }
+
     var body: some View {
-        Menu {
-            Button { NotificationCenter.default.post(name: .newChart, object: nil) } label: { Label("新建命盤", systemImage: "plus") }
-            Button { NotificationCenter.default.post(name: .openPillars, object: nil) } label: { Label("四柱反查", systemImage: "magnifyingglass") }
-            Menu {
-                Button("當前時刻起盤（男盤）") { TempChart.open(.now(.male)) }
-                Button("當前時刻起盤（女盤）") { TempChart.open(.now(.female)) }
-                Divider()
-                Button("系統亂序起盤（男盤）") { TempChart.open(.random(.male)) }
-                Button("系統亂序起盤（女盤）") { TempChart.open(.random(.female)) }
-                Divider()
-                Button("當前時刻起七層限流盤（男盤）") { TempChart.open(.sevenLayer(.male)) }
-                Button("當前時刻起七層限流盤（女盤）") { TempChart.open(.sevenLayer(.female)) }
-            } label: { Label("紫占排盤", systemImage: "sparkles") }
-            Divider()
-            Button { flow(2) } label: { Label("今年流盤", systemImage: "calendar") }
-            Button { flow(3) } label: { Label("本月流盤", systemImage: "calendar.day.timeline.left") }
-            Button { flow(4) } label: { Label("今日流盤", systemImage: "sun.max") }
-            Button { flow(5) } label: { Label("此時流盤", systemImage: "clock") }
-        } label: {
-            Image(systemName: "sparkles")
-                .font(Font.zHeadline)
-                .foregroundStyle(Color.zOnColor)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(Color.zAccent))
-                .shadow(color: Color.zShadow, radius: 10, y: 4)
-                .scaleEffect(hover && !Motion.reduce ? 1.06 : 1)
-                .animation(Motion.fast, value: hover)
-                .contentShape(Circle())
+        VStack(alignment: .trailing, spacing: 10) {
+            if open {
+                VStack(alignment: .leading, spacing: 2) {
+                    item("plus.circle", "新建命盤", 0) { close(); NotificationCenter.default.post(name: .newChart, object: nil) }
+                    item("square.grid.2x2", "四柱反查", 1) { close(); NotificationCenter.default.post(name: .openPillars, object: nil) }
+                    item("sparkles", "紫占排盤", 2, chevron: sub == .zizhan) { toggle(.zizhan) }
+                    if sub == .zizhan {
+                        subItem("clock", "當前時刻起盤（男）") { go(.now(.male)) }
+                        subItem("clock", "當前時刻起盤（女）") { go(.now(.female)) }
+                        subItem("shuffle", "系統亂序起盤（男）") { go(.random(.male)) }
+                        subItem("shuffle", "系統亂序起盤（女）") { go(.random(.female)) }
+                        subItem("square.stack.3d.up", "七層限流盤（男）") { go(.sevenLayer(.male)) }
+                        subItem("square.stack.3d.up", "七層限流盤（女）") { go(.sevenLayer(.female)) }
+                    }
+                    item("number", "報數起卦", 3, chevron: sub == .baoshu) { toggle(.baoshu) }
+                    if sub == .baoshu { baoshu }
+                    Rectangle().fill(Color.zLine).frame(height: 0.5).padding(.vertical, 4)
+                    item("calendar", "今年流盤", 4) { flow(2) }
+                    item("calendar.day.timeline.left", "本月流盤", 5) { flow(3) }
+                    item("sun.max", "今日流盤", 6) { flow(4) }
+                    item("clock.badge", "此時流盤", 7) { flow(5) }
+                }
+                .padding(6)
+                .frame(width: 236)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard).shadow(color: Color.zShadow, radius: 18, y: 6))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
+                .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .bottomTrailing)))
+            }
+            Button { withAnimation(Motion.snap) { open.toggle(); if !open { sub = nil } } } label: {
+                Image(systemName: open ? "xmark" : "sparkles")
+                    .font(Font.zHeadline)
+                    .foregroundStyle(Color.zOnColor)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Color.zAccent))
+                    .shadow(color: Color.zShadow, radius: 10, y: 4)
+                    .rotationEffect(.degrees(open && !Motion.reduce ? 90 : 0))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(PressStyle())
+            .onHover { hover = $0 }
+            .help("快捷排盤")
         }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .onHover { hover = $0 }
-        .help("快捷排盤")
     }
+
+    private var baoshu: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("心裡想著問題，隨口報三個數字").font(Font.zCaption).foregroundStyle(Color.zText3)
+            HStack(spacing: 6) {
+                ForEach(0..<3, id: \.self) { k in
+                    TextField(["月", "日", "時"][k], text: $nums[k])
+                        .textFieldStyle(.plain).multilineTextAlignment(.center)
+                        .font(Font.zBody.monospacedDigit())
+                        .frame(height: 32)
+                        .background(RoundedRectangle(cornerRadius: 7).fill(Color.zBg))
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine))
+                        .onChange(of: nums[k]) { _, v in let d = v.filter(\.isNumber); if d != v { nums[k] = d } }
+                }
+            }
+            ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
+            Button("起卦") {
+                let n = nums.compactMap { Int($0) }
+                guard n.count == 3 else { return }
+                close()
+                TempChart.openBaoshu(n, gender)
+            }
+            .buttonStyle(ZPrimaryButton(small: true))
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .disabled(nums.contains { Int($0) == nil })
+        }
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: 9).fill(Color.zHover))
+        .transition(.opacity)
+    }
+
+    private func item(_ icon: String, _ title: String, _ i: Int, chevron: Bool? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(Font.zIcon).foregroundStyle(Color.zAccent).frame(width: 18)
+                Text(title).font(Font.zBody).foregroundStyle(Color.zText)
+                Spacer()
+                if let chevron {
+                    Image(systemName: "chevron.right").font(Font.zCaption).foregroundStyle(Color.zText3)
+                        .rotationEffect(.degrees(chevron ? 90 : 0))
+                }
+            }
+            .padding(.horizontal, 10).frame(height: 34)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(QuickRowStyle())
+        .enterFromBelow(open, index: 7 - i, distance: 6)
+    }
+
+    private func subItem(_ icon: String, _ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(Font.zCaption).foregroundStyle(Color.zText3).frame(width: 18)
+                Text(title).font(Font.zCallout).foregroundStyle(Color.zText2)
+                Spacer()
+            }
+            .padding(.leading, 24).padding(.trailing, 10).frame(height: 30)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(QuickRowStyle())
+        .transition(.opacity)
+    }
+
+    private func toggle(_ s: Sub) { withAnimation(Motion.base) { sub = sub == s ? nil : s } }
+    private func close() { withAnimation(Motion.exit) { open = false; sub = nil } }
+    private func go(_ k: TempChart.Kind) { close(); TempChart.open(k) }
 
     /// 回到今天的運限，並切到指定層級
     private func flow(_ level: Int) {
+        close()
         var p = Pick.today()
         p.level = level
-        withAnimation(Motion.snap) { pick = p }
+        pick = p
+    }
+}
+
+private struct QuickRowStyle: ButtonStyle {
+    @State private var hover = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(RoundedRectangle(cornerRadius: 8).fill(configuration.isPressed ? Color.zSel : hover ? Color.zHover : .clear))
+            .animation(Motion.fast, value: hover)
+            .onHover { hover = $0 }
     }
 }
 
@@ -67,6 +157,21 @@ enum TempChart {
             p = make(d, g, name: "紫占 · 亂序"); level = 2
         }
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: level))
+    }
+
+    /// 報數起卦：三個數字依序取農曆月（÷12 餘數）、日（÷30 餘數）、時辰（÷12 餘數，1＝子），年用今年農曆年
+    static func openBaoshu(_ n: [Int], _ g: Gender) {
+        let today = Pick.today()
+        let m = (n[0] - 1 + 1200) % 12 + 1
+        var d = (n[1] - 1 + 3000) % 30 + 1
+        if d == 30 && Lunar.monthLength(today.year, m) == 29 { d = 29 }
+        let branch = (n[2] - 1 + 1200) % 12
+        guard let s = Lunar.toSolar(today.year, m, d) else { return }
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Asia/Taipei")!
+        let date = cal.date(from: DateComponents(year: s.0, month: s.1, day: s.2, hour: branch == 0 ? 0 : branch * 2, minute: branch == 0 ? 30 : 0))!
+        let p = make(date, g, name: "報數 \(n.map(String.init).joined(separator: "·"))")
+        NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: 2))
+        Toast.show("報數 \(n[0])、\(n[1])、\(n[2]) → 農曆\(ZW.lunarMonths[m - 1])\(ZW.lunarDays[d - 1]) \(ZW.branches[branch])時")
     }
 
     static func make(_ d: Date, _ g: Gender, name: String) -> Person {
