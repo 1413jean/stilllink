@@ -146,6 +146,16 @@ final class Engine: @unchecked Sendable {
 
     func chart(for p: Person) async -> Chart { await run { self._chart(p) } }
 
+    /// 預先算好前後幾年（同月日時）的運限，切換流年時直接取快取
+    func prefetch(_ p: Person, around pick: Pick) {
+        queue.async(qos: .utility) {
+            for d in [1, -1, 2, -2, 3, -3] {
+                var q = pick; q.year += d
+                _ = self._horo(p, q)
+            }
+        }
+    }
+
     /// 套用命盤設定：同步到 iztro、本地四化表，並清掉快取
     func configure(_ s: ZSettings) {
         var cfg = s.iztroConfig
@@ -170,6 +180,7 @@ final class Engine: @unchecked Sendable {
 
 /// 一張盤畫面需要的所有資料，背景算好再交給畫面
 struct ChartModel {
+    let id = UUID()
     let chart: Chart
     let horo: Horoscope
     let selfs: [(out: [String: Mutagen], into: [String: Mutagen])]

@@ -5,7 +5,7 @@ struct QuickMenu: View {
     @Binding var pick: Pick
     @State private var open = false
     @State private var sub: Sub?
-    @State private var nums = ["", "", ""]
+    @State private var num = ""
     @State private var gender: Gender = .female
     @State private var hover = false
 
@@ -58,28 +58,23 @@ struct QuickMenu: View {
 
     private var baoshu: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("心裡想著問題，隨口報三個數字").font(Font.zCaption).foregroundStyle(Color.zText3)
-            HStack(spacing: 6) {
-                ForEach(0..<3, id: \.self) { k in
-                    TextField(["月", "日", "時"][k], text: $nums[k])
-                        .textFieldStyle(.plain).multilineTextAlignment(.center)
-                        .font(Font.zBody.monospacedDigit())
-                        .frame(height: 32)
-                        .background(RoundedRectangle(cornerRadius: 7).fill(Color.zBg))
-                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine))
-                        .onChange(of: nums[k]) { _, v in let d = v.filter(\.isNumber); if d != v { nums[k] = d } }
+            Text("心裡想著問題，隨口報一個 0–9999 的數字").font(Font.zCaption).foregroundStyle(Color.zText3)
+            TextField("例如：3721", text: $num)
+                .textFieldStyle(.plain).multilineTextAlignment(.center)
+                .font(Font.zBody.monospacedDigit())
+                .frame(height: 32)
+                .background(RoundedRectangle(cornerRadius: 7).fill(Color.zBg))
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine))
+                .onChange(of: num) { _, v in
+                    let d = String(v.filter(\.isNumber).prefix(4))
+                    if d != v { num = d }
                 }
-            }
+                .onSubmit(submitBaoshu)
             ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
-            Button("起卦") {
-                let n = nums.compactMap { Int($0) }
-                guard n.count == 3 else { return }
-                close()
-                TempChart.openBaoshu(n, gender)
-            }
-            .buttonStyle(ZPrimaryButton(small: true))
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .disabled(nums.contains { Int($0) == nil })
+            Button("起卦", action: submitBaoshu)
+                .buttonStyle(ZPrimaryButton(small: true))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .disabled(Int(num) == nil)
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 9).fill(Color.zHover))
@@ -116,6 +111,12 @@ struct QuickMenu: View {
         }
         .buttonStyle(QuickRowStyle())
         .transition(.opacity)
+    }
+
+    private func submitBaoshu() {
+        guard let n = Int(num) else { return }
+        close()
+        TempChart.openBaoshu(n, gender)
     }
 
     private func toggle(_ s: Sub) { withAnimation(Motion.base) { sub = sub == s ? nil : s } }
@@ -159,19 +160,20 @@ enum TempChart {
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: level))
     }
 
-    /// 報數起卦：三個數字依序取農曆月（÷12 餘數）、日（÷30 餘數）、時辰（÷12 餘數，1＝子），年用今年農曆年
-    static func openBaoshu(_ n: [Int], _ g: Gender) {
+    /// 報數起卦：一個 0–9999 的數字，依序拆出農曆月（÷12 的餘數）、日（再 ÷30 的餘數）、時辰（再 ÷12 的餘數，0＝子）。
+    /// 年用今年農曆年；同一個數字每次都排出同一張盤。
+    static func openBaoshu(_ n: Int, _ g: Gender) {
         let today = Pick.today()
-        let m = (n[0] - 1 + 1200) % 12 + 1
-        var d = (n[1] - 1 + 3000) % 30 + 1
+        let m = n % 12 + 1
+        var d = (n / 12) % 30 + 1
         if d == 30 && Lunar.monthLength(today.year, m) == 29 { d = 29 }
-        let branch = (n[2] - 1 + 1200) % 12
+        let branch = (n / 360) % 12
         guard let s = Lunar.toSolar(today.year, m, d) else { return }
         var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Asia/Taipei")!
         let date = cal.date(from: DateComponents(year: s.0, month: s.1, day: s.2, hour: branch == 0 ? 0 : branch * 2, minute: branch == 0 ? 30 : 0))!
-        let p = make(date, g, name: "報數 \(n.map(String.init).joined(separator: "·"))")
+        let p = make(date, g, name: "報數 \(n)")
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: 2))
-        Toast.show("報數 \(n[0])、\(n[1])、\(n[2]) → 農曆\(ZW.lunarMonths[m - 1])\(ZW.lunarDays[d - 1]) \(ZW.branches[branch])時")
+        Toast.show("報數 \(n) → 農曆\(ZW.lunarMonths[m - 1])\(ZW.lunarDays[d - 1]) \(ZW.branches[branch])時")
     }
 
     static func make(_ d: Date, _ g: Gender, name: String) -> Person {

@@ -48,7 +48,24 @@ extension Color {
 }
 
 extension Mutagen {
+    /// 文字、箭頭用（深色模式較亮）
     var color: Color { [.mLu, .mQuan, .mKe, .mJi][Mutagen.allCases.firstIndex(of: self)!] }
+    /// 色塊底色用（上面放白字）：深色模式改用較沉、飽和度較低的色，白字才讀得清楚
+    var fill: Color { [.fLu, .fQuan, .fKe, .fJi][Mutagen.allCases.firstIndex(of: self)!] }
+}
+
+extension Color {
+    static let fLu = dynamic(0x1F8A3A, 0x2F6B45)
+    static let fQuan = dynamic(0x7B48C8, 0x5F4796)
+    static let fKe = dynamic(0x1F5FBF, 0x335B99)
+    static let fJi = dynamic(0xD0102A, 0x9C3239)
+    static let fBirth = dynamic(0xD0102A, 0x9C3239)       // 生年四化方塊
+    static let fMinor = dynamic(0x1F8A8A, 0x2C6E6E)       // 小限四化方塊
+    /// 運限四化方塊底色：大限、流年、流月、流日、流時
+    static let fScopes: [Color] = [
+        dynamic(0x1F8A3A, 0x2F6B45), dynamic(0x1F5FBF, 0x335B99), dynamic(0xC27A12, 0x8E6224),
+        dynamic(0xB8357A, 0x8A3C66), dynamic(0x6B6963, 0x5A5955),
+    ]
 }
 
 extension ZW.Tone {

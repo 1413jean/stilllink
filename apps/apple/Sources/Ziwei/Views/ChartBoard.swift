@@ -2,11 +2,16 @@ import SwiftUI
 import AppKit
 
 /// 照文墨天機排的十二宮盤面（純 SwiftUI 繪製）
-struct ChartBoard: View {
+struct ChartBoard: View, Equatable {
     let person: Person
     let model: ChartModel
     let level: Int
     var onResetLevel: () -> Void = {}
+
+    /// 只有資料真的換了才重畫（點運限表時，盤面不會先拿舊資料多畫一次）
+    static func == (a: ChartBoard, b: ChartBoard) -> Bool {
+        a.person == b.person && a.model.id == b.model.id && a.level == b.level
+    }
     @State private var sel: Int?
     @State private var appeared = false
     @State private var locked: Int?    // 長按鎖定的宮位（比較兩組三方四正）
@@ -174,7 +179,7 @@ private struct PalaceCell: View {
         VStack(alignment: .leading, spacing: 2) {
             // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
             ViewThatFits(in: .vertical) {
-                ForEach(Array([(1.0, 1.0), (1.0, 0.8), (0.92, 0.72), (0.84, 0.68), (0.74, 0.64)].enumerated()), id: \.offset) { _, k in
+                ForEach(Array([(1.0, 1.0), (1.0, 0.78), (0.86, 0.68), (0.74, 0.62)].enumerated()), id: \.offset) { _, k in
                     starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1)
                 }
             }
@@ -326,7 +331,7 @@ private struct StarColumn: View {
                          weight: star.type == "major" ? .semibold : .regular)
                 .padding(.vertical, 1)
                 .frame(width: fs * 1.18)
-                .background(fly?.color ?? .clear)
+                .background(fly?.fill ?? .clear)
             Text(star.brightness.isEmpty ? " " : star.brightness)
                 .font(ChartType.font(ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
@@ -348,15 +353,15 @@ private struct StarColumn: View {
     /// 生年 → 小限 → 大限 → 流年 → … 的四化方塊
     private var allBoxes: [(String, Color)] {
         var b: [(String, Color)] = []
-        if !star.mutagen.isEmpty { b.append((star.mutagen, .wmRed)) }
-        if let minor { b.append((minor.rawValue, .minorColor)) }
-        for (lv, m) in scopes { b.append((m.rawValue, Color.scopeColors[lv - 1])) }
+        if !star.mutagen.isEmpty { b.append((star.mutagen, .fBirth)) }
+        if let minor { b.append((minor.rawValue, .fMinor)) }
+        for (lv, m) in scopes { b.append((m.rawValue, Color.fScopes[lv - 1])) }
         return b
     }
 
     private func box(_ t: String, fill: Color, size: CGFloat = 1.12) -> some View {
         Text(t)
-            .font(ChartType.font(fs * size * 0.75, .semibold))
+            .font(ChartType.font(fs * size * 0.8))
             .foregroundStyle(Color.zOnColor)
             .frame(width: fs * size, height: fs * size)
             .background(fill)
@@ -440,8 +445,8 @@ private struct CenterInfo: View {
                 .lineLimit(1).minimumScaleFactor(0.7)
                 HStack(spacing: 4) {
                     ForEach(Mutagen.allCases, id: \.self) { m in
-                        Text(m.rawValue).font(ChartType.font(ChartType.centerSmall(fs), .semibold)).foregroundStyle(Color.zOnColor)
-                            .padding(.horizontal, 3).background(m.color)
+                        Text(m.rawValue).font(ChartType.font(ChartType.centerSmall(fs))).foregroundStyle(Color.zOnColor)
+                            .padding(.horizontal, 3).background(m.fill)
                     }
                     Text("自化：↑離心 ↓向心").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
                     if let taiji {

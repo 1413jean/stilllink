@@ -45,6 +45,7 @@ struct ChartScreen: View {
     @State private var pick: Pick
     @State private var showInfo = true
     @State private var model: ChartModel?
+    @State private var shownLevel = 2           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
     @State private var zoomBase: CGFloat = 1
 
@@ -74,7 +75,8 @@ struct ChartScreen: View {
                     VStack(spacing: 12) {
                         Group {
                             if let model {
-                                ChartBoard(person: person, model: model, level: pick.level) { pick.level = 0 }
+                                ChartBoard(person: person, model: model, level: shownLevel) { pick.level = 0 }
+                                    .equatable()
                                     .transaction(value: pick) { $0.animation = nil }
                                     .transition(.opacity)
                             } else {
@@ -114,6 +116,22 @@ struct ChartScreen: View {
                             .allowsHitTesting(false)
                     )
             }
+            .dimmedBlur()
+            .overlay(alignment: .topTrailing) {
+                if showInfo {
+                    ScrollView(showsIndicators: false) {
+                        InfoPanel(person: person, chart: model?.chart)
+                            .padding(.top, 12)
+                            .padding(.bottom, 96) // 底部留給右下角的快捷鈕
+                            .padding(.horizontal, 16) // 留空間給卡片陰影
+                    }
+                    .scrollClipDisabled()
+                    .frame(width: infoPanelWidth + 32)
+                    .padding(.trailing, 4)
+                    .dimmedBlur()
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+            }
             .overlay(alignment: .bottomTrailing) {
                 VStack(alignment: .trailing, spacing: 10) {
                     if zoom > 1 {
@@ -129,25 +147,9 @@ struct ChartScreen: View {
                     }
                     QuickMenu(pick: $pick)
                 }
-                .padding(.trailing, (showInfo ? infoPanelWidth + 36 : 0) + 24)
+                .padding(.trailing, 24)
                 .padding(.bottom, 24)
                 .animation(Motion.base, value: zoom > 1)
-            }
-            .dimmedBlur()
-            .overlay(alignment: .topTrailing) {
-                if showInfo {
-                    ScrollView(showsIndicators: false) {
-                        InfoPanel(person: person, chart: model?.chart)
-                            .padding(.top, 12)
-                            .padding(.bottom, 24)
-                            .padding(.horizontal, 16) // 留空間給卡片陰影
-                    }
-                    .scrollClipDisabled()
-                    .frame(width: infoPanelWidth + 32)
-                    .padding(.trailing, 4)
-                    .dimmedBlur()
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
             }
         }
         .background(Color.zBg)
@@ -159,9 +161,18 @@ struct ChartScreen: View {
             }
         }
         .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
-            let m = await Engine.shared.model(for: person, pick: pick)
+            let target = pick
+            let m = await Engine.shared.model(for: person, pick: target)
+            guard !Task.isCancelled else { return }
             // 第一次淡入；之後換運限直接換，不讓整張盤一起動畫
-            if model == nil { withAnimation(Motion.enter) { model = m } } else { model = m }
+            if model == nil {
+                shownLevel = target.level
+                withAnimation(Motion.enter) { model = m }
+            } else {
+                var t = Transaction(); t.disablesAnimations = true
+                withTransaction(t) { model = m; shownLevel = target.level }
+            }
+            Engine.shared.prefetch(person, around: target)
         }
     }
 
