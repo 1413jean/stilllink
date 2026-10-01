@@ -17,6 +17,7 @@ struct Sidebar: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
                     NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", action: onNew)
+                    NavRow(icon: "clock", title: "此刻", selected: route == .home || route == nil) { route = .home }
                     if searching {
                         HStack(spacing: 8) {
                             Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
@@ -126,6 +127,7 @@ private struct NavRow: View {
     let icon: String
     let title: String
     var shortcut: String? = nil
+    var selected = false
     let action: () -> Void
     @State private var hover = false
     var body: some View {
@@ -138,7 +140,7 @@ private struct NavRow: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 30)
-            .background(RoundedRectangle(cornerRadius: 8).fill(hover ? Color.zHover : Color.clear))
+            .background(RoundedRectangle(cornerRadius: 8).fill(selected ? Color.zSel : hover ? Color.zHover : Color.clear))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

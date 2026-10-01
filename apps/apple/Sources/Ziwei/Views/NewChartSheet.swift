@@ -1,192 +1,204 @@
 import SwiftUI
-import MapKit
 
-/// 地址自動完成：MKLocalSearchCompleter → 選定後用 MKLocalSearch 取得經緯度與時區
-@MainActor
-final class PlaceSearch: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
-    @Published var query = "" { didSet { if query != oldValue && !suppress { completer.queryFragment = query } } }
-    @Published var results: [MKLocalSearchCompletion] = []
-    @Published var resolving = false
-    private let completer = MKLocalSearchCompleter()
-    private var suppress = false
-
-    override init() {
-        super.init()
-        completer.delegate = self
-        completer.resultTypes = [.address, .pointOfInterest]
-    }
-
-    nonisolated func completerDidUpdateResults(_ c: MKLocalSearchCompleter) {
-        let r = Array(c.results.prefix(6))
-        Task { @MainActor in self.results = r }
-    }
-    nonisolated func completer(_ c: MKLocalSearchCompleter, didFailWithError error: Error) {}
-
-    func resolve(_ item: MKLocalSearchCompletion) async -> BirthPlace? {
-        resolving = true
-        defer { resolving = false }
-        let res = try? await MKLocalSearch(request: MKLocalSearch.Request(completion: item)).start()
-        guard let m = res?.mapItems.first else { return nil }
-        let name = [item.title, item.subtitle].filter { !$0.isEmpty }.joined(separator: "，")
-        set(name)
-        results = []
-        let coord = m.placemark.coordinate
-        return BirthPlace(name: name, latitude: coord.latitude, longitude: coord.longitude,
-                          timeZoneID: (m.timeZone ?? TimeZone(identifier: "Asia/Taipei")!).identifier)
-    }
-
-    func set(_ text: String) { suppress = true; query = text; suppress = false }
-}
-
-/// 新增命盤彈窗
+/// 新增命盤彈窗：照 Claude 設定頁——分區標題，每列左邊標題＋說明、右邊控制項，列之間細線
 struct NewChartSheet: View {
     @EnvironmentObject var store: Store
-    @Environment(\.dismiss) private var dismiss
+    var editing: Person? = nil      // 有值＝編輯既有命盤
+    var onClose: () -> Void
     var onCreated: (Person) -> Void
 
     @State private var name = ""
     @State private var gender: Gender = .female
-    @State private var calendar = 0 // 0 國曆、1 農曆
-    @State private var date = Calendar.current.date(from: DateComponents(year: 1995, month: 1, day: 1, hour: 12))!
-    @State private var ly = 1995
-    @State private var lm = 1
-    @State private var ld = 1
-    @State private var leap = false
-    @State private var time = Calendar.current.date(from: DateComponents(year: 2000, month: 1, day: 1, hour: 12, minute: 0))!
-    @State private var unknownTime = false
     @State private var group = "客人"
-    @State private var place: BirthPlace?
-    @StateObject private var search = PlaceSearch()
-    @FocusState private var focus: Field?
-    enum Field { case name, place }
+    @State private var calendar = 0 // 0 國曆、1 農曆
+    @State private var y = 1995
+    @State private var m = 1
+    @State private var d = 1
+    @State private var leap = false
+    @State private var hh = 12
+    @State private var mi = 0
+    @State private var unknownTime = false
+    @State private var region: PlaceRegion = Places.taiwan
+    @State private var city: PlaceCity? = Places.taiwan.cities.first
+    @State private var loaded = false
+    @FocusState private var nameFocused: Bool
 
+    private let controlWidth: CGFloat = 340
     private var canSubmit: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("新增命盤").font(.zTitle)
+                Text(editing == nil ? "新增命盤" : "編輯命主資料").font(.zTitle).foregroundStyle(Color.zText)
                 Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(Font.zCaptionStrong).foregroundStyle(Color.zText2)
-                        .frame(width: 24, height: 24).background(Circle().fill(Color.zHover))
+                Button(action: onClose) {
+                    Image(systemName: "xmark").font(Font.zIcon).foregroundStyle(Color.zText2)
+                        .frame(width: 30, height: 30).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .keyboardShortcut(.cancelAction)
             }
-            .padding(.bottom, 18)
+            .padding(.horizontal, 32)
+            .padding(.top, 24)
+            .padding(.bottom, 4)
 
-            VStack(alignment: .leading, spacing: 14) {
-                field("姓名") {
-                    TextField("例如：林小姐", text: $name).textFieldStyle(.plain).focused($focus, equals: .name)
-                        .inputBox()
-                }
-                HStack(spacing: 14) {
-                    field("性別") {
-                        Picker("", selection: $gender) { ForEach(Gender.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
-                            .pickerStyle(.segmented).labelsHidden().frame(width: 110)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    sectionTitle("基本資料")
+                    row("姓名", "客人的名字或代稱") {
+                        TextField("例如：林小姐", text: $name).textFieldStyle(.plain)
+                            .focused($nameFocused)
+                            .inputBox()
                     }
-                    field("分組") {
-                        Picker("", selection: $group) { ForEach(groupOptions, id: \.self) { Text($0).tag($0) } }
-                            .labelsHidden().frame(width: 120)
+                    row("性別", "影響大限順逆") {
+                        ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
                     }
-                    Spacer()
-                }
+                    row("分組", "顯示在側欄的資料夾", last: true) {
+                        ZMenuField(options: groupOptions, selection: $group)
+                    }
 
-                field("出生日期") {
-                    HStack(spacing: 10) {
-                        Picker("", selection: $calendar) { Text("國曆").tag(0); Text("農曆").tag(1) }
-                            .pickerStyle(.segmented).labelsHidden().frame(width: 110)
-                        if calendar == 0 {
-                            DatePicker("", selection: $date, displayedComponents: .date)
-                                .datePickerStyle(.field).labelsHidden()
-                        } else {
-                            Picker("", selection: $ly) { ForEach(1900...2100, id: \.self) { Text(String($0) + "年").tag($0) } }.labelsHidden().frame(width: 90)
-                            Picker("", selection: $lm) { ForEach(1...12, id: \.self) { Text(ZW.lunarMonths[$0 - 1]).tag($0) } }.labelsHidden().frame(width: 76)
-                            Picker("", selection: $ld) { ForEach(1...30, id: \.self) { Text(ZW.lunarDays[$0 - 1]).tag($0) } }.labelsHidden().frame(width: 76)
-                            Toggle("閏月", isOn: $leap).toggleStyle(.checkbox)
-                        }
+                    sectionTitle("出生時間")
+                    row("曆法", "輸入的日期是國曆還是農曆") {
+                        ZSegmented(options: [(0, "國曆"), (1, "農曆")], selection: $calendar)
                     }
-                }
-
-                field("出生時間") {
-                    HStack(spacing: 10) {
-                        DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
-                            .datePickerStyle(.field).labelsHidden().disabled(unknownTime)
-                        Toggle("時間不確定（以午時排）", isOn: $unknownTime).toggleStyle(.checkbox)
-                            .font(Font.zCallout)
-                    }
-                }
-
-                field("出生地") {
-                    VStack(alignment: .leading, spacing: 0) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "mappin.and.ellipse").foregroundStyle(Color.zText3)
-                            TextField("輸入城市或地址，例如：台北市大安區", text: $search.query)
-                                .textFieldStyle(.plain)
-                                .focused($focus, equals: .place)
-                                .onChange(of: search.query) { _, v in if v != place?.name { place = nil } }
-                            if search.resolving { ProgressView().controlSize(.small) }
-                        }
-                        .inputBox()
-                        if focus == .place && !search.results.isEmpty && place == nil {
-                            VStack(alignment: .leading, spacing: 0) {
-                                ForEach(search.results, id: \.self) { r in
-                                    Button {
-                                        Task { place = await search.resolve(r) }
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: 1) {
-                                            Text(r.title).font(Font.zCallout).foregroundStyle(Color.zText)
-                                            if !r.subtitle.isEmpty { Text(r.subtitle).font(Font.zCaption).foregroundStyle(Color.zText3) }
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.horizontal, 10).padding(.vertical, 6)
-                                        .contentShape(Rectangle())
-                                    }
-                                    .buttonStyle(HoverRowStyle())
-                                }
+                    row("出生日期", calendar == 0 ? "國曆年月日" : "農曆年月日") {
+                        HStack(spacing: 10) {
+                            HStack(spacing: 2) {
+                                NumberField(value: $y, range: 1900...2100, width: 50)
+                                unit("年")
+                                NumberField(value: $m, range: 1...12, width: 30)
+                                unit("月")
+                                NumberField(value: $d, range: 1...31, width: 30)
+                                unit("日")
+                                Spacer(minLength: 0)
                             }
-                            .padding(4)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.zCard))
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.zLine))
-                            .padding(.top, 4)
-                        }
-                        if let place {
-                            Text(String(format: "經度 %.4f°%@　緯度 %.4f°%@　%@", abs(place.longitude), place.longitude >= 0 ? "E" : "W",
-                                        abs(place.latitude), place.latitude >= 0 ? "N" : "S", place.timeZoneID))
-                                .font(Font.zCaption.monospacedDigit()).foregroundStyle(Color.zText2)
-                                .padding(.top, 6)
+                            .inputBox()
+                            if calendar == 1 {
+                                Toggle("閏月", isOn: $leap).toggleStyle(.checkbox).font(Font.zBody)
+                            }
                         }
                     }
-                }
+                    row("出生時間", "24 小時制，以出生地鐘錶時間為準") {
+                        HStack(spacing: 2) {
+                            NumberField(value: $hh, range: 0...23, width: 30, pad: true)
+                            unit(":")
+                            NumberField(value: $mi, range: 0...59, width: 30, pad: true)
+                            Spacer(minLength: 0)
+                            Text(ZW.hours[SolarTime.shichen(hh)] + "時").font(Font.zCallout).foregroundStyle(Color.zText3)
+                        }
+                        .inputBox()
+                        .disabled(unknownTime)
+                        .opacity(unknownTime ? 0.4 : 1)
+                    }
+                    row("時間不確定", "不知道出生時間時，以午時排盤", last: true) {
+                        HStack { Spacer(); Toggle("", isOn: $unknownTime).toggleStyle(.switch).labelsHidden() }
+                    }
 
-                // 結果預覽：真太陽時與時辰
-                HStack(spacing: 8) {
-                    Image(systemName: "sun.max").foregroundStyle(Color.zAccent)
-                    Text(previewText).font(Font.zCallout.monospacedDigit()).foregroundStyle(Color.zText2)
+                    sectionTitle("出生地")
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("用經緯度換算真太陽時。上下捲動選擇國家／地區與城市。")
+                            .font(Font.zCallout).foregroundStyle(Color.zText3)
+                        HStack(spacing: 10) {
+                            ZColumnList(items: Places.all, id: \.id, label: \.name, selected: region.id) { r in
+                                region = r
+                                city = r.cities.first
+                            }
+                            .frame(width: 220)
+                            ZColumnList(items: region.cities, id: \.id, label: \.name, selected: city?.id) { c in city = c }
+                        }
+                        .frame(height: 220)
+                        if let city {
+                            Text(String(format: "%@ · %@　經度 %.4f°%@　緯度 %.4f°%@　%@", region.name, city.name,
+                                        abs(city.lon), city.lon >= 0 ? "E" : "W", abs(city.lat), city.lat >= 0 ? "N" : "S", city.tz))
+                                .font(Font.zCaption.monospacedDigit()).foregroundStyle(Color.zText2)
+                        }
+                    }
+                    .padding(.vertical, 12)
+                    .overlay(alignment: .bottom) { Rectangle().fill(Color.zLine).frame(height: 0.5) }
+                    row("排盤時間", "實際用來排盤的時間與時辰", last: true) {
+                        Text(previewText)
+                            .font(Font.zBody.monospacedDigit())
+                            .foregroundStyle(Color.zText)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                 }
-                .padding(.horizontal, 12).padding(.vertical, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.zHover))
+                .padding(.horizontal, 32)
+                .padding(.bottom, 8)
             }
+            .scrollIndicators(.automatic)
 
-            HStack {
+            HStack(spacing: 10) {
                 Spacer()
-                Button("取消") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("排盤") { submit() }
+                Button("取消", action: onClose).controlSize(.large)
+                Button(editing == nil ? "排盤" : "儲存", action: submit)
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
-                    .tint(Color.zAccent)
+                    .controlSize(.large)
                     .disabled(!canSubmit)
             }
-            .controlSize(.large)
-            .padding(.top, 22)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 18)
+            .overlay(alignment: .top) { Rectangle().fill(Color.zLine).frame(height: 0.5) }
         }
-        .padding(24)
-        .frame(width: 560)
-        .background(Color.zBg)
-        .environment(\.locale, Locale(identifier: "zh_TW"))
-        .onAppear { focus = .name }
+        .frame(width: 760)
+        .frame(maxHeight: 820)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .shadow(color: Color.zShadow, radius: 40, y: 16)
+        .padding(.vertical, 40)
+        .onAppear { load(); nameFocused = true }
     }
+
+    /// 編輯時把原本的資料帶進表單
+    private func load() {
+        guard !loaded, let p = editing else { return }
+        loaded = true
+        name = p.name; gender = p.gender; group = p.group
+        let src = p.clock ?? "\(p.solar) \(String(format: "%02d", max(0, p.hour * 2 - (p.hour == 12 ? 1 : 0))) ):00"
+        let parts = src.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == ":" }).compactMap { Int($0) }
+        if parts.count >= 5 { (y, m, d, hh, mi) = (parts[0], parts[1], parts[2], parts[3], parts[4]) }
+        calendar = 0
+        if let pl = p.place {
+            // 先比名字，再找最近的城市
+            let best = Places.all.flatMap { r in r.cities.map { (r, $0) } }
+                .min { a, b in dist(a.1, pl) < dist(b.1, pl) }
+            if let best { region = best.0; city = best.1 }
+        } else {
+            city = nil
+        }
+    }
+
+    private func dist(_ c: PlaceCity, _ p: BirthPlace) -> Double {
+        (c.lat - p.latitude) * (c.lat - p.latitude) + (c.lon - p.longitude) * (c.lon - p.longitude)
+    }
+
+    // MARK: 版面元件
+
+    private func sectionTitle(_ t: String) -> some View {
+        Text(t).font(Font.zHeadline).foregroundStyle(Color.zText)
+            .padding(.top, 22).padding(.bottom, 4)
+    }
+
+    private func unit(_ t: String) -> some View {
+        Text(t).font(Font.zInput).foregroundStyle(Color.zText3)
+    }
+
+    /// 設定列：左邊標題＋說明，右邊固定寬度的控制項欄；列之間細線
+    private func row<C: View>(_ title: String, _ note: String, last: Bool = false, @ViewBuilder _ control: () -> C) -> some View {
+        HStack(alignment: .center, spacing: 24) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(Font.zBody).foregroundStyle(Color.zText)
+                Text(note).font(Font.zCallout).foregroundStyle(Color.zText3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            control()
+                .frame(width: controlWidth)
+        }
+        .padding(.vertical, 12)
+        .overlay(alignment: .bottom) { if !last { Rectangle().fill(Color.zLine).frame(height: 0.5) } }
+    }
+
+    // MARK: 資料
 
     private var groupOptions: [String] {
         var g = ["客人", "家人", "朋友"]
@@ -194,23 +206,23 @@ struct NewChartSheet: View {
         return g
     }
 
+    private var place: BirthPlace? {
+        city.map { BirthPlace(name: region.name == $0.name ? $0.name : "\(region.name)\($0.name)", latitude: $0.lat, longitude: $0.lon, timeZoneID: $0.tz) }
+    }
+
     /// 算出排盤用的國曆日期、時辰與真太陽時
     private func resolved() -> (solar: String, hour: Int, clock: String, trueSolar: String?) {
-        let (y, m, d): (Int, Int, Int) = {
-            if calendar == 0 {
-                let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
-                return (c.year!, c.month!, c.day!)
-            }
-            let s = Engine.shared.lunarToSolar(ly, lm, ld, leap: leap).split(separator: "-").compactMap { Int($0) }
-            return s.count == 3 ? (s[0], s[1], s[2]) : (ly, lm, ld)
+        let (sy, sm, sd): (Int, Int, Int) = {
+            if calendar == 0 { return (y, m, d) }
+            let s = Engine.shared.lunarToSolar(y, m, d, leap: leap).split(separator: "-").compactMap { Int($0) }
+            return s.count == 3 ? (s[0], s[1], s[2]) : (y, m, d)
         }()
-        let t = Calendar.current.dateComponents([.hour, .minute], from: time)
-        let (hh, mm) = unknownTime ? (12, 0) : (t.hour!, t.minute!)
-        let clock = String(format: "%d-%d-%d %02d:%02d", y, m, d, hh, mm)
+        let (h, mm) = unknownTime ? (12, 0) : (hh, mi)
+        let clock = String(format: "%d-%d-%d %02d:%02d", sy, sm, sd, h, mm)
         guard let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else {
-            return ("\(y)-\(m)-\(d)", SolarTime.shichen(hh), clock, nil)
+            return ("\(sy)-\(sm)-\(sd)", SolarTime.shichen(h), clock, nil)
         }
-        let r = SolarTime.compute(year: y, month: m, day: d, hour: hh, minute: mm, longitude: place.longitude, tz: tz)
+        let r = SolarTime.compute(year: sy, month: sm, day: sd, hour: h, minute: mm, longitude: place.longitude, tz: tz)
         let ts = String(format: "%d-%d-%d %02d:%02d", r.ymd.0, r.ymd.1, r.ymd.2, r.hm.0, r.hm.1)
         return ("\(r.ymd.0)-\(r.ymd.1)-\(r.ymd.2)", r.shichen, clock, ts)
     }
@@ -218,44 +230,65 @@ struct NewChartSheet: View {
     private var previewText: String {
         let r = resolved()
         let sc = ZW.hours[r.hour] + "時"
-        if let ts = r.trueSolar { return "鐘錶 \(r.clock)　→　真太陽時 \(ts)　→　\(sc)" }
-        if unknownTime { return "時間不確定，以午時排盤" }
-        return "鐘錶 \(r.clock)　→　\(sc)（填出生地可換算真太陽時）"
+        if unknownTime { return "以午時排盤" }
+        if let ts = r.trueSolar { return "真太陽時 \(ts) · \(sc)" }
+        return "\(r.clock) · \(sc)"
     }
 
     private func submit() {
         guard canSubmit else { return }
         let r = resolved()
+        if var p = editing {
+            p.name = name.trimmingCharacters(in: .whitespaces); p.gender = gender; p.group = group
+            p.solar = r.solar; p.hour = r.hour; p.clock = r.clock; p.trueSolar = r.trueSolar; p.place = place
+            store.update(p)
+            onClose()
+            onCreated(p)
+            return
+        }
         let p = Person(name: name.trimmingCharacters(in: .whitespaces), gender: gender, solar: r.solar, hour: r.hour,
                        group: group, clock: r.clock, trueSolar: r.trueSolar, place: place)
         store.add(p)
-        dismiss()
+        onClose()
         onCreated(p)
-    }
-
-    private func field<C: View>(_ label: String, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(Font.zCaptionStrong).foregroundStyle(Color.zText2)
-            content()
-        }
     }
 }
 
-private struct HoverRowStyle: ButtonStyle {
-    @State private var hover = false
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(RoundedRectangle(cornerRadius: 7).fill(hover ? Color.zHover : .clear))
-            .onHover { hover = $0 }
+/// 數字輸入欄：無邊框，放在 inputBox 裡；只收數字，超出範圍不採用
+private struct NumberField: View {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    let width: CGFloat
+    var pad = false
+    @State private var text = ""
+
+    var body: some View {
+        TextField("", text: $text)
+            .textFieldStyle(.plain)
+            .multilineTextAlignment(.center)
+            .font(Font.zInput.monospacedDigit())
+            .frame(width: width)
+            .onAppear { text = format(value) }
+            .onChange(of: value) { _, v in if Int(text) != v { text = format(v) } }
+            .onChange(of: text) { _, t in
+                let digits = t.filter(\.isNumber)
+                if digits != t { text = digits }
+                if let v = Int(digits), range.contains(v) { value = v }
+            }
+            .onSubmit { text = format(value) }
     }
+
+    private func format(_ v: Int) -> String { pad ? String(format: "%02d", v) : String(v) }
 }
 
 extension View {
+    /// 設計系統的輸入框：38 高、14pt、淺底細框
     func inputBox() -> some View {
-        self.font(Font.zBody)
-            .padding(.horizontal, 10)
-            .frame(height: 32)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.zLine))
+        self.font(Font.zInput)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 38)
+            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
+            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
     }
 }

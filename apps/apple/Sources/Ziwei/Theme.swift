@@ -61,8 +61,10 @@ extension ZW.Wuxing {
 extension Color {
     /// 色塊上的文字（四化方塊、強調色按鈕）
     static let zOnColor = Color.white
+    /// 彈窗背景模糊上的暗化
+    static let zScrim = Color.black.opacity(0.12)
     /// 浮層陰影
-    static let zShadow = Color.black.opacity(0.07)
+    static let zShadow = Color.black.opacity(0.12)
 }
 
 // MARK: - 字級（全部 SF Pro；中文由系統自動以蘋方補字）
@@ -71,7 +73,8 @@ extension Font {
     static let zDisplay = Font.system(size: 32, weight: .medium)        // 首頁大標
     static let zTitle = Font.system(size: 20, weight: .semibold)        // 彈窗標題
     static let zHeadline = Font.system(size: 14, weight: .medium)       // 卡片內人名
-    static let zBody = Font.system(size: 13)                            // 內文、輸入框、側欄列
+    static let zInput = Font.system(size: 14)                           // 表單輸入框
+    static let zBody = Font.system(size: 13)                            // 內文、側欄列
     static let zBodyStrong = Font.system(size: 13, weight: .medium)
     static let zCallout = Font.system(size: 12)                         // 次要內文、資料列
     static let zCalloutStrong = Font.system(size: 12, weight: .medium)  // 卡片標題、表頭

@@ -1,0 +1,93 @@
+import SwiftUI
+
+// 設計系統控制項：高度一律 38，與 inputBox 一致
+
+/// 分段選擇：淺底軌道，選中的是白色膠囊
+struct ZSegmented<T: Hashable>: View {
+    let options: [(T, String)]
+    @Binding var selection: T
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(options, id: \.0) { value, label in
+                let on = value == selection
+                Button { selection = value } label: {
+                    Text(label)
+                        .font(on ? Font.zBodyStrong : Font.zBody)
+                        .foregroundStyle(on ? Color.zText : Color.zText2)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 32)
+                        .background(RoundedRectangle(cornerRadius: 7).fill(on ? Color.zCard : Color.clear)
+                            .shadow(color: on ? Color.zShadow : .clear, radius: 2, y: 1))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .frame(height: 38)
+        .background(RoundedRectangle(cornerRadius: 9).fill(Color.zHover))
+    }
+}
+
+/// 下拉選單：外觀跟輸入框一樣
+struct ZMenuField: View {
+    let options: [String]
+    @Binding var selection: String
+
+    var body: some View {
+        Menu {
+            ForEach(options, id: \.self) { o in Button(o) { selection = o } }
+        } label: {
+            HStack {
+                Text(selection).font(Font.zInput).foregroundStyle(Color.zText)
+                Spacer()
+                Image(systemName: "chevron.up.chevron.down").font(Font.zCaption).foregroundStyle(Color.zText3)
+            }
+            .inputBox()
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+    }
+}
+
+/// 滾軸式選擇：一欄可捲動的清單，選中的列反白並自動捲到可見處
+struct ZColumnList<Item: Hashable, ID: Hashable>: View {
+    let items: [Item]
+    let id: KeyPath<Item, ID>
+    let label: (Item) -> String
+    let selected: ID?
+    let onSelect: (Item) -> Void
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 1) {
+                    ForEach(items, id: id) { item in
+                        let on = item[keyPath: id] == selected
+                        Button { onSelect(item) } label: {
+                            HStack {
+                                Text(label(item)).font(Font.zBody).foregroundStyle(on ? Color.zText : Color.zText2)
+                                Spacer()
+                                if on { Image(systemName: "checkmark").font(Font.zCaptionStrong).foregroundStyle(Color.zAccent) }
+                            }
+                            .padding(.horizontal, 10)
+                            .frame(height: 30)
+                            .background(RoundedRectangle(cornerRadius: 7).fill(on ? Color.zSel : Color.clear))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .id(item[keyPath: id])
+                    }
+                }
+                .padding(4)
+            }
+            .onAppear { if let selected { proxy.scrollTo(selected, anchor: .center) } }
+            .onChange(of: selected) { _, s in if let s { withAnimation { proxy.scrollTo(s, anchor: .center) } } }
+        }
+        .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
+    }
+}

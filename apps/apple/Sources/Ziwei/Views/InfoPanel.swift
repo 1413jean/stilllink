@@ -30,11 +30,13 @@ struct InfoPanel: View {
     @State private var draft = ""
     @FocusState private var draftFocused: Bool
 
+    @AppStorage("nowGender") private var nowGender: Gender = .male
     private var current: Person { store.people.first { $0.id == person.id } ?? person }
+    private var isNow: Bool { person.id == NowChart.id }
 
     var body: some View {
         VStack(spacing: 12) {
-                card("命主資料") {
+                card("命主資料", action: isNow ? nil : ("square.and.pencil", { NotificationCenter.default.post(name: .editChart, object: person.id) })) {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(spacing: 10) {
                             Text(String(current.name.prefix(1)))
@@ -58,17 +60,22 @@ struct InfoPanel: View {
                         }
                         if let pl = current.place {
                             row("mappin.and.ellipse", "出生地", pl.name)
-                            row("location", "經緯度", String(format: "%.4f°%@ %.4f°%@", abs(pl.longitude), pl.longitude >= 0 ? "E" : "W",
-                                                           abs(pl.latitude), pl.latitude >= 0 ? "N" : "S"))
                         } else {
                             row("mappin.slash", "出生地", "未填（無法換算真太陽時）")
-                        }
-                        if let chart {
-                            row("sparkle", "命主／身主", "\(chart.soul)／\(chart.body)")
                         }
                     }
                 }
 
+                if isNow {
+                    card("此刻盤") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("以當下時間排盤，每分鐘自動更新，不會存檔。")
+                                .font(Font.zCallout).foregroundStyle(Color.zText3)
+                            Picker("", selection: $nowGender) { ForEach(Gender.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
+                                .pickerStyle(.segmented).labelsHidden().fixedSize()
+                        }
+                    }
+                } else {
                 card("備註") {
                     VStack(alignment: .leading, spacing: 10) {
                         TextField("記下客人的問題或你的觀察…", text: $draft, axis: .vertical)
@@ -88,16 +95,7 @@ struct InfoPanel: View {
                             }
                         }
                         ForEach(current.notes.reversed()) { n in
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(n.text).font(Font.zCallout).foregroundStyle(Color.zText).textSelection(.enabled)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(n.at.formatted(date: .abbreviated, time: .shortened))
-                                    .font(Font.zMicro).foregroundStyle(Color.zText3)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 8)
-                            .overlay(alignment: .top) { Rectangle().fill(Color.zLine).frame(height: 0.5) }
-                            .contextMenu { Button("刪除", role: .destructive) { deleteNote(n.id) } }
+                            NoteRow(note: n) { deleteNote(n.id) }
                         }
                     }
                 }
@@ -132,6 +130,7 @@ struct InfoPanel: View {
                         }
                     }
                     return true
+                }
                 }
         }
         .frame(width: infoPanelWidth)
@@ -208,6 +207,37 @@ struct InfoPanel: View {
         p.photos?.removeAll { $0 == name }
         try? FileManager.default.removeItem(at: Media.url(name))
         store.update(p)
+    }
+}
+
+/// 一則備註：滑過時右上角出現刪除鈕
+private struct NoteRow: View {
+    let note: Note
+    let onDelete: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(note.text).font(Font.zCallout).foregroundStyle(Color.zText).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(note.at.formatted(date: .abbreviated, time: .shortened))
+                    .font(Font.zMicro).foregroundStyle(Color.zText3)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: onDelete) {
+                Image(systemName: "trash").font(Font.zCaption).foregroundStyle(Color.zText3)
+                    .frame(width: 22, height: 22).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("刪除這則備註")
+            .opacity(hover ? 1 : 0)
+        }
+        .padding(.top, 8)
+        .overlay(alignment: .top) { Rectangle().fill(Color.zLine).frame(height: 0.5) }
+        .contentShape(Rectangle())
+        .onHover { hover = $0 }
+        .contextMenu { Button("刪除", role: .destructive, action: onDelete) }
     }
 }
 

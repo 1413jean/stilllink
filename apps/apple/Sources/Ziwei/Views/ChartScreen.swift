@@ -15,6 +15,24 @@ struct Pick: Equatable, Hashable {
     }
 }
 
+/// 首頁：以當下時間排盤（不存檔）
+struct NowChart: View {
+    @AppStorage("nowGender") private var gender: Gender = .male
+    @State private var now = Date()
+
+    var body: some View {
+        let c = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+        let p = Person(id: NowChart.id, name: "此刻", gender: gender, solar: "\(c.year!)-\(c.month!)-\(c.day!)",
+                       hour: SolarTime.shichen(c.hour!), group: "此刻",
+                       clock: String(format: "%d-%d-%d %02d:%02d", c.year!, c.month!, c.day!, c.hour!, c.minute!))
+        ChartScreen(person: p)
+            .id(p.chartKey)
+            .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
+    }
+
+    static let id = UUID(uuidString: "00000000-0000-0000-0000-00000000A0A0")!
+}
+
 /// 盤面寬度上限（約文墨天機的比例）
 let boardMaxWidth: CGFloat = 700
 let infoPanelWidth: CGFloat = 300
@@ -87,7 +105,7 @@ struct ChartScreen: View {
             }
         }
         .background(Color.zBg)
-        .navigationTitle(person.name)
+        .navigationTitle(person.id == NowChart.id ? "此刻 · \(person.clock ?? "")" : person.name)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { withAnimation(.easeOut(duration: 0.2)) { showInfo.toggle() } } label: { Image(systemName: "sidebar.right") }

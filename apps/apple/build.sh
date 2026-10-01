@@ -7,7 +7,7 @@ APP=build/紫微.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/Ziwei "$APP/Contents/MacOS/Ziwei"
-cp Resources/*.js "$APP/Contents/Resources/"
+cp Resources/*.js Resources/zone.tab "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
