@@ -8,6 +8,7 @@ struct ChartBoard: View {
     var onResetLevel: () -> Void = {}
     @State private var sel: Int?
     @State private var appeared = false
+    @Environment(\.zSettings) private var settings
 
     var body: some View {
         let chart = model.chart
@@ -27,10 +28,10 @@ struct ChartBoard: View {
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipped()
                         .contentShape(Rectangle())
-                        .onTapGesture { withAnimation(Motion.snap) { sel = i } }
+                        .onTapGesture { Sound.tap(settings); withAnimation(Motion.snap) { sel = i } }
                         .enterFromBelow(appeared, index: r * 4 + c)
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
-                    compassLabel(i, r: r, c: c, cw: cw, ch: ch, m: m)
+                    if settings.showCompass { compassLabel(i, r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
                 CenterInfo(person: person, model: model, selected: selected, fs: fs, level: level, onResetLevel: onResetLevel)
                     .enterFromBelow(appeared, index: 8)
@@ -77,6 +78,7 @@ struct VerticalText: View {
 }
 
 private struct PalaceCell: View {
+    @Environment(\.zSettings) private var settings
     let model: ChartModel
     let index: Int
     let level: Int
@@ -90,15 +92,19 @@ private struct PalaceCell: View {
         let p = chart.palaces[index]
         let selfs = model.selfs[index]
         let curDecade = level >= 1 && horo.decadal.index == index
+        let minor = level >= 2 && settings.showMinor
+        // 來因宮：生年天干所在的宮（寅～亥，子丑與寅卯同干不算）
+        let laiyin = settings.showLaiyin && index < 10 && p.stem == String(chart.chineseDate.prefix(1))
         VStack(alignment: .leading, spacing: 2) {
             FlowLayout(spacing: 1, lineSpacing: 4) {
                 ForEach(p.stars, id: \.name) { s in
                     StarColumn(star: s, fs: fs, fly: flyStars[s.name],
+                               minor: minor ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                                scopes: (1...max(1, level)).compactMap { lv in
                                    level >= lv ? ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) } : nil
                                })
                 }
-                ForEach(p.adj, id: \.name) { s in
+                ForEach(settings.showAdj ? p.adj : [], id: \.name) { s in
                     VerticalText(s.name, size: ChartType.adj(fs), color: .wmBlue)
                 }
             }
@@ -107,14 +113,17 @@ private struct PalaceCell: View {
             .layoutPriority(-1)
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
+                    if settings.showGods {
                     Text(p.boshi).foregroundStyle(Color.wmGreen)
                     Text(p.jiangqian)
                     Text(p.suiqian)
+                    }
                 }
                 .font(ChartType.font(ChartType.gods(fs)))
                 .foregroundStyle(Color.zText)
                 Spacer(minLength: 0)
                 VStack(spacing: 2) {
+                    if settings.showAges {
                     VStack(spacing: 0) {
                         Text("流年: " + model.yearlyAges[index].map(String.init).joined(separator: ","))
                         Text("小限: " + p.ages.prefix(5).map(String.init).joined(separator: ","))
@@ -124,11 +133,20 @@ private struct PalaceCell: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .padding(.bottom, 1)
+                    }
                     Text("\(p.range[0])~\(p.range[1])")
                         .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
                         .underline(curDecade)
                         .foregroundStyle(curDecade ? Color.wmRed : Color.zText)
                     HStack(spacing: 3) {
+                        if minor {
+                            Text("小" + String(horo.age.palaceNames[index].prefix(1)))
+                                .font(ChartType.font(ChartType.tag(fs), .semibold))
+                                .foregroundStyle(Color.minorColor)
+                        }
+                        if laiyin {
+                            Text("來因").font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmRed)
+                        }
                         ForEach(1..<(level + 1), id: \.self) { lv in
                             Text(ZW.scopeTags[lv - 1] + String(horo.scope(lv).palaceNames[index].prefix(1)))
                                 .font(ChartType.font(ChartType.tag(fs), .semibold))
@@ -154,7 +172,7 @@ private struct PalaceCell: View {
         .overlay(Rectangle().stroke(Color.zGrid, lineWidth: 0.5))
         .overlay(selected ? Rectangle().stroke(Color.wmRed, lineWidth: 1.5) : nil)
         .overlay(alignment: .trailing) {
-            if p.isBody {
+            if p.isBody && settings.showBody {
                 VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
                     .padding(.vertical, 3).padding(.horizontal, 1)
                     .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
@@ -162,7 +180,7 @@ private struct PalaceCell: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            let marks = selfs.out.sorted { $0.key < $1.key }.map { ("↑", $0.value) } + selfs.into.sorted { $0.key < $1.key }.map { ("↓", $0.value) }
+            let marks = !settings.showSelf ? [] : selfs.out.sorted { $0.key < $1.key }.map { ("↑", $0.value) } + selfs.into.sorted { $0.key < $1.key }.map { ("↓", $0.value) }
             if !marks.isEmpty {
                 VStack(alignment: .trailing, spacing: 1) {
                     ForEach(Array(marks.enumerated()), id: \.offset) { _, mk in
@@ -180,6 +198,7 @@ private struct StarColumn: View {
     let star: Star
     let fs: CGFloat
     let fly: Mutagen?   // 點選宮位的宮干四化落在這顆星
+    let minor: Mutagen? // 小限四化
     let scopes: [(Int, Mutagen)]
 
     var body: some View {
@@ -195,6 +214,9 @@ private struct StarColumn: View {
                 .foregroundStyle(Color.zText2)
             if !star.mutagen.isEmpty {
                 box(star.mutagen, fill: .wmRed)
+            }
+            if let minor {
+                box(minor.rawValue, fill: .minorColor)
             }
             ForEach(scopes, id: \.0) { lv, m in
                 box(m.rawValue, fill: Color.scopeColors[lv - 1])
@@ -213,6 +235,7 @@ private struct StarColumn: View {
 }
 
 private struct CenterInfo: View {
+    @Environment(\.zSettings) private var settings
     let person: Person
     let model: ChartModel
     let selected: Int
@@ -228,6 +251,7 @@ private struct CenterInfo: View {
         ZStack {
             SanFangShape(points: Quad(ZW.sanFang(selected).map { ZW.anchor[$0] }))
                 .stroke(Color.zText3.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                .opacity(settings.showSanfang ? 1 : 0)
             VStack(spacing: fs * 0.55) {
                 Text("紫微斗數").font(ChartType.font(ChartType.centerTitle(fs), .semibold)).tracking(2)
                 Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {

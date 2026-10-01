@@ -1,7 +1,11 @@
 import SwiftUI
 import AppKit
 
-enum Route: Hashable { case home, person(UUID) }
+enum Route: Hashable {
+    case home, person(UUID), new, edit(UUID), settings
+    /// 新增、編輯、設定這類「頁面」（返回時不回到它們）
+    var isPage: Bool { switch self { case .new, .edit, .settings: true; default: false } }
+}
 
 @main
 struct ZiweiApp: App {
@@ -19,6 +23,10 @@ struct ZiweiApp: App {
         .defaultSize(width: 1440, height: 920)
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("設定…") { NotificationCenter.default.post(name: .openSettings, object: nil) }
+                    .keyboardShortcut(",")
+            }
             CommandGroup(replacing: .newItem) {
                 Button("新增命盤") { NotificationCenter.default.post(name: .newChart, object: nil) }
                     .keyboardShortcut("n")
@@ -30,6 +38,7 @@ struct ZiweiApp: App {
 extension Notification.Name {
     static let newChart = Notification.Name("zw.newChart")
     static let editChart = Notification.Name("zw.editChart")
+    static let openSettings = Notification.Name("zw.openSettings")
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -61,70 +70,58 @@ enum Snapshot {
 struct RootView: View {
     @EnvironmentObject var store: Store
     @State private var route: Route? = .home
-    @State private var creating = false
-    @State private var editing: Person?
-    @State private var dimmed = false   // 背景模糊：不做動畫（模糊半徑動畫很吃效能、會頓一下）
+    @State private var back: Route = .home   // 從新增／編輯／設定返回時回到這頁
 
     var body: some View {
         NavigationSplitView {
-            Sidebar(route: $route, onNew: { open() })
+            Sidebar(route: $route, onNew: { go(.new) })
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
         } detail: {
-            switch route {
-            case .person(let id):
-                if let p = store.people.first(where: { $0.id == id }) {
-                    ChartScreen(person: p).id(id)
-                } else {
+            Group {
+                switch route {
+                case .person(let id):
+                    if let p = store.people.first(where: { $0.id == id }) {
+                        ChartScreen(person: p).id(id)
+                    } else {
+                        NowChart()
+                    }
+                case .new:
+                    NewChartSheet(onClose: { goBack() }) { p in route = .person(p.id) }
+                case .edit(let id):
+                    NewChartSheet(editing: store.people.first { $0.id == id }, onClose: { goBack() }) { p in route = .person(p.id) }
+                        .id(id)
+                case .settings:
+                    SettingsPage(onClose: { goBack() })
+                default:
                     NowChart()
                 }
-            default:
-                NowChart()
             }
+            .transition(.opacity)
         }
-        // 新增命盤：背景模糊＋變暗，模糊由各欄內容層自己處理（見 DimmedBlur）
-        .environment(\.zDimmed, dimmed)
-        .overlay {
-            if creating || editing != nil {
-                ZStack {
-                    Color.zScrim
-                        .ignoresSafeArea()
-                        .onTapGesture { close() }
-                        .transition(.opacity)
-                    NewChartSheet(editing: editing, onClose: { close() }) { p in route = .person(p.id) }
-                        .id(editing?.id)
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .scale(scale: 0.96)).combined(with: .offset(y: 10)),
-                            removal: .opacity.combined(with: .scale(scale: 0.98))))
-                }
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .newChart)) { _ in open() }
+        .environment(\.zSettings, store.settings)
+        .onReceive(NotificationCenter.default.publisher(for: .newChart)) { _ in go(.new) }
         .onReceive(NotificationCenter.default.publisher(for: .editChart)) { n in
-            if let id = n.object as? UUID, let p = store.people.first(where: { $0.id == id }) {
-                dimmed = true
-                withAnimation(Motion.enter) { editing = p }
-            }
+            if let id = n.object as? UUID { go(.edit(id)) }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { _ in go(.settings) }
         .onAppear(perform: applyDebugEnv)
     }
 
-    private func open() {
-        dimmed = true
-        withAnimation(Motion.enter) { creating = true }
+    private func go(_ r: Route) {
+        if let cur = route, !cur.isPage { back = cur }
+        withAnimation(Motion.base) { route = r }
     }
-    private func close() {
-        withAnimation(Motion.exit) { creating = false; editing = nil }
-        dimmed = false
-    }
+    private func goBack() { withAnimation(Motion.base) { route = back } }
 
     /// 驗證用：ZIWEI_ROUTE=<姓名> 直接打開那張盤；ZIWEI_THEME=dark/light
     private func applyDebugEnv() {
         let env = ProcessInfo.processInfo.environment
         if let t = env["ZIWEI_THEME"], let a = Appearance(rawValue: t) { store.appearance = a }
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
-        if env["ZIWEI_NEW"] != nil { open() }
+        if env["ZIWEI_NEW"] != nil { go(.new) }
+        if env["ZIWEI_SETTINGS"] != nil { go(.settings) }
         if let t = env["ZIWEI_NEW_AFTER"].flatMap(Double.init) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + t) { open() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + t) { go(.new) }
         }
     }
 }

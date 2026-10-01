@@ -18,8 +18,11 @@ enum ZW {
     static let levels = ["本命", "大限", "流年", "流月", "流日", "流時"]
     static let scopeTags = ["大", "年", "月", "日", "時"]
 
-    /// 宮干四化（祿權科忌），庚干採「陽武陰同」
-    static let stemMutagen: [String: [String]] = [
+    /// 目前使用的十干四化表（依設定，見 ZSettings.stemMutagen）
+    static var stemMutagen: [String: [String]] = defaultStemMutagen
+
+    /// 預設十干四化（祿權科忌），庚干採「陽武陰同」
+    static let defaultStemMutagen: [String: [String]] = [
         "甲": ["廉貞", "破軍", "武曲", "太陽"], "乙": ["天機", "天梁", "紫微", "太陰"],
         "丙": ["天同", "天機", "文昌", "廉貞"], "丁": ["太陰", "天同", "天機", "巨門"],
         "戊": ["貪狼", "太陰", "右弼", "天機"], "己": ["武曲", "貪狼", "天梁", "文曲"],

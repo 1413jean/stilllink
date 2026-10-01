@@ -116,7 +116,7 @@ struct ChartScreen: View {
                     .help("客人資料")
             }
         }
-        .task(id: TaskKey(person: person.chartKey, pick: pick)) {
+        .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
             let m = await Engine.shared.model(for: person, pick: pick)
             withAnimation(model == nil ? Motion.enter : Motion.base) { model = m }
         }

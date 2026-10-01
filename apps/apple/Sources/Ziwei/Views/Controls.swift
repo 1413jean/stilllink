@@ -94,7 +94,7 @@ struct ZColumnList<Item: Hashable, ID: Hashable>: View {
         .scrollPosition(id: $position, anchor: .center)
         .onAppear { position = selected }
         .onChange(of: items.map { $0[keyPath: id] }) { _, _ in position = selected }
-        .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
+        .background(RoundedRectangle(cornerRadius: 9).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
     }
 }

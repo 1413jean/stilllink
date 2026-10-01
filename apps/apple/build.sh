@@ -8,6 +8,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/Ziwei "$APP/Contents/MacOS/Ziwei"
 cp Resources/*.js Resources/zone.tab "$APP/Contents/Resources/"
+cp -R Resources/sfx "$APP/Contents/Resources/sfx"
 # App 圖示：icon-1024.png → AppIcon.icns（改圖示：swift scripts/make-icon.swift Resources/icon-1024.png）
 ICONSET=.build/AppIcon.iconset
 rm -rf $ICONSET && mkdir -p $ICONSET

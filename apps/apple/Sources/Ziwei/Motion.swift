@@ -4,7 +4,9 @@ import AppKit
 /// 動態設計 token（參考 GSAP 的原則：out 系 easing、短時長、清單錯開、只動 transform／opacity）
 /// 系統「減少動態效果」打開時，全部改成瞬間切換。
 enum Motion {
-    static var reduce: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+    /// 設定裡的「介面動畫」開關
+    static var userEnabled = true
+    static var reduce: Bool { !userEnabled || NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
     /// hover、按壓等即時回饋（≈ power1.out 0.15s）
     static var fast: Animation? { reduce ? nil : .timingCurve(0.25, 0.46, 0.45, 0.94, duration: 0.15) }

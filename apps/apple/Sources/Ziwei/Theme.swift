@@ -37,6 +37,9 @@ extension Color {
     static let mKe = dynamic(0x1F5FBF, 0x6AA2F5)
     static let mJi = dynamic(0xD0102A, 0xF06A6A)
 
+    /// 小限：青綠
+    static let minorColor = dynamic(0x1F8A8A, 0x4FC9C9)
+
     /// 運限四化色：大限綠、流年藍、流月琥珀、流日洋紅、流時灰
     static let scopeColors: [Color] = [
         dynamic(0x1F8A3A, 0x4FBF7E), dynamic(0x1F5FBF, 0x6AA2F5), dynamic(0xC27A12, 0xE8A84A),

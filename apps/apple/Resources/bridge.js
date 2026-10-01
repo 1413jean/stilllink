@@ -1,9 +1,19 @@
 // Swift ↔ iztro 的橋。只負責計算，回傳 JSON 字串給 Swift 解碼。
 var __cache = {};
+var __fixLeap = true;
+
+// 套用設定（四化表、派別、年分界、晚子時），並清掉快取
+function zwConfig(json) {
+  var c = JSON.parse(json);
+  __fixLeap = c.fixLeap !== false;
+  delete c.fixLeap;
+  iztro.astro.config(c);
+  __cache = {};
+}
 
 function __astro(solar, t, gender) {
   var key = solar + '|' + t + '|' + gender;
-  if (!__cache[key]) __cache[key] = iztro.astro.bySolar(solar, t, gender, true, 'zh-TW');
+  if (!__cache[key]) __cache[key] = iztro.astro.bySolar(solar, t, gender, __fixLeap, 'zh-TW');
   return __cache[key];
 }
 
@@ -35,7 +45,7 @@ function zwChart(solar, t, gender) {
 function zwHoro(solar, t, gender, date, hour) {
   var h = __astro(solar, t, gender).horoscope(date, hour);
   function sc(x) { return { index: x.index, stem: x.heavenlyStem, branch: x.earthlyBranch, palaceNames: x.palaceNames.map(__pn), mutagen: x.mutagen }; }
-  return JSON.stringify({ decadal: sc(h.decadal), yearly: sc(h.yearly), monthly: sc(h.monthly), daily: sc(h.daily), hourly: sc(h.hourly) });
+  return JSON.stringify({ decadal: sc(h.decadal), age: sc(h.age), yearly: sc(h.yearly), monthly: sc(h.monthly), daily: sc(h.daily), hourly: sc(h.hourly) });
 }
 
 function zwLunarToSolar(y, m, d, leap) {

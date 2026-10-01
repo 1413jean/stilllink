@@ -28,19 +28,10 @@ struct NewChartSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(editing == nil ? "新增命盤" : "編輯命主資料").font(.zTitle).foregroundStyle(Color.zText)
-                Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark").font(Font.zIcon).foregroundStyle(Color.zText2)
-                        .frame(width: 30, height: 30).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.cancelAction)
-            }
-            .padding(.horizontal, 32)
-            .padding(.top, 24)
-            .padding(.bottom, 4)
+            Text(editing == nil ? "新增命盤" : "編輯命主資料").font(.zTitle).foregroundStyle(Color.zText)
+                .padding(.horizontal, 32)
+                .padding(.top, 20)
+                .padding(.bottom, 4)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -140,12 +131,11 @@ struct NewChartSheet: View {
             .padding(.vertical, 18)
             .overlay(alignment: .top) { Rectangle().fill(Color.zLine).frame(height: 0.5) }
         }
-        .frame(width: 760)
-        .frame(maxHeight: 820)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .shadow(color: Color.zShadow, radius: 40, y: 16)
-        .padding(.vertical, 40)
+        .frame(maxWidth: 760)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.zBg)
+        .navigationTitle("")
+        .toolbar { BackToolbar(action: onClose) }
         .onAppear { load(); nameFocused = true }
     }
 
@@ -254,6 +244,20 @@ struct NewChartSheet: View {
     }
 }
 
+/// 左上角「‹ 返回」
+struct BackToolbar: ToolbarContent {
+    let action: () -> Void
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            Button(action: action) {
+                Label("返回", systemImage: "chevron.left").labelStyle(.titleAndIcon)
+            }
+            .keyboardShortcut(.cancelAction)
+            .help("返回")
+        }
+    }
+}
+
 /// 數字輸入欄：無邊框，放在 inputBox 裡；只收數字，超出範圍不採用
 private struct NumberField: View {
     @Binding var value: Int
@@ -288,7 +292,7 @@ extension View {
             .padding(.horizontal, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: 38)
-            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
+            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zCard))
             .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
     }
 }

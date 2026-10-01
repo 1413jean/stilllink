@@ -18,7 +18,7 @@ struct Sidebar: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
                     NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { withAnimation(Motion.snap) { route = .home } }
-                    NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", action: onNew)
+                    NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", selected: route == .new, action: onNew)
                     if searching {
                         HStack(spacing: 8) {
                             Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
@@ -48,7 +48,7 @@ struct Sidebar: View {
                         ForEach(pinned) { p in personRow(p, indent: false) }
                     }
 
-                    SectionLabel("命盤").padding(.top, 18)
+                    SectionLabel("命盤", action: onNew).padding(.top, 18)
                     ForEach(groupNames, id: \.self) { g in
                         let list = store.people.filter { !$0.pinned && $0.group == g && matches($0) }
                         if !list.isEmpty {
@@ -187,10 +187,26 @@ private struct FolderRow: View {
 
 private struct SectionLabel: View {
     let text: String
-    init(_ t: String) { text = t }
+    var action: (() -> Void)? = nil
+    @State private var hover = false
+    init(_ t: String, action: (() -> Void)? = nil) { text = t; self.action = action }
     var body: some View {
-        Text(text).font(Font.zCaption).foregroundStyle(Color.zText3)
-            .padding(.horizontal, 10).padding(.bottom, 4)
+        HStack {
+            Text(text).font(Font.zCaption).foregroundStyle(Color.zText3)
+            Spacer()
+            if let action {
+                Button(action: action) {
+                    Image(systemName: "plus").font(Font.zCaptionStrong).foregroundStyle(hover ? Color.zText : Color.zText3)
+                        .frame(width: 22, height: 22)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(hover ? Color.zHover : .clear))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressStyle())
+                .onHover { h in withAnimation(Motion.fast) { hover = h } }
+                .help("新增命盤")
+            }
+        }
+        .padding(.leading, 10).padding(.trailing, 4).padding(.bottom, 2)
     }
 }
 
@@ -210,7 +226,8 @@ private struct AccountBar: View {
                 Button { } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
                 Button { } label: { Label("使用 Google 登入", systemImage: "g.circle") }
                 Divider()
-                Button("命盤設定…") { }
+                Button("設定…") { NotificationCenter.default.post(name: .openSettings, object: nil) }
+                    .keyboardShortcut(",")
             } label: {
                 HStack(spacing: 8) {
                     Text("J")

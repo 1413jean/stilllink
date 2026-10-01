@@ -49,6 +49,23 @@ final class Store: ObservableObject {
     /// 側欄顯示的命宮主星，背景算好放這裡
     @Published var soulStars: [UUID: String] = [:]
     @AppStorage("appearance") var appearance: Appearance = .system
+    /// 命盤設定：變了就重新設定引擎、重算側欄
+    @Published var settings: ZSettings = Store.loadSettings() {
+        didSet {
+            guard settings != oldValue else { return }
+            if let d = try? JSONEncoder().encode(settings) { UserDefaults.standard.set(d, forKey: "settings") }
+            Motion.userEnabled = settings.motion
+            if settings.calcKey != oldValue.calcKey {
+                Engine.shared.configure(settings)
+                refreshSoulStars()
+            }
+        }
+    }
+
+    private static func loadSettings() -> ZSettings {
+        guard let d = UserDefaults.standard.data(forKey: "settings"), let s = try? JSONDecoder().decode(ZSettings.self, from: d) else { return ZSettings() }
+        return s
+    }
 
     private let url: URL = {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -58,6 +75,8 @@ final class Store: ObservableObject {
     }()
 
     init() {
+        Engine.shared.configure(settings)
+        Motion.userEnabled = settings.motion
         if let data = try? Data(contentsOf: url), let list = try? JSONDecoder().decode([Person].self, from: data) {
             people = list
         } else {

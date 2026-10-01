@@ -5,7 +5,8 @@ struct PeriodTable: View {
     let chart: Chart
     let birthYear: Int
     @Binding var pick: Pick
-    @Namespace private var ns   // 每一列的選取底色共用一個 id，切換時會滑過去（類似 GSAP Flip）
+    @Namespace private var ns
+    @Environment(\.zSettings) private var settings   // 每一列的選取底色共用一個 id，切換時會滑過去（類似 GSAP Flip）
 
     var body: some View {
         let decades = chart.palaces.map { ($0.range, $0.stem + $0.branch) }.sorted { $0.0[0] < $1.0[0] }
@@ -96,7 +97,7 @@ struct PeriodTable: View {
     }
 
     private func cell(_ main: String, _ sub: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
-        Button { withAnimation(Motion.snap) { action() } } label: {
+        Button { Sound.tap(settings); withAnimation(Motion.snap) { action() } } label: {
             VStack(spacing: 1) {
                 Text(main).font(Font.zCaption)
                 if let sub { Text(sub).font(Font.zMicro).opacity(0.7) }

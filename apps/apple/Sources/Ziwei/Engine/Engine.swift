@@ -55,6 +55,7 @@ struct HoroScope: Codable {
 
 struct Horoscope: Codable {
     let decadal: HoroScope
+    let age: HoroScope      // 小限
     let yearly: HoroScope
     let monthly: HoroScope
     let daily: HoroScope
@@ -143,6 +144,19 @@ final class Engine: @unchecked Sendable {
     }
 
     func chart(for p: Person) async -> Chart { await run { self._chart(p) } }
+
+    /// 套用命盤設定：同步到 iztro、本地四化表，並清掉快取
+    func configure(_ s: ZSettings) {
+        var cfg = s.iztroConfig
+        cfg["fixLeap"] = s.leapSplit
+        let json = String(data: try! JSONSerialization.data(withJSONObject: cfg), encoding: .utf8)!
+        queue.sync {
+            ZW.stemMutagen = s.stemMutagen
+            _ = _call("zwConfig", [json])
+            chartCache = [:]
+            horoCache = [:]
+        }
+    }
 
     /// 開 app 時把所有人的命盤先算好
     func warm(_ people: [Person], pick: Pick) async {
