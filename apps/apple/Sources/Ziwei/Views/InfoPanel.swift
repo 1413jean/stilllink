@@ -28,6 +28,7 @@ struct InfoPanel: View {
     @State private var preview: String?
     @State private var dropping = false
     @State private var draft = ""
+    @State private var appeared = false
     @FocusState private var draftFocused: Bool
 
     @AppStorage("nowGender") private var nowGender: Gender = .male
@@ -96,6 +97,8 @@ struct InfoPanel: View {
                         }
                         ForEach(current.notes.reversed()) { n in
                             NoteRow(note: n) { deleteNote(n.id) }
+                                .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: -6)),
+                                                        removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))))
                         }
                     }
                 }
@@ -134,6 +137,8 @@ struct InfoPanel: View {
                 }
         }
         .frame(width: infoPanelWidth)
+        .enterFromBelow(appeared, index: 4)
+        .onAppear { appeared = true }
         .sheet(item: Binding(get: { preview.map { PreviewItem(name: $0) } }, set: { preview = $0?.name })) { item in
             VStack {
                 if let img = NSImage(contentsOf: Media.url(item.name)) {
@@ -182,14 +187,14 @@ struct InfoPanel: View {
         guard !t.isEmpty else { return }
         var p = current
         p.notes.append(Note(text: t))
-        store.update(p)
+        withAnimation(Motion.base) { store.update(p) }
         draft = ""
     }
 
     private func deleteNote(_ id: UUID) {
         var p = current
         p.notes.removeAll { $0.id == id }
-        store.update(p)
+        withAnimation(Motion.base) { store.update(p) }
     }
 
     private func pickPhotos() {

@@ -55,7 +55,7 @@ struct ChartScreen: View {
                     VStack(spacing: 12) {
                         Group {
                             if let model {
-                                ChartBoard(person: person, model: model, level: pick.level) { pick.level = 0 }
+                                ChartBoard(person: person, model: model, level: pick.level) { withAnimation(Motion.snap) { pick.level = 0 } }
                                     .transition(.opacity)
                             } else {
                                 BoardSkeleton().transition(.opacity)
@@ -65,6 +65,7 @@ struct ChartScreen: View {
 
                         if let model {
                             PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
+                                .transition(.opacity.combined(with: .offset(y: 8)))
                         } else {
                             RoundedRectangle(cornerRadius: 12).fill(Color.zHover).frame(height: 210).shimmer()
                         }
@@ -109,13 +110,13 @@ struct ChartScreen: View {
         .navigationTitle(person.id == NowChart.id ? "此刻 · \(person.clock ?? "")" : person.name)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button { withAnimation(.easeOut(duration: 0.2)) { showInfo.toggle() } } label: { Image(systemName: "sidebar.right") }
+                Button { withAnimation(Motion.enter) { showInfo.toggle() } } label: { Image(systemName: "sidebar.right") }
                     .help("客人資料")
             }
         }
         .task(id: TaskKey(person: person.chartKey, pick: pick)) {
             let m = await Engine.shared.model(for: person, pick: pick)
-            withAnimation(.easeOut(duration: model == nil ? 0.18 : 0)) { model = m }
+            withAnimation(model == nil ? Motion.enter : Motion.base) { model = m }
         }
     }
 

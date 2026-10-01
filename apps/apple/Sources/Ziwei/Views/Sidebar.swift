@@ -9,6 +9,7 @@ struct Sidebar: View {
     @State private var search = ""
     @State private var collapsed: Set<String> = []
     @FocusState private var searchFocused: Bool
+    @Namespace private var selNS   // 選取底色在列之間滑動
 
     private var q: String { search.trimmingCharacters(in: .whitespaces) }
 
@@ -16,7 +17,7 @@ struct Sidebar: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
-                    NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { route = .home }
+                    NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { withAnimation(Motion.snap) { route = .home } }
                     NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", action: onNew)
                     if searching {
                         HStack(spacing: 8) {
@@ -52,12 +53,15 @@ struct Sidebar: View {
                         let list = store.people.filter { !$0.pinned && $0.group == g && matches($0) }
                         if !list.isEmpty {
                             FolderRow(name: g, count: list.count, open: !collapsed.contains(g)) {
-                                withAnimation(.easeOut(duration: 0.15)) {
+                                withAnimation(Motion.base) {
                                     if collapsed.contains(g) { collapsed.remove(g) } else { collapsed.insert(g) }
                                 }
                             }
                             if !collapsed.contains(g) {
-                                ForEach(list) { p in personRow(p, indent: true) }
+                                ForEach(list) { p in
+                                    personRow(p, indent: true)
+                                        .transition(.opacity.combined(with: .offset(y: -4)))
+                                }
                             }
                         }
                     }
@@ -85,7 +89,7 @@ struct Sidebar: View {
 
     private func personRow(_ p: Person, indent: Bool) -> some View {
         let on = route == .person(p.id)
-        return Button { route = .person(p.id) } label: {
+        return Button { withAnimation(Motion.snap) { route = .person(p.id) } } label: {
             HStack(spacing: 9) {
                 Circle()
                     .stroke(Color.zText3, lineWidth: 1)
@@ -98,7 +102,9 @@ struct Sidebar: View {
             }
             .padding(.horizontal, 8)
             .frame(height: 30)
-            .background(RoundedRectangle(cornerRadius: 8).fill(on ? Color.zSel : Color.clear))
+            .background {
+                if on { RoundedRectangle(cornerRadius: 8).fill(Color.zSel).matchedGeometryEffect(id: "sel", in: selNS) }
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(RowButtonStyle(selected: on))
@@ -119,6 +125,9 @@ private struct RowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background(RoundedRectangle(cornerRadius: 8).fill(!selected && hover ? Color.zHover : Color.clear))
+            .scaleEffect(configuration.isPressed && !Motion.reduce ? 0.98 : 1)
+            .animation(Motion.fast, value: hover)
+            .animation(Motion.fast, value: configuration.isPressed)
             .onHover { hover = $0 }
     }
 }
@@ -142,8 +151,9 @@ private struct NavRow: View {
             .frame(height: 30)
             .background(RoundedRectangle(cornerRadius: 8).fill(selected ? Color.zSel : hover ? Color.zHover : Color.clear))
             .contentShape(Rectangle())
+            .animation(Motion.fast, value: hover)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle())
         .onHover { hover = $0 }
     }
 }
@@ -167,8 +177,9 @@ private struct FolderRow: View {
             .frame(height: 30)
             .background(RoundedRectangle(cornerRadius: 8).fill(hover ? Color.zHover : Color.clear))
             .contentShape(Rectangle())
+            .animation(Motion.fast, value: hover)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle())
         .onHover { hover = $0 }
     }
 }

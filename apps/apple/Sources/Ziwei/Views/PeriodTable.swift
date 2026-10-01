@@ -5,6 +5,7 @@ struct PeriodTable: View {
     let chart: Chart
     let birthYear: Int
     @Binding var pick: Pick
+    @Namespace private var ns   // 每一列的選取底色共用一個 id，切換時會滑過去（類似 GSAP Flip）
 
     var body: some View {
         let decades = chart.palaces.map { ($0.range, $0.stem + $0.branch) }.sorted { $0.0[0] < $1.0[0] }
@@ -19,9 +20,9 @@ struct PeriodTable: View {
 
         VStack(spacing: 0) {
             row("大限") {
-                cell("起限前", "(童限)", on: cur == nil && pick.level >= 1) { pick.level = 2; pick.year = birthYear }
+                cell("起限前", "(童限)", group: "dec", on: cur == nil && pick.level >= 1) { pick.level = 2; pick.year = birthYear }
                 ForEach(Array(decades.enumerated()), id: \.offset) { k, d in
-                    cell("\(d.0[0])~\(d.0[1])", d.1 + "限", on: cur == k && pick.level >= 1) {
+                    cell("\(d.0[0])~\(d.0[1])", d.1 + "限", group: "dec", on: cur == k && pick.level >= 1) {
                         if cur == k && pick.level == 1 { pick.level = 0 } else { pick.level = 1; pick.year = birthYear + d.0[0] - 1 }
                     }
                 }
@@ -29,14 +30,14 @@ struct PeriodTable: View {
             row("流年\n小限") {
                 ForEach(0..<10, id: \.self) { k in
                     let y = start + k
-                    cell("\(y)年", "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲", on: y == pick.year && pick.level >= 2) {
+                    cell("\(y)年", "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲", group: "year", on: y == pick.year && pick.level >= 2) {
                         pick.level = (y == pick.year && pick.level == 2) ? 1 : 2; pick.year = y
                     }
                 }
             }
             row("流月") {
                 ForEach(1...12, id: \.self) { m in
-                    cell(ZW.lunarMonths[m - 1], ZW.monthGanzhi(lunarYear: pick.year, month: m), on: m == pick.lm && pick.level >= 3) {
+                    cell(ZW.lunarMonths[m - 1], ZW.monthGanzhi(lunarYear: pick.year, month: m), group: "month", on: m == pick.lm && pick.level >= 3) {
                         pick.level = (m == pick.lm && pick.level == 3) ? 2 : 3; pick.lm = m
                     }
                 }
@@ -45,7 +46,7 @@ struct PeriodTable: View {
                 head("流日")
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 10), spacing: 0) {
                     ForEach(1...30, id: \.self) { d in
-                        cell(ZW.lunarDays[d - 1], j1.map { ZW.ganzhi(ZW.dayIndex(jdn: $0 + d - 1)) }, on: d == pick.ld && pick.level >= 4, minW: 0) {
+                        cell(ZW.lunarDays[d - 1], j1.map { ZW.ganzhi(ZW.dayIndex(jdn: $0 + d - 1)) }, group: "day", on: d == pick.ld && pick.level >= 4, minW: 0) {
                             pick.level = (d == pick.ld && pick.level == 4) ? 3 : 4; pick.ld = d
                         }
                         .disabled(d > monthLen)
@@ -56,7 +57,7 @@ struct PeriodTable: View {
             Divider()
             row("流時", divider: false) {
                 ForEach(0..<12, id: \.self) { h in
-                    cell(ZW.branches[h] + "時", ZW.hourGanzhi(dayStem: dayStem, hour: h), on: h == pick.hour && pick.level >= 5) {
+                    cell(ZW.branches[h] + "時", ZW.hourGanzhi(dayStem: dayStem, hour: h), group: "hour", on: h == pick.hour && pick.level >= 5) {
                         pick.level = (h == pick.hour && pick.level == 5) ? 4 : 5; pick.hour = h
                     }
                 }
@@ -94,8 +95,8 @@ struct PeriodTable: View {
         }
     }
 
-    private func cell(_ main: String, _ sub: String? = nil, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    private func cell(_ main: String, _ sub: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
+        Button { withAnimation(Motion.snap) { action() } } label: {
             VStack(spacing: 1) {
                 Text(main).font(Font.zCaption)
                 if let sub { Text(sub).font(Font.zMicro).opacity(0.7) }
@@ -103,10 +104,12 @@ struct PeriodTable: View {
             .foregroundStyle(on ? Color.zBg : Color.zText)
             .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)
             .padding(.horizontal, 4)
-            .background(on ? Color.zText : Color.clear)
+            .background {
+                if on { Rectangle().fill(Color.zText).matchedGeometryEffect(id: group, in: ns) }
+            }
             .overlay(alignment: .trailing) { Rectangle().fill(Color.zLine).frame(width: 0.5) }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle())
     }
 }

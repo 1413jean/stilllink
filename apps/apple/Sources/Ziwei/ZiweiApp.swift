@@ -92,7 +92,9 @@ struct RootView: View {
                         .transition(.opacity)
                     NewChartSheet(editing: editing, onClose: { close() }) { p in route = .person(p.id) }
                         .id(editing?.id)
-                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.96)).combined(with: .offset(y: 10)),
+                            removal: .opacity.combined(with: .scale(scale: 0.98))))
                 }
             }
         }
@@ -100,7 +102,7 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .editChart)) { n in
             if let id = n.object as? UUID, let p = store.people.first(where: { $0.id == id }) {
                 dimmed = true
-                withAnimation(.easeOut(duration: 0.18)) { editing = p }
+                withAnimation(Motion.enter) { editing = p }
             }
         }
         .onAppear(perform: applyDebugEnv)
@@ -108,10 +110,10 @@ struct RootView: View {
 
     private func open() {
         dimmed = true
-        withAnimation(.easeOut(duration: 0.18)) { creating = true }
+        withAnimation(Motion.enter) { creating = true }
     }
     private func close() {
-        withAnimation(.easeIn(duration: 0.14)) { creating = false; editing = nil }
+        withAnimation(Motion.exit) { creating = false; editing = nil }
         dimmed = false
     }
 

@@ -7,6 +7,7 @@ struct ChartBoard: View {
     let level: Int
     var onResetLevel: () -> Void = {}
     @State private var sel: Int?
+    @State private var appeared = false
 
     var body: some View {
         let chart = model.chart
@@ -26,17 +27,20 @@ struct ChartBoard: View {
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipped()
                         .contentShape(Rectangle())
-                        .onTapGesture { sel = i }
+                        .onTapGesture { withAnimation(Motion.snap) { sel = i } }
+                        .enterFromBelow(appeared, index: r * 4 + c)
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
                     compassLabel(i, r: r, c: c, cw: cw, ch: ch, m: m)
                 }
                 CenterInfo(person: person, model: model, selected: selected, fs: fs, level: level, onResetLevel: onResetLevel)
+                    .enterFromBelow(appeared, index: 8)
                     .frame(width: cw * 2, height: ch * 2)
                     .offset(x: m + cw, y: m + ch)
             }
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
+        .onAppear { appeared = true }
     }
 
     @ViewBuilder
@@ -222,13 +226,8 @@ private struct CenterInfo: View {
         let yang = ["甲", "丙", "戊", "庚", "壬"].contains(String(pillars.first?.prefix(1) ?? ""))
         let flies = model.flying[selected]
         ZStack {
-            Canvas { ctx, size in
-                let pts = ZW.sanFang(selected).map { CGPoint(x: ZW.anchor[$0].0 * size.width, y: ZW.anchor[$0].1 * size.height) }
-                var tri = Path()
-                tri.addLines([pts[0], pts[1], pts[2], pts[0]])
-                tri.move(to: pts[0]); tri.addLine(to: pts[3])
-                ctx.stroke(tri, with: .color(Color.zText3.opacity(0.7)), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-            }
+            SanFangShape(points: Quad(ZW.sanFang(selected).map { ZW.anchor[$0] }))
+                .stroke(Color.zText3.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
             VStack(spacing: fs * 0.55) {
                 Text("紫微斗數").font(ChartType.font(ChartType.centerTitle(fs), .semibold)).tracking(2)
                 Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {
@@ -291,6 +290,35 @@ private struct CenterInfo: View {
 
     private func label(_ s: String) -> some View {
         Text(s + ":").foregroundStyle(Color.zText2)
+    }
+}
+
+/// 三方四正連線：四個錨點可以補間，換宮位時連線會滑過去而不是瞬間跳
+struct Quad: VectorArithmetic {
+    var v: [Double]
+    init(_ pts: [(Double, Double)]) { v = pts.flatMap { [$0.0, $0.1] } }
+    init(raw: [Double]) { v = raw }
+    static var zero: Quad { Quad(raw: Array(repeating: 0, count: 8)) }
+    static func + (a: Quad, b: Quad) -> Quad { Quad(raw: zip(a.padded, b.padded).map(+)) }
+    static func - (a: Quad, b: Quad) -> Quad { Quad(raw: zip(a.padded, b.padded).map(-)) }
+    mutating func scale(by r: Double) { v = padded.map { $0 * r } }
+    var magnitudeSquared: Double { padded.reduce(0) { $0 + $1 * $1 } }
+    private var padded: [Double] { v.count == 8 ? v : Array(repeating: 0, count: 8) }
+    func point(_ i: Int, in r: CGRect) -> CGPoint { CGPoint(x: padded[i * 2] * r.width, y: padded[i * 2 + 1] * r.height) }
+}
+
+struct SanFangShape: Shape {
+    var points: Quad
+    var animatableData: Quad {
+        get { points }
+        set { points = newValue }
+    }
+    func path(in r: CGRect) -> Path {
+        var p = Path()
+        let a = points.point(0, in: r), b = points.point(1, in: r), c = points.point(2, in: r), d = points.point(3, in: r)
+        p.addLines([a, b, c, a])
+        p.move(to: a); p.addLine(to: d)
+        return p
     }
 }
 

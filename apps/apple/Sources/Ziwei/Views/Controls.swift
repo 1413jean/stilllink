@@ -6,19 +6,25 @@ import SwiftUI
 struct ZSegmented<T: Hashable>: View {
     let options: [(T, String)]
     @Binding var selection: T
+    @Namespace private var ns
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(options, id: \.0) { value, label in
                 let on = value == selection
-                Button { selection = value } label: {
+                Button { withAnimation(Motion.snap) { selection = value } } label: {
                     Text(label)
                         .font(on ? Font.zBodyStrong : Font.zBody)
                         .foregroundStyle(on ? Color.zText : Color.zText2)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
-                        .background(RoundedRectangle(cornerRadius: 7).fill(on ? Color.zCard : Color.clear)
-                            .shadow(color: on ? Color.zShadow : .clear, radius: 2, y: 1))
+                        .background {
+                            if on {
+                                RoundedRectangle(cornerRadius: 7).fill(Color.zCard)
+                                    .shadow(color: Color.zShadow, radius: 2, y: 1)
+                                    .matchedGeometryEffect(id: "pill", in: ns)
+                            }
+                        }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -68,7 +74,7 @@ struct ZColumnList<Item: Hashable, ID: Hashable>: View {
             LazyVStack(spacing: 1) {
                 ForEach(items, id: id) { item in
                     let on = item[keyPath: id] == selected
-                    Button { onSelect(item) } label: {
+                    Button { withAnimation(Motion.base) { onSelect(item) } } label: {
                         HStack {
                             Text(label(item)).font(Font.zBody).foregroundStyle(on ? Color.zText : Color.zText2)
                             Spacer()
