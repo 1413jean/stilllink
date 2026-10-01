@@ -100,11 +100,13 @@ struct ToastHost: View {
                     .foregroundStyle(Color.zBg)
                     .padding(.horizontal, 16).frame(height: 36)
                     .background(Capsule().fill(Color.zText))
-                    .shadow(color: Color.zShadow, radius: 12, y: 4)
+                    // 兩層陰影：一層大而柔、一層貼近輪廓，浮起來比較明顯
+                    .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
+                    .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
                     .transition(.opacity.combined(with: .offset(y: 12)))
             }
         }
-        .padding(.bottom, 150)
+        .padding(.bottom, 124)   // 剛好在下方 AI 輸入框上面一點
         .allowsHitTesting(false)
         .onReceive(NotificationCenter.default.publisher(for: .toast)) { n in
             guard let t = n.object as? String else { return }
