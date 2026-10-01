@@ -29,7 +29,7 @@ extension Color {
     static let wmGreen = dynamic(0x1F8A3A, 0x5BCB8A)
     static let wmBlack = dynamic(0x1F1E1C, 0xECEAE4)
     static let wmEarth = dynamic(0xB5701A, 0xE0A84A)
-    static let wmSF = dynamic(0xF6F3EC, 0x2D2C2A)
+    static let wmSF = dynamic(0xF4F0E6, 0x3E3C37)
     static let wmSel = dynamic(0xFBEDEA, 0x3A2E2C)
 
     static let mLu = dynamic(0x1F8A3A, 0x4FBF7E)
@@ -37,9 +37,10 @@ extension Color {
     static let mKe = dynamic(0x1F5FBF, 0x6AA2F5)
     static let mJi = dynamic(0xD0102A, 0xF06A6A)
 
+    /// 運限四化色：大限綠、流年藍、流月琥珀、流日洋紅、流時灰
     static let scopeColors: [Color] = [
-        dynamic(0xB5701A, 0xE0A84A), dynamic(0x1F5FBF, 0x6AA2F5), dynamic(0x7B48C8, 0xA987EC),
-        dynamic(0x1F8A8A, 0x4FC9C9), dynamic(0x6B6963, 0xA6A39C),
+        dynamic(0x1F8A3A, 0x4FBF7E), dynamic(0x1F5FBF, 0x6AA2F5), dynamic(0xC27A12, 0xE8A84A),
+        dynamic(0xB8357A, 0xE877B4), dynamic(0x6B6963, 0xA6A39C),
     ]
 }
 

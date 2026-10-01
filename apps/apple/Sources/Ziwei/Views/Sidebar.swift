@@ -89,7 +89,7 @@ struct Sidebar: View {
                 Circle()
                     .stroke(Color.zText3, lineWidth: 1)
                     .frame(width: 6, height: 6)
-                    .padding(.leading, indent ? 18 : 2)
+                    .padding(.leading, 7) // 圓點對齊資料夾圖示中心
                 Text(p.name).font(Font.zBody).foregroundStyle(Color.zText).lineLimit(1)
                 Spacer(minLength: 6)
                 Text(store.soulStars[p.id] ?? "")

@@ -7,6 +7,9 @@ function __astro(solar, t, gender) {
   return __cache[key];
 }
 
+// 宮名用語：僕役宮一律叫交友宮
+function __pn(n) { return n === '僕役' ? '交友' : n; }
+
 function __star(s) {
   return { name: s.name, type: s.type, brightness: s.brightness || '', mutagen: s.mutagen || '' };
 }
@@ -20,7 +23,7 @@ function zwChart(solar, t, gender) {
     yearBranch: a.rawDates.chineseDate.yearly[1],
     palaces: a.palaces.map(function (p) {
       return {
-        name: p.name, stem: p.heavenlyStem, branch: p.earthlyBranch, isBody: p.isBodyPalace,
+        name: __pn(p.name), stem: p.heavenlyStem, branch: p.earthlyBranch, isBody: p.isBodyPalace,
         major: p.majorStars.map(__star), minor: p.minorStars.map(__star), adj: p.adjectiveStars.map(__star),
         changsheng: p.changsheng12, boshi: p.boshi12, jiangqian: p.jiangqian12, suiqian: p.suiqian12,
         range: p.decadal.range, ages: p.ages,
@@ -31,7 +34,7 @@ function zwChart(solar, t, gender) {
 
 function zwHoro(solar, t, gender, date, hour) {
   var h = __astro(solar, t, gender).horoscope(date, hour);
-  function sc(x) { return { index: x.index, stem: x.heavenlyStem, branch: x.earthlyBranch, palaceNames: x.palaceNames, mutagen: x.mutagen }; }
+  function sc(x) { return { index: x.index, stem: x.heavenlyStem, branch: x.earthlyBranch, palaceNames: x.palaceNames.map(__pn), mutagen: x.mutagen }; }
   return JSON.stringify({ decadal: sc(h.decadal), yearly: sc(h.yearly), monthly: sc(h.monthly), daily: sc(h.daily), hourly: sc(h.hourly) });
 }
 
