@@ -21,7 +21,10 @@ struct PeriodTable: View {
 
         VStack(spacing: 0) {
             row("大限") {
-                cell("起限前", "(童限)", group: "dec", on: cur == nil && pick.level >= 1) { pick.level = 2; pick.year = birthYear }
+                // 起限前（童限）：停在大限層級，不強制切到流年；再點一次回本命
+                cell("起限前", "(童限)", group: "dec", on: cur == nil && pick.level >= 1) {
+                    if cur == nil && pick.level == 1 { pick.level = 0 } else { pick.level = 1; pick.year = birthYear }
+                }
                 ForEach(Array(decades.enumerated()), id: \.offset) { k, d in
                     cell("\(d.0[0])~\(d.0[1])", d.1 + "限", group: "dec", on: cur == k && pick.level >= 1) {
                         if cur == k && pick.level == 1 { pick.level = 0 } else { pick.level = 1; pick.year = birthYear + d.0[0] - 1 }
