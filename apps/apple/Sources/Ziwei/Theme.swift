@@ -38,7 +38,7 @@ extension Color {
     static let mJi = dynamic(0xD0102A, 0xF06A6A)
 
     /// 小限：青綠
-    static let minorColor = dynamic(0x0A8FA8, 0x5CCBDA)   // 小限：青色，跟大限的綠分開
+    static let minorColor = dynamic(0x0098B5, 0x2EC4DE)   // 小限：青色（深淺色都用青），跟大限的綠分開
 
     /// 運限四化色：大限綠、流年藍、流月琥珀、流日洋紅、流時灰
     static let scopeColors: [Color] = [
@@ -60,7 +60,7 @@ extension Color {
     static let fKe = dynamic(0x1F5FBF, 0x335B99)
     static let fJi = dynamic(0xD0102A, 0x9C3239)
     static let fBirth = dynamic(0xD0102A, 0x9C3239)       // 生年四化方塊
-    static let fMinor = dynamic(0x0A8FA8, 0x2A7684)       // 小限四化方塊：跟小限標籤同一個青色
+    static let fMinor = dynamic(0x0098B5, 0x0098B5)       // 小限四化方塊：深淺色都用同一個青色
     /// 運限四化方塊底色：大限、流年、流月、流日、流時
     static let fScopes: [Color] = [
         dynamic(0x1F8A3A, 0x2F6B45), dynamic(0x1F5FBF, 0x335B99), dynamic(0xC27A12, 0x8E6224),
