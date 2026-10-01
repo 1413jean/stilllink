@@ -32,7 +32,7 @@ struct ChartScreen: View {
             let panelSpace: CGFloat = showInfo ? infoPanelWidth + 24 : 0
             let usable = geo.size.width - panelSpace
             let boardW = min(usable - 48, boardMaxWidth, max(460, geo.size.height - 180))
-            ZStack(alignment: .top) {
+            ZStack(alignment: .bottom) {
                 ScrollView {
                     VStack(spacing: 12) {
                         Group {
@@ -54,12 +54,23 @@ struct ChartScreen: View {
                     }
                     .frame(width: boardW)
                     .padding(.top, 14)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 150)
                     .frame(width: usable)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .defaultScrollAnchor(.top)
 
+                AIComposer()
+                    .frame(width: min(boardW, 720))
+                    .padding(.top, 28)
+                    .padding(.bottom, 16)
+                    .frame(width: usable)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        LinearGradient(colors: [Color.zBg.opacity(0), Color.zBg, Color.zBg], startPoint: .top, endPoint: .bottom)
+                            .padding(.trailing, 16) // 不蓋到捲軸
+                            .allowsHitTesting(false)
+                    )
             }
             .overlay(alignment: .topTrailing) {
                 if showInfo {
@@ -90,6 +101,36 @@ struct ChartScreen: View {
     }
 
     private struct TaskKey: Equatable { let person: String; let pick: Pick }
+}
+
+/// 下方 AI 解盤輸入框（Codex 式）：先留位置，功能之後接上
+private struct AIComposer: View {
+    @State private var text = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TextField("問問這張盤…", text: $text, axis: .vertical)
+                .textFieldStyle(.plain)
+                .lineLimit(1...6)
+                .font(.system(size: 13.5))
+            HStack(spacing: 10) {
+                Image(systemName: "plus").font(.system(size: 13)).foregroundStyle(Color.zText2)
+                Label("AI 解盤 · 即將推出", systemImage: "sparkle")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(Color.zText3)
+                Spacer()
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(Color.zText3.opacity(0.45)))
+                    .help("AI 解盤即將推出")
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.zLine))
+        .shadow(color: .black.opacity(0.08), radius: 18, y: 6)
+    }
 }
 
 /// 載入中的盤面骨架

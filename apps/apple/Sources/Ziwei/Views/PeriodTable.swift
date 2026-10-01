@@ -11,6 +11,11 @@ struct PeriodTable: View {
         let age = pick.year - birthYear + 1
         let cur = decades.firstIndex { age >= $0.0[0] && age <= $0.0[1] }
         let start = cur.map { birthYear + decades[$0].0[0] - 1 } ?? birthYear
+        // 這個農曆月初一的儒略日，與月長（大月 30、小月 29）
+        let j1 = jdnOf(pick.year, pick.lm)
+        let jNext = pick.lm == 12 ? jdnOf(pick.year + 1, 1) : jdnOf(pick.year, pick.lm + 1)
+        let monthLen = (j1 != nil && jNext != nil) ? max(29, min(30, jNext! - j1!)) : 30
+        let dayStem = j1.map { ZW.dayIndex(jdn: $0 + min(pick.ld, monthLen) - 1) % 10 } ?? 0
 
         VStack(spacing: 0) {
             row("大限") {
@@ -31,7 +36,7 @@ struct PeriodTable: View {
             }
             row("流月") {
                 ForEach(1...12, id: \.self) { m in
-                    cell(ZW.lunarMonths[m - 1], on: m == pick.lm && pick.level >= 3) {
+                    cell(ZW.lunarMonths[m - 1], ZW.monthGanzhi(lunarYear: pick.year, month: m), on: m == pick.lm && pick.level >= 3) {
                         pick.level = (m == pick.lm && pick.level == 3) ? 2 : 3; pick.lm = m
                     }
                 }
@@ -40,16 +45,18 @@ struct PeriodTable: View {
                 head("流日")
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 10), spacing: 0) {
                     ForEach(1...30, id: \.self) { d in
-                        cell(ZW.lunarDays[d - 1], on: d == pick.ld && pick.level >= 4, minW: 0) {
+                        cell(ZW.lunarDays[d - 1], j1.map { ZW.ganzhi(ZW.dayIndex(jdn: $0 + d - 1)) }, on: d == pick.ld && pick.level >= 4, minW: 0) {
                             pick.level = (d == pick.ld && pick.level == 4) ? 3 : 4; pick.ld = d
                         }
+                        .disabled(d > monthLen)
+                        .opacity(d > monthLen ? 0.25 : 1)
                     }
                 }
             }
             Divider()
             row("流時", divider: false) {
                 ForEach(0..<12, id: \.self) { h in
-                    cell(ZW.branches[h] + "時", on: h == pick.hour && pick.level >= 5) {
+                    cell(ZW.branches[h] + "時", ZW.hourGanzhi(dayStem: dayStem, hour: h), on: h == pick.hour && pick.level >= 5) {
                         pick.level = (h == pick.hour && pick.level == 5) ? 4 : 5; pick.hour = h
                     }
                 }
@@ -58,6 +65,11 @@ struct PeriodTable: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
+    }
+
+    private func jdnOf(_ y: Int, _ m: Int) -> Int? {
+        let s = Engine.shared.lunarToSolar(y, m, 1).split(separator: "-").compactMap { Int($0) }
+        return s.count == 3 ? ZW.jdn(s[0], s[1], s[2]) : nil
     }
 
     private func head(_ t: String) -> some View {

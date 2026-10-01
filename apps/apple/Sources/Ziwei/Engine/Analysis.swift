@@ -65,6 +65,27 @@ enum ZW {
 
     static func yearGanzhi(_ y: Int) -> String { stems[(y - 4) % 10] + branches[(y - 4) % 12] }
 
+    /// 流月干支（五虎遁）：正月建寅，月干由年干起
+    static func monthGanzhi(lunarYear y: Int, month m: Int) -> String {
+        let first = (((y - 4) % 10) % 5) * 2 + 2
+        return stems[(first + m - 1) % 10] + branches[(m + 1) % 12]
+    }
+
+    /// 儒略日數（國曆）
+    static func jdn(_ y: Int, _ m: Int, _ d: Int) -> Int {
+        let a = (14 - m) / 12, yy = y + 4800 - a, mm = m + 12 * a - 3
+        return d + (153 * mm + 2) / 5 + 365 * yy + yy / 4 - yy / 100 + yy / 400 - 32045
+    }
+
+    /// 日干支序號（0＝甲子）；2000-1-1 為戊午
+    static func dayIndex(jdn: Int) -> Int { ((jdn - 11) % 60 + 60) % 60 }
+    static func ganzhi(_ idx: Int) -> String { stems[idx % 10] + branches[idx % 12] }
+
+    /// 流時干支（五鼠遁）：時干由日干起
+    static func hourGanzhi(dayStem: Int, hour h: Int) -> String {
+        stems[((dayStem % 5) * 2 + h) % 10] + branches[h]
+    }
+
     enum Wuxing { case wood, fire, earth, metal, water }
     static func wuxing(_ ch: String) -> Wuxing {
         switch ch {
