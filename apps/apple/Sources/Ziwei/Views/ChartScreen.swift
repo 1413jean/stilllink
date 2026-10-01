@@ -17,6 +17,7 @@ struct Pick: Equatable, Hashable {
 
 /// 盤面寬度上限（約文墨天機的比例）
 let boardMaxWidth: CGFloat = 700
+let infoPanelWidth: CGFloat = 300
 
 struct ChartScreen: View {
     @EnvironmentObject var store: Store
@@ -28,53 +29,59 @@ struct ChartScreen: View {
     private var notes: [Note] { store.people.first { $0.id == person.id }?.notes ?? [] }
 
     var body: some View {
-        HStack(spacing: 0) {
-            // 中間：命盤＋運限表＋筆記串，最下面浮著輸入框（Codex 式）
-            GeometryReader { geo in
-                let boardW = min(geo.size.width - 48, boardMaxWidth, max(460, geo.size.height - 180))
-                ZStack(alignment: .bottom) {
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            Group {
-                                if let model {
-                                    ChartBoard(person: person, model: model, level: pick.level) { pick.level = 0 }
-                                        .transition(.opacity)
-                                } else {
-                                    BoardSkeleton().transition(.opacity)
-                                }
-                            }
-                            .frame(width: boardW, height: boardW)
-
+        // 捲動區佔滿整個寬度（捲軸貼在視窗最右邊）；右側資訊卡固定浮在右上角，不跟著捲
+        GeometryReader { geo in
+            let panelSpace: CGFloat = showInfo ? infoPanelWidth + 24 : 0
+            let usable = geo.size.width - panelSpace
+            let boardW = min(usable - 48, boardMaxWidth, max(460, geo.size.height - 180))
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(spacing: 12) {
+                        Group {
                             if let model {
-                                PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
+                                ChartBoard(person: person, model: model, level: pick.level) { pick.level = 0 }
+                                    .transition(.opacity)
                             } else {
-                                RoundedRectangle(cornerRadius: 12).fill(Color.zHover).frame(height: 210).shimmer()
+                                BoardSkeleton().transition(.opacity)
                             }
-
-                            NoteThread(notes: notes)
                         }
-                        .frame(width: boardW)
-                        .padding(.top, 14)
-                        .padding(.bottom, 150)
-                        .frame(maxWidth: .infinity)
+                        .frame(width: boardW, height: boardW)
+
+                        if let model {
+                            PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
+                        } else {
+                            RoundedRectangle(cornerRadius: 12).fill(Color.zHover).frame(height: 210).shimmer()
+                        }
+
+                        NoteThread(notes: notes)
                     }
-                    .defaultScrollAnchor(.top)
-
-                    Composer(person: person)
-                        .frame(width: min(boardW, 720))
-                        .padding(.top, 28)
-                        .padding(.bottom, 16)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            LinearGradient(colors: [Color.zBg.opacity(0), Color.zBg, Color.zBg], startPoint: .top, endPoint: .bottom)
-                                .allowsHitTesting(false)
-                        )
+                    .frame(width: boardW)
+                    .padding(.top, 14)
+                    .padding(.bottom, 150)
+                    .frame(width: usable)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            }
+                .defaultScrollAnchor(.top)
 
-            if showInfo {
-                InfoPanel(person: person, chart: model?.chart)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                Composer(person: person)
+                    .frame(width: min(boardW, 720))
+                    .padding(.top, 28)
+                    .padding(.bottom, 16)
+                    .frame(width: usable)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        LinearGradient(colors: [Color.zBg.opacity(0), Color.zBg, Color.zBg], startPoint: .top, endPoint: .bottom)
+                            .padding(.trailing, 16) // 不蓋到捲軸
+                            .allowsHitTesting(false)
+                    )
+            }
+            .overlay(alignment: .topTrailing) {
+                if showInfo {
+                    InfoPanel(person: person, chart: model?.chart)
+                        .padding(.top, 12)
+                        .padding(.trailing, 20)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
             }
         }
         .background(Color.zBg)

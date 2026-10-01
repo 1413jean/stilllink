@@ -31,8 +31,7 @@ struct InfoPanel: View {
     private var current: Person { store.people.first { $0.id == person.id } ?? person }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
+        VStack(spacing: 12) {
                 card("命主資料") {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(spacing: 10) {
@@ -99,12 +98,9 @@ struct InfoPanel: View {
                     }
                     return true
                 }
-            }
-            .padding(.top, 10)
-            .padding(.trailing, 12)
-            .padding(.bottom, 16)
         }
-        .frame(width: 300)
+        .frame(width: infoPanelWidth)
+        .shadow(color: .black.opacity(0.06), radius: 16, y: 4)
         .sheet(item: Binding(get: { preview.map { PreviewItem(name: $0) } }, set: { preview = $0?.name })) { item in
             VStack {
                 if let img = NSImage(contentsOf: Media.url(item.name)) {
