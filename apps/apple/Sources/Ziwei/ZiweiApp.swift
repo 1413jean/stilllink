@@ -36,6 +36,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ n: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        // 出生地資料（解析 zone.tab＋中文排序）先在背景建好，否則第一次開「新增命盤」會卡約 0.2 秒
+        DispatchQueue.global(qos: .utility).async { _ = Places.all }
         Snapshot.scheduleIfRequested()
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }
@@ -61,6 +63,7 @@ struct RootView: View {
     @State private var route: Route? = .home
     @State private var creating = false
     @State private var editing: Person?
+    @State private var dimmed = false   // 背景模糊：不做動畫（模糊半徑動畫很吃效能、會頓一下）
 
     var body: some View {
         NavigationSplitView {
@@ -79,7 +82,7 @@ struct RootView: View {
             }
         }
         // 新增命盤：背景輕微模糊＋變暗（還看得到後面內容），彈窗不加邊框
-        .blur(radius: creating || editing != nil ? 6 : 0)
+        .blur(radius: dimmed ? 6 : 0)
         .overlay {
             if creating || editing != nil {
                 ZStack {
@@ -96,20 +99,30 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .newChart)) { _ in open() }
         .onReceive(NotificationCenter.default.publisher(for: .editChart)) { n in
             if let id = n.object as? UUID, let p = store.people.first(where: { $0.id == id }) {
+                dimmed = true
                 withAnimation(.easeOut(duration: 0.18)) { editing = p }
             }
         }
         .onAppear(perform: applyDebugEnv)
     }
 
-    private func open() { withAnimation(.easeOut(duration: 0.18)) { creating = true } }
-    private func close() { withAnimation(.easeIn(duration: 0.14)) { creating = false; editing = nil } }
+    private func open() {
+        dimmed = true
+        withAnimation(.easeOut(duration: 0.18)) { creating = true }
+    }
+    private func close() {
+        withAnimation(.easeIn(duration: 0.14)) { creating = false; editing = nil }
+        dimmed = false
+    }
 
     /// 驗證用：ZIWEI_ROUTE=<姓名> 直接打開那張盤；ZIWEI_THEME=dark/light
     private func applyDebugEnv() {
         let env = ProcessInfo.processInfo.environment
         if let t = env["ZIWEI_THEME"], let a = Appearance(rawValue: t) { store.appearance = a }
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
-        if env["ZIWEI_NEW"] != nil { creating = true }
+        if env["ZIWEI_NEW"] != nil { open() }
+        if let t = env["ZIWEI_NEW_AFTER"].flatMap(Double.init) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + t) { open() }
+        }
     }
 }

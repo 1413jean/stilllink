@@ -53,40 +53,41 @@ struct ZMenuField: View {
     }
 }
 
-/// 滾軸式選擇：一欄可捲動的清單，選中的列反白並自動捲到可見處
+/// 滾軸式選擇：一欄可捲動的清單，選中的列反白。
+/// 用 scrollPosition 只捲自己這一欄——不用 ScrollViewReader.scrollTo，它會連外層的彈窗一起捲，造成畫面跳動。
 struct ZColumnList<Item: Hashable, ID: Hashable>: View {
     let items: [Item]
     let id: KeyPath<Item, ID>
     let label: (Item) -> String
     let selected: ID?
     let onSelect: (Item) -> Void
+    @State private var position: ID?
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 1) {
-                    ForEach(items, id: id) { item in
-                        let on = item[keyPath: id] == selected
-                        Button { onSelect(item) } label: {
-                            HStack {
-                                Text(label(item)).font(Font.zBody).foregroundStyle(on ? Color.zText : Color.zText2)
-                                Spacer()
-                                if on { Image(systemName: "checkmark").font(Font.zCaptionStrong).foregroundStyle(Color.zAccent) }
-                            }
-                            .padding(.horizontal, 10)
-                            .frame(height: 30)
-                            .background(RoundedRectangle(cornerRadius: 7).fill(on ? Color.zSel : Color.clear))
-                            .contentShape(Rectangle())
+        ScrollView {
+            LazyVStack(spacing: 1) {
+                ForEach(items, id: id) { item in
+                    let on = item[keyPath: id] == selected
+                    Button { onSelect(item) } label: {
+                        HStack {
+                            Text(label(item)).font(Font.zBody).foregroundStyle(on ? Color.zText : Color.zText2)
+                            Spacer()
+                            if on { Image(systemName: "checkmark").font(Font.zCaptionStrong).foregroundStyle(Color.zAccent) }
                         }
-                        .buttonStyle(.plain)
-                        .id(item[keyPath: id])
+                        .padding(.horizontal, 10)
+                        .frame(height: 30)
+                        .background(RoundedRectangle(cornerRadius: 7).fill(on ? Color.zSel : Color.clear))
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(4)
             }
-            .onAppear { if let selected { proxy.scrollTo(selected, anchor: .center) } }
-            .onChange(of: selected) { _, s in if let s { withAnimation { proxy.scrollTo(s, anchor: .center) } } }
+            .scrollTargetLayout()
+            .padding(4)
         }
+        .scrollPosition(id: $position, anchor: .center)
+        .onAppear { position = selected }
+        .onChange(of: items.map { $0[keyPath: id] }) { _, _ in position = selected }
         .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
         .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
     }
