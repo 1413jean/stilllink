@@ -91,6 +91,7 @@ struct ChartScreen: View {
                             .allowsHitTesting(false)
                     )
             }
+            .dimmedBlur()
             .overlay(alignment: .topTrailing) {
                 if showInfo {
                     ScrollView(showsIndicators: false) {
@@ -102,6 +103,7 @@ struct ChartScreen: View {
                     .scrollClipDisabled()
                     .frame(width: infoPanelWidth + 32)
                     .padding(.trailing, 4)
+                    .dimmedBlur()
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }

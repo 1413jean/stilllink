@@ -81,8 +81,8 @@ struct RootView: View {
                 NowChart()
             }
         }
-        // 新增命盤：背景輕微模糊＋變暗（還看得到後面內容），彈窗不加邊框
-        .blur(radius: dimmed ? 6 : 0)
+        // 新增命盤：背景模糊＋變暗，模糊由各欄內容層自己處理（見 DimmedBlur）
+        .environment(\.zDimmed, dimmed)
         .overlay {
             if creating || editing != nil {
                 ZStack {

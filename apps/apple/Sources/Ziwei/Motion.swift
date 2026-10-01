@@ -32,6 +32,25 @@ extension View {
     }
 }
 
+/// 彈窗開著時背景要模糊。模糊加在各欄的內容層（已在 safe area 內），
+/// 不能加在 NavigationSplitView 外層——那樣會吃掉工具列的 safe area，整個畫面往上跳。
+private struct DimmedKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    var zDimmed: Bool {
+        get { self[DimmedKey.self] }
+        set { self[DimmedKey.self] = newValue }
+    }
+}
+
+struct DimmedBlur: ViewModifier {
+    @Environment(\.zDimmed) private var dimmed
+    func body(content: Content) -> some View { content.blur(radius: dimmed ? 6 : 0) }
+}
+
+extension View {
+    func dimmedBlur() -> some View { modifier(DimmedBlur()) }
+}
+
 /// 按壓回饋：按下縮 0.97（hover 底色由各列自己處理）
 struct PressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {

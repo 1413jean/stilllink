@@ -72,6 +72,7 @@ struct Sidebar: View {
             }
             AccountBar()
         }
+        .dimmedBlur()
         .background(Color.zSide)
         .background(
             Button("") { searching = true; DispatchQueue.main.async { searchFocused = true } }
