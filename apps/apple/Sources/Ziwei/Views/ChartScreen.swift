@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// 運限選擇：level 0 本命、1 大限、2 流年、3 流月、4 流日、5 流時；年月日都是農曆
+/// 運限選擇（預設大限）：level 0 本命、1 大限、2 流年、3 流月、4 流日、5 流時；年月日都是農曆
 struct Pick: Equatable, Hashable {
-    var level = 2
+    var level = 1
     var year: Int
     var lm: Int
     var ld: Int
@@ -45,11 +45,11 @@ struct ChartScreen: View {
     @State private var pick: Pick
     @State private var showInfo = true
     @State private var model: ChartModel?
-    @State private var shownLevel = 2           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
+    @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
     @State private var zoomBase: CGFloat = 1
 
-    init(person: Person, level: Int = 2) {
+    init(person: Person, level: Int = 1) {
         self.person = person
         var p = Pick.today(); p.level = level
         _pick = State(initialValue: p)

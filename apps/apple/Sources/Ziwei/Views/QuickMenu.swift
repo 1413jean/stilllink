@@ -147,13 +147,13 @@ enum TempChart {
     static func open(_ k: Kind) {
         let p: Person, level: Int
         switch k {
-        case .now(let g): p = make(Date(), g, name: "紫占 · 此刻"); level = 2
+        case .now(let g): p = make(Date(), g, name: "紫占 · 此刻"); level = 1
         case .sevenLayer(let g): p = make(Date(), g, name: "七層限流盤"); level = 5
         case .random(let g):
             var cal = Calendar(identifier: .gregorian); cal.timeZone = .current
             let d = cal.date(from: DateComponents(year: Int.random(in: 1940...2015), month: Int.random(in: 1...12),
                                                   day: Int.random(in: 1...28), hour: Int.random(in: 0...23), minute: Int.random(in: 0...59)))!
-            p = make(d, g, name: "匿名"); level = 2
+            p = make(d, g, name: "匿名"); level = 1
         }
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: level))
     }
@@ -173,7 +173,7 @@ enum TempChart {
         var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Asia/Taipei")!
         let date = cal.date(from: DateComponents(year: s.0, month: s.1, day: s.2, hour: branch == 0 ? 0 : branch * 2, minute: branch == 0 ? 30 : 0))!
         let p = make(date, g, name: "匿名")
-        NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: 2))
+        NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: 1))
         Toast.show("報數 \(n) → 農曆\(year)年\(ZW.lunarMonths[month - 1])\(ZW.lunarDays[day - 1]) \(ZW.branches[branch])時 · \(g.rawValue)")
     }
 
