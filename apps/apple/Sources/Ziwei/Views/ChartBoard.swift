@@ -157,12 +157,14 @@ struct VerticalText: View {
     init(_ text: String, size: CGFloat, color: Color = .zText, weight: Font.Weight = .regular) {
         self.text = text; self.size = size; self.color = color; self.weight = weight
     }
+    /// 一個 Text 換行排直（不用每個字一個 Text，盤面上上百個字時差很多）
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(text.enumerated()), id: \.offset) { _, ch in
-                Text(String(ch)).font(.system(size: size, weight: weight)).foregroundStyle(color)
-            }
-        }
+        Text(text.map(String.init).joined(separator: "\n"))
+            .font(.system(size: size, weight: weight))
+            .foregroundStyle(color)
+            .multilineTextAlignment(.center)
+            .lineSpacing(-size * 0.18)
+            .fixedSize()
     }
 }
 
@@ -182,7 +184,6 @@ private struct PalaceCell: View {
     var body: some View {
         let chart = model.chart, horo = model.horo
         let p = chart.palaces[index]
-        let selfs = model.selfs[index]
         let curDecade = level >= 1 && horo.decadal.index == index
         let minor = level >= 2 && settings.showMinor
         // 來因宮：生年天干所在的宮（寅～亥，子丑與寅卯同干不算）

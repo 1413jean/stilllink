@@ -5,7 +5,6 @@ struct PeriodTable: View {
     let chart: Chart
     let birthYear: Int
     @Binding var pick: Pick
-    @Namespace private var ns
     @Environment(\.zSettings) private var settings   // 每一列的選取底色共用一個 id，切換時會滑過去（類似 GSAP Flip）
 
     var body: some View {
@@ -101,7 +100,7 @@ struct PeriodTable: View {
     private func cell(_ main: String, _ sub: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
         Button {
             Sound.tap(settings, ["dec": .decade, "year": .year, "month": .month, "day": .day, "hour": .hour][group] ?? .palace)
-            withAnimation(Motion.snap) { action() }
+            action()   // 選取底色直接跳過去：盤面同時要重畫，滑動動畫會被卡住，看起來反而頓
         } label: {
             VStack(spacing: 1) {
                 Text(main).font(Font.zCaption)
@@ -111,7 +110,7 @@ struct PeriodTable: View {
             .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)
             .padding(.horizontal, 4)
             .background {
-                if on { Rectangle().fill(Color.zText).matchedGeometryEffect(id: group, in: ns) }
+                if on { Rectangle().fill(Color.zText) }
             }
             .overlay(alignment: .trailing) { Rectangle().fill(Color.zLine).frame(width: 0.5) }
             .contentShape(Rectangle())

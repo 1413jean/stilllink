@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// 效能量測（驗證用）：ZIWEI_BENCH=/path.txt 時量排盤各步驟耗時，寫入檔案後結束
 enum Bench {
@@ -18,6 +19,26 @@ enum Bench {
             t = Date(); for _ in 0..<1000 { _ = Lunar.toLunar(2026, 10, 1) }; lines.append("Lunar 1000 次 \(ms(t))")
             let c = await Engine.shared.chart(for: p)
             t = Date(); for _ in 0..<100 { _ = BaziInfo(person: p, chart: c) }; lines.append("BaziInfo 100 次 \(ms(t))")
+            // 盤面繪製（ImageRenderer 離屏畫一張完整盤面，含排版）
+            var models: [ChartModel] = []
+            for (lv, y) in [(1, 2026), (2, 2026), (2, 2027), (3, 2027), (5, 2028)] {
+                if let m = await Engine.shared.model(for: p, pick: Pick(level: lv, year: y, lm: 3, ld: 5, hour: 4)) { models.append(m) }
+            }
+            let built = models
+            let renderLines: [String] = await MainActor.run {
+                var out: [String] = []
+                for (k, m) in built.enumerated() {
+                    let view = ChartBoard(person: p, model: m, level: [1, 2, 2, 3, 5][k])
+                        .frame(width: 760, height: 806)
+                        .environment(\.zSettings, ZSettings())
+                    let r = ImageRenderer(content: view)
+                    let t0 = Date()
+                    _ = r.nsImage
+                    out.append("繪製盤面 level \([1, 2, 2, 3, 5][k]) \(String(format: "%.1fms", Date().timeIntervalSince(t0) * 1000))")
+                }
+                return out
+            }
+            lines += renderLines
             try? lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
             exit(0)
         }
