@@ -284,6 +284,8 @@ private struct PalaceCell: View {
         // 鎖定的宮位細邊框；鎖定後第二次點的宮位用粗紅框
         .overlay(isLocked ? Rectangle().strokeBorder(Color.zAccent, lineWidth: 1.2) : nil)
         .overlay(selected ? Rectangle().strokeBorder(Color.wmRed, lineWidth: comparing ? 3 : 1.5) : nil)
+        // 鎖定後第二次點的三方四正：其他三宮也加粗紅框
+        .overlay(comparing && inSF ? Rectangle().strokeBorder(Color.wmRed.opacity(0.85), lineWidth: 2) : nil)
         .overlay(alignment: .topLeading) {
             if isLocked {
                 Image(systemName: "lock.fill").font(.system(size: max(8, fs * 0.6))).foregroundStyle(Color.zAccent).padding(3)
