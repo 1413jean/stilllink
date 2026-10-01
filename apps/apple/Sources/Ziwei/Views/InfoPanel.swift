@@ -134,7 +134,6 @@ struct InfoPanel: View {
                 }
         }
         .frame(width: infoPanelWidth)
-        .shadow(color: Color.zShadow, radius: 16, y: 4)
         .sheet(item: Binding(get: { preview.map { PreviewItem(name: $0) } }, set: { preview = $0?.name })) { item in
             VStack {
                 if let img = NSImage(contentsOf: Media.url(item.name)) {
@@ -161,7 +160,11 @@ struct InfoPanel: View {
             content()
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard))
+        // 陰影只加在卡片底板，不會染到文字；邊框讓層級清楚
+        .background(
+            RoundedRectangle(cornerRadius: 14).fill(Color.zCard)
+                .shadow(color: Color.zShadow.opacity(0.6), radius: 10, y: 3)
+        )
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
     }
 

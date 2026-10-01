@@ -16,8 +16,8 @@ struct Sidebar: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
+                    NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { route = .home }
                     NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", action: onNew)
-                    NavRow(icon: "clock", title: "此刻", selected: route == .home || route == nil) { route = .home }
                     if searching {
                         HStack(spacing: 8) {
                             Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)

@@ -95,11 +95,12 @@ struct ChartScreen: View {
                     ScrollView(showsIndicators: false) {
                         InfoPanel(person: person, chart: model?.chart)
                             .padding(.top, 12)
-                            .padding(.bottom, 16)
-                            .padding(.horizontal, 4)
+                            .padding(.bottom, 24)
+                            .padding(.horizontal, 16) // 留空間給卡片陰影
                     }
-                    .frame(width: infoPanelWidth + 8)
-                    .padding(.trailing, 16)
+                    .scrollClipDisabled()
+                    .frame(width: infoPanelWidth + 32)
+                    .padding(.trailing, 4)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
