@@ -7,6 +7,8 @@ struct QuickMenu: View {
     @State private var sub: Sub?
     @State private var num = ""
     @State private var hover = false
+    @State private var frame: CGRect = .zero      // 選單＋按鈕在視窗裡的位置（點外面就關）
+    @State private var monitor: Any?
 
     enum Sub { case zizhan, baoshu }
 
@@ -53,6 +55,29 @@ struct QuickMenu: View {
             .onHover { hover = $0 }
             .help("快捷排盤")
         }
+        .background(GeometryReader { g in
+            Color.clear
+                .onAppear { frame = g.frame(in: .global) }
+                .onChange(of: g.frame(in: .global)) { _, f in frame = f }
+        })
+        .onChange(of: open) { _, isOpen in isOpen ? watchOutsideClicks() : stopWatching() }
+        .onDisappear(perform: stopWatching)
+        .onExitCommand { if open { close() } }
+    }
+
+    /// 選單打開時：點到選單以外的地方（盤面、側欄…）就收起來，那一下點擊照常生效
+    private func watchOutsideClicks() {
+        stopWatching()
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { e in
+            guard let h = e.window?.contentView?.bounds.height else { return e }
+            let p = CGPoint(x: e.locationInWindow.x, y: h - e.locationInWindow.y)
+            if !frame.contains(p) { close() }
+            return e
+        }
+    }
+
+    private func stopWatching() {
+        if let m = monitor { NSEvent.removeMonitor(m); monitor = nil }
     }
 
     private var baoshu: some View {
