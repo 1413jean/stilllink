@@ -20,10 +20,12 @@ enum Updater {
             let parts = t.split(separator: "-b", maxSplits: 1).map(String.init)
             return (parts[0].split(separator: ".").compactMap { Int($0) }, parts.count > 1 ? Int(parts[1]) ?? 0 : 0)
         }
-        /// macOS 13 版：優先下載檔名有「macOS13」的 DMG（一般版需要 macOS 14）
+        /// 看實際系統版本挑 DMG：macOS 13 下載檔名有「macOS13」的；14 以上下載一般版（裝了 13 版的人升級系統後會自動換回一般版）
         var dmgURL: URL? {
             let dmgs = assets.filter { $0.name.hasSuffix(".dmg") }
-            return (dmgs.first { $0.name.contains("macOS13") } ?? dmgs.first).flatMap { URL(string: $0.browser_download_url) }
+            let isOld = ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 14
+            let pick = isOld ? dmgs.first { $0.name.contains("macOS13") } : dmgs.first { !$0.name.contains("macOS13") }
+            return (pick ?? dmgs.first).flatMap { URL(string: $0.browser_download_url) }
         }
         /// 給人看的版本：0.2.0 或 0.2.0 測試版（build 80）
         var display: String {
