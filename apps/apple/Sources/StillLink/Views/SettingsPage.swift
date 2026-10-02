@@ -165,7 +165,7 @@ struct SettingsPage: View {
                 row(c.label, c.members, last: c == .misc) {
                     HStack(spacing: 10) {
                         Spacer()
-                        Text(c == .major ? "紫微" : c == .aux ? "左輔" : c == .lucky ? "祿存" : c == .tough ? "擎羊" : "紅鸞")
+                        Text(c == .major ? "紫微" : c == .aux ? "右弼" : c == .lucky ? "祿存" : c == .tough ? "擎羊" : "紅鸞")
                             .font(ChartType.font(15, .medium)).foregroundStyle(store.settings.tone(c).color)
                         ZMenuField(options: ZW.Tone.allCases.map(\.label), selection: starColorBinding(c))
                             .frame(width: 96)
