@@ -9,6 +9,7 @@ struct GroupDial: View {
     @Environment(\.zSettings) private var settings
     @State private var pos: String?          // 停下來對齊的那一個（決定選擇）
     @State private var live: String?         // 滑動中目前在中間的那一個（震動、即時反白）
+    @State private var tick: Int?            // 目前在中間線上的刻度編號（換刻度就震一下）
     private let itemW: CGFloat = 76
 
     var body: some View {
@@ -44,12 +45,17 @@ struct GroupDial: View {
             .scrollPosition(id: $pos, anchor: .center)
             .onPreferenceChange(DialCenters.self) { centers in
                 guard let nearest = centers.min(by: { abs($0.value - mid) < abs($1.value - mid) })?.key else { return }
-                if nearest != live {
-                    if live != nil && settings.haptics {
-                        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                // 每一根刻度經過中間指示線就輕震一下（像轉動實體刻度盤）
+                if let first = options.first, let c0 = centers[first] {
+                    let t = Int(((mid - c0) / (itemW / 5)).rounded(.down))
+                    if t != tick {
+                        if tick != nil && settings.haptics {
+                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                        }
+                        tick = t
                     }
-                    live = nearest
                 }
+                if nearest != live { live = nearest }
             }
             // 正中間的指示線
             .overlay(alignment: .bottom) {
@@ -93,3 +99,4 @@ private struct DialCenters: PreferenceKey {
         value.merge(nextValue()) { _, n in n }
     }
 }
+

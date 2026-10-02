@@ -11,6 +11,8 @@ struct ChartBoard: View, Equatable {
     /// 合盤（對方出生年）；nil＝沒合盤
     var hepan: Hepan? = nil
     var onResetLevel: () -> Void = {}
+    /// 選取的宮位變了（nil＝取消選取），給右側星曜筆記用
+    var onSelect: (Int?) -> Void = { _ in }
 
     /// 只有資料真的換了才重畫（點運限表時，盤面不會先拿舊資料多畫一次）
     static func == (a: ChartBoard, b: ChartBoard) -> Bool {
@@ -54,12 +56,12 @@ struct ChartBoard: View, Equatable {
                                 }
                             }))
                         .contextMenu {
-                            if taiji == i {
-                                Button("取消轉宮") { setTaiji(nil, chart) }
-                            } else {
+                            // 轉宮中（右鍵指定或點宮位產生的 X之Y）都可以取消
+                            let transferring = effectiveTaiji(selected, chart) != nil
+                            if taiji != i {
                                 Button("以「\(chart.palaces[i].name)」為命（轉宮）") { setTaiji(i, chart) }
-                                if taiji != nil { Button("取消轉宮") { setTaiji(nil, chart) } }
                             }
+                            if transferring { Button("取消轉宮") { setTaiji(nil, chart) } }
                             Divider()
                             Button(locked == i ? "解除鎖定" : "鎖定此宮三方四正") { toggleLock(i, chart) }
                         }
@@ -76,7 +78,8 @@ struct ChartBoard: View, Equatable {
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
-        .onAppear { appeared = true; sel = focusIndex }
+        .onAppear { appeared = true; sel = focusIndex; onSelect(focusIndex) }
+        .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { _, v in onSelect(v < 0 ? nil : v) }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
         // 新命宮的位置直接放進偵測的值裡：macOS 13 的 onChange 拿到的是上一次的 model，不能在裡面再算
         .onChange(of: FocusKey(model: model.id, focus: focusIndex)) { _, k in
@@ -113,7 +116,7 @@ struct ChartBoard: View, Equatable {
     }
 
     private func setTaiji(_ i: Int?, _ chart: Chart) {
-        withAnimation(Motion.base) { taiji = i }
+        withAnimation(Motion.base) { taiji = i; if i == nil { userPicked = false } }
         if let i { Toast.show("轉宮：以「\(chart.palaces[i].name)」為命") } else { Toast.show("已取消轉宮") }
     }
 
@@ -214,14 +217,30 @@ private struct PalaceCell: View {
                 }
                 .lineLimit(1)
             }
-            // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
-            ViewThatFits(in: .vertical) {
-                ForEach(Array([(1.0, 1.0), (1.0, 0.78), (0.86, 0.68), (0.74, 0.62)].enumerated()), id: \.offset) { _, k in
-                    starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1)
+            HStack(alignment: .top, spacing: 3) {
+                // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
+                ViewThatFits(in: .vertical) {
+                    ForEach(Array([(1.0, 1.0), (1.0, 0.78), (0.86, 0.68), (0.74, 0.62)].enumerated()), id: \.offset) { _, k in
+                        starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
+                .clipped()
+                // 流曜（大祿、年鸞…）與合祿／合羊／合陀：放右上角，跟本命星曜分開；每排 4 個，由右往左
+                let extra = extraStars(p, horo)
+                if !extra.isEmpty {
+                    VStack(alignment: .trailing, spacing: 3) {
+                        ForEach(Array(stride(from: 0, to: extra.count, by: 4)), id: \.self) { k in
+                            HStack(alignment: .top, spacing: 1) {
+                                ForEach(Array(extra[k..<min(k + 4, extra.count)].reversed()), id: \.0) { name, color in
+                                    VerticalText(name, size: ChartType.adj(fs) * 0.92, color: color)
+                                }
+                            }
+                        }
+                    }
+                    .fixedSize()
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
-            .clipped()
             .layoutPriority(-1)
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -379,10 +398,6 @@ extension PalaceCell {
             }
             ForEach(settings.showAdj ? p.adj : [], id: \.name) { s in
                 VerticalText(s.name, size: adjF, color: settings.tone(.misc).color)
-            }
-            // 流曜（大祿、年鸞…）與合盤的合祿／合羊／合陀
-            ForEach(extraStars(p, horo), id: \.0) { name, color in
-                VerticalText(name, size: adjF, color: color)
             }
         }
     }

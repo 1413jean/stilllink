@@ -2,9 +2,9 @@ import SwiftUI
 import AppKit
 
 enum Route: Hashable {
-    case home, person(UUID), new, newSelf, edit(UUID), settings, pillars, temp(Person, Int)
+    case home, person(UUID), new, newSelf, edit(UUID), settings, pillars, starNotes(String?), temp(Person, Int)
     /// 新增、編輯、設定這類「頁面」（返回時不回到它們）
-    var isPage: Bool { switch self { case .new, .newSelf, .edit, .settings, .pillars: true; default: false } }
+    var isPage: Bool { switch self { case .new, .newSelf, .edit, .settings, .pillars, .starNotes: true; default: false } }
 }
 
 @main
@@ -114,6 +114,8 @@ struct RootView: View {
                         .id(settingsSection)
                 case .pillars:
                     PillarSearchPage(onClose: { goBack() })
+                case .starNotes(let k):
+                    StarNotesPage(initial: k, onClose: { goBack() }).id(k ?? "")
                 case .temp(let p, let lv):
                     ChartPager(primary: p, level: lv).id(p.id)
                 default:
@@ -156,6 +158,7 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .newSelfChart)) { _ in go(.newSelf) }
         .onReceive(NotificationCenter.default.publisher(for: .openSelf)) { _ in if let me = store.me { route = .person(me.id) } }
         .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
+        .onReceive(NotificationCenter.default.publisher(for: .openStarNotes)) { n in go(.starNotes(n.object as? String)) }
         .onReceive(NotificationCenter.default.publisher(for: .openTemp)) { n in
             if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
         }
@@ -183,6 +186,7 @@ struct RootView: View {
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
         if env["ZIWEI_NEW"] != nil { go(.new) }
         if env["ZIWEI_NEWSELF"] != nil { go(.newSelf) }
+        if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
             if let s = SettingsPage.Section.allCases.first(where: { "\($0)" == v }) {
                 NotificationCenter.default.post(name: .openSettings, object: s)

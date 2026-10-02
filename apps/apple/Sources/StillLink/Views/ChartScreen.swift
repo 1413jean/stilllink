@@ -48,6 +48,7 @@ struct ChartScreen: View {
     var onAdd: (() -> Void)? = nil
     @State private var pick: Pick
     @State private var hepanYear: Int?          // 合盤：對方出生年
+    @State private var selPalace: Int?          // 盤上點選的宮位（右側顯示星曜筆記）
     @AppStorage("showInfoPanel") private var showInfo = true
     @State private var model: ChartModel?
     @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
@@ -96,7 +97,8 @@ struct ChartScreen: View {
                     VStack(spacing: 12) {
                         Group {
                             if let model {
-                                ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, hepan: hepanYear.map(Hepan.init)) { pick.level = 0 }
+                                ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, hepan: hepanYear.map(Hepan.init),
+                                           onResetLevel: { pick.level = 0 }, onSelect: { selPalace = $0 })
                                     .equatable()
                                     .transaction(value: pick) { $0.animation = nil }
                                     .transition(.opacity)
@@ -147,7 +149,7 @@ struct ChartScreen: View {
             .overlay(alignment: .topTrailing) {
                 if showInfo {
                     ScrollView(showsIndicators: false) {
-                        InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear)
+                        InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace)
                             .padding(.top, 12)
                             .padding(.bottom, 96) // 底部留給右下角的快捷鈕
                             .padding(.horizontal, 16) // 留空間給卡片陰影

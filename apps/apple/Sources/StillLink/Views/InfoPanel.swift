@@ -25,6 +25,7 @@ struct InfoPanel: View {
     let person: Person
     let chart: Chart?
     @Binding var hepanYear: Int?
+    var selectedPalace: Int? = nil
     @State private var hepanDraft = ""
     @State private var preview: String?
     @State private var dropping = false
@@ -74,6 +75,14 @@ struct InfoPanel: View {
                         } else {
                             row("mappin.slash", "出生地", "未填（無法換算真太陽時）")
                         }
+                    }
+                }
+
+                // 星曜筆記：點選宮位裡每顆星的意思（總論＋落在這一宮），可以自己改寫
+                if let chart, let i = selectedPalace, i < chart.palaces.count {
+                    card("星曜筆記 · \(chart.palaces[i].name)",
+                         action: ("book.closed", { NotificationCenter.default.post(name: .openStarNotes, object: nil) })) {
+                        StarNotesCard(palace: chart.palaces[i]).id(i)
                     }
                 }
 
