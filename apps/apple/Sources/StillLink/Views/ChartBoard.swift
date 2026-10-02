@@ -252,9 +252,17 @@ private struct PalaceCell: View {
                     let rest = Array(tags.dropFirst(2))            // 往左的欄，每欄 3 個
                     let restCols = stride(from: 0, to: rest.count, by: 3).map { Array(rest[$0..<min($0 + 3, rest.count)]) }
                     HStack(alignment: .bottom, spacing: 4) {
-                        if let taijiLabel {
-                            Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
-                                .lineLimit(1).fixedSize()
+                        // 小限宮名在上、轉宮名在下（同一欄）
+                        if minor || taijiLabel != nil {
+                            VStack(alignment: .leading, spacing: 0) {
+                                if minor {
+                                    tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
+                                }
+                                if let taijiLabel {
+                                    Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
+                                        .lineLimit(1).fixedSize()
+                                }
+                            }
                         }
                         // 越後面的欄越靠左
                         ForEach(Array(restCols.enumerated().reversed()), id: \.offset) { _, col in
@@ -270,14 +278,6 @@ private struct PalaceCell: View {
                                 Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
                                     .lineLimit(1).fixedSize()
                                     .alignmentGuide(.nameCenter) { $0[HorizontalAlignment.center] }
-                                if minor {
-                                    tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
-                                }
-                                if laiyin {
-                                    Text("來因").font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zOnColor)
-                                        .padding(.horizontal, 2).background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
-                                        .fixedSize()
-                                }
                             }
                         }
                     }
@@ -290,6 +290,13 @@ private struct PalaceCell: View {
                             .padding(.vertical, 3).padding(.horizontal, 1)
                             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
                             .padding(.bottom, 3)
+                    }
+                    // 來因宮：直排紅底，放在長生上面
+                    if laiyin {
+                        VerticalText("來因", size: ChartType.meta(fs), color: .zOnColor, weight: .semibold)
+                            .padding(.vertical, 2).padding(.horizontal, 1)
+                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
+                            .padding(.bottom, 2)
                     }
                     VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
                         .padding(.bottom, 2)
