@@ -467,7 +467,7 @@ private struct AccountBar: View {
         VStack(spacing: 0) {
             Rectangle().fill(Color.zLine).frame(height: 0.5)
             Menu {
-                Picker("外觀", selection: $store.appearance) {
+                Picker("外觀", selection: store.appearanceWithTransition) {
                     ForEach(Appearance.allCases, id: \.self) { Label($0.label, systemImage: $0.icon).tag($0) }
                 }
                 .pickerStyle(.inline)

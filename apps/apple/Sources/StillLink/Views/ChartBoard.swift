@@ -269,6 +269,13 @@ private struct PalaceCell: View {
                 }
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
+                    // 身宮：排在長生上面（同一欄），不會壓到字
+                    if p.isBody && settings.showBody {
+                        VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
+                            .padding(.vertical, 3).padding(.horizontal, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
+                            .padding(.bottom, 3)
+                    }
                     VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
                         .padding(.bottom, 2)
                     Text(p.stem).font(ChartType.font(ChartType.ganzhi(fs)))
@@ -289,14 +296,6 @@ private struct PalaceCell: View {
         .overlay(alignment: .topLeading) {
             if isLocked {
                 Image(systemName: "lock.fill").font(.system(size: max(8, fs * 0.6))).foregroundStyle(Color.zAccent).padding(3)
-            }
-        }
-        .overlay(alignment: .trailing) {
-            if p.isBody && settings.showBody {
-                VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
-                    .padding(.vertical, 3).padding(.horizontal, 1)
-                    .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
-                    .padding(.trailing, 4)
             }
         }
         .clipped()

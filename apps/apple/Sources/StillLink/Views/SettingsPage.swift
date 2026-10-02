@@ -196,7 +196,7 @@ struct SettingsPage: View {
         case .appearance:
             title("外觀")
             row("主題", "淺色、深色或跟隨系統", last: true) {
-                ZSegmented(options: Appearance.allCases.map { ($0, $0.label) }, selection: $store.appearance)
+                ZSegmented(options: Appearance.allCases.map { ($0, $0.label) }, selection: store.appearanceWithTransition)
             }
         case .data:
             title("資料")
