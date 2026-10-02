@@ -58,9 +58,9 @@ struct QuickMenu: View {
         .background(GeometryReader { g in
             Color.clear
                 .onAppear { frame = g.frame(in: .global) }
-                .onChange(of: g.frame(in: .global)) { _, f in frame = f }
+                .onChange(of: g.frame(in: .global)) { f in frame = f }
         })
-        .onChange(of: open) { _, isOpen in isOpen ? watchOutsideClicks() : stopWatching() }
+        .onChange(of: open) { isOpen in isOpen ? watchOutsideClicks() : stopWatching() }
         .onDisappear(perform: stopWatching)
         .onExitCommand { if open { close() } }
     }
@@ -89,7 +89,7 @@ struct QuickMenu: View {
                 .frame(height: 32)
                 .background(RoundedRectangle(cornerRadius: 7).fill(Color.zBg))
                 .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine))
-                .onChange(of: num) { _, v in
+                .onChange(of: num) { v in
                     let d = String(v.filter(\.isNumber).prefix(4))
                     if d != v { num = d }
                 }

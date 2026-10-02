@@ -18,21 +18,29 @@ struct ChartPager: View {
         GeometryReader { outer in
             let top = outer.safeAreaInsets.top
             GeometryReader { geo in
-                ScrollView(.horizontal) {
-                    LazyHStack(spacing: 0) {
-                        ForEach(Array(pages.enumerated()), id: \.element.id) { i, p in
-                            ChartScreen(person: p, level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
-                                .padding(.top, top)
-                                .frame(width: geo.size.width, height: geo.size.height)
-                                .id(i)
-                        }
+                let row = LazyHStack(spacing: 0) {
+                    ForEach(Array(pages.enumerated()), id: \.element.id) { i, p in
+                        ChartScreen(person: p, level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
+                            .padding(.top, top)
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .id(i)
                     }
-                    .scrollTargetLayout()
                 }
-                .scrollTargetBehavior(.paging)
-                .scrollPosition(id: $page)
-                .scrollIndicators(.never)
-                .scrollDisabled(extras.isEmpty)
+                if #available(macOS 14, *) {
+                    ScrollView(.horizontal) { row.scrollTargetLayout() }
+                        .scrollTargetBehavior(.paging)
+                        .scrollPosition(id: $page)
+                        .scrollIndicators(.never)
+                        .scrollDisabled(extras.isEmpty)
+                } else {
+                    // macOS 13：沒有整頁吸附，改成點頁籤滑過去（不能用手勢拖，免得停在兩頁中間）
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal) { row }
+                            .scrollIndicators(.never)
+                            .scrollDisabled(true)
+                            .onChange(of: page) { p in withAnimation(Motion.base) { proxy.scrollTo(p ?? 0, anchor: .leading) } }
+                    }
+                }
             }
             .ignoresSafeArea(edges: .top)
         }

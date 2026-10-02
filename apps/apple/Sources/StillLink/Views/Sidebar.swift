@@ -155,7 +155,7 @@ struct Sidebar: View {
                 dropLine = DropLine(key: "p:" + list[0].id.uuidString, pos: .below)
             }
         }
-        .onChange(of: route) { _, _ in
+        .onChange(of: route) { _ in
             if searching { searching = false; search = "" }
         }
         .background(

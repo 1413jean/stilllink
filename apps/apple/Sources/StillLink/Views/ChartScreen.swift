@@ -72,8 +72,8 @@ struct ChartScreen: View {
     }
 
     private var magnify: some Gesture {
-        MagnifyGesture()
-            .onChanged { v in zoom = min(2.5, max(1, zoomBase * v.magnification)) }
+        MagnificationGesture()   // macOS 13 也能用（14 的 MagnifyGesture 不行）
+            .onChanged { v in zoom = min(2.5, max(1, zoomBase * v)) }
             .onEnded { _ in
                 if zoom < 1.05 { withAnimation(Motion.snap) { zoom = 1 } }
                 zoomBase = zoom
@@ -95,7 +95,7 @@ struct ChartScreen: View {
                             if let model {
                                 ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom) { pick.level = 0 }
                                     .equatable()
-                                    .transaction(value: pick) { $0.animation = nil }
+                                    .animation(nil, value: pick)
                                     .transition(.opacity)
                             } else {
                                 BoardSkeleton().transition(.opacity)
@@ -124,7 +124,7 @@ struct ChartScreen: View {
                     .frame(width: max(usable, boardW * zoom + 48))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .defaultScrollAnchor(.top)
+                .defaultScrollAnchorTop()
 
                 if store.settings.showComposer {
                 AIComposer()
@@ -149,7 +149,7 @@ struct ChartScreen: View {
                             .padding(.bottom, 96) // 底部留給右下角的快捷鈕
                             .padding(.horizontal, 16) // 留空間給卡片陰影
                     }
-                    .scrollClipDisabled()
+                    .scrollClipDisabledCompat()
                     .frame(width: infoPanelWidth + 32)
                     .padding(.trailing, 4)
                     .dimmedBlur()

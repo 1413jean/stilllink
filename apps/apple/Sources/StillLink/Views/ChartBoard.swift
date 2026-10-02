@@ -71,7 +71,7 @@ struct ChartBoard: View, Equatable {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
         .onAppear { appeared = true; sel = focusIndex }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
-        .onChange(of: model.id) { _, _ in
+        .onChange(of: model.id) { _ in
             userPicked = false
             withAnimation(Motion.snap) { sel = focusIndex }
         }

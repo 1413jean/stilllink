@@ -112,8 +112,8 @@ struct AvatarCropSheet: View {
             .gesture(DragGesture()
                 .onChanged { v in crop.offset = clamp(CGSize(width: dragStart.width + v.translation.width, height: dragStart.height + v.translation.height)) }
                 .onEnded { _ in dragStart = crop.offset })
-            .simultaneousGesture(MagnifyGesture()
-                .onChanged { v in crop.scale = min(4, max(1, pinchStart * v.magnification)); crop.offset = clamp(crop.offset) }
+            .simultaneousGesture(MagnificationGesture()
+                .onChanged { v in crop.scale = min(4, max(1, pinchStart * v)); crop.offset = clamp(crop.offset) }
                 .onEnded { _ in pinchStart = crop.scale; dragStart = crop.offset })
 
             HStack(spacing: 10) {

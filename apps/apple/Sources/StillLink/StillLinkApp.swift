@@ -116,7 +116,7 @@ struct RootView: View {
                 }
             }
             // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
-            .transaction(value: route) { $0.animation = nil }
+            .animation(nil, value: route)
             .overlay(alignment: .top) { TopFade(color: .zBg) }
         }
         .toolbarBackground(.hidden, for: .windowToolbar)
@@ -130,7 +130,7 @@ struct RootView: View {
                     .disabled(cursor >= history.count - 1).help("下一頁 ⌘]").keyboardShortcut("]", modifiers: .command)
             }
         }
-        .onChange(of: route) { _, r in
+        .onChange(of: route) { r in
             guard let r else { return }
             if stepping { stepping = false; return }
             if history.indices.contains(cursor), history[cursor] == r { return }

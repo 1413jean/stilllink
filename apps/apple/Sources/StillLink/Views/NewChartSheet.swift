@@ -66,7 +66,7 @@ struct NewChartSheet: View {
                                 TextField("新分組名稱，例如：VIP", text: $newGroup).textFieldStyle(.plain)
                                     .focused($groupFocused)
                                     .onSubmit(commitGroup)
-                                    .onChange(of: groupFocused) { _, f in if !f && addingGroup { commitGroup() } }
+                                    .onChange(of: groupFocused) { f in if !f && addingGroup { commitGroup() } }
                                     .inputBox()
                                 Button("完成", action: commitGroup).buttonStyle(ZPrimaryButton())
                             }
@@ -377,7 +377,7 @@ private struct NumberField: View {
             .font(Font.zInput.monospacedDigit())
             .frame(width: width)
             .focused($focused)
-            .onChange(of: focused) { _, f in if !f { draft = nil } }
+            .onChange(of: focused) { f in if !f { draft = nil } }
             .onSubmit { draft = nil }
     }
 

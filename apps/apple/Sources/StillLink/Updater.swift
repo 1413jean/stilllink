@@ -20,7 +20,11 @@ enum Updater {
             let parts = t.split(separator: "-b", maxSplits: 1).map(String.init)
             return (parts[0].split(separator: ".").compactMap { Int($0) }, parts.count > 1 ? Int(parts[1]) ?? 0 : 0)
         }
-        var dmgURL: URL? { assets.first { $0.name.hasSuffix(".dmg") }.flatMap { URL(string: $0.browser_download_url) } }
+        /// macOS 13 版：優先下載檔名有「macOS13」的 DMG（一般版需要 macOS 14）
+        var dmgURL: URL? {
+            let dmgs = assets.filter { $0.name.hasSuffix(".dmg") }
+            return (dmgs.first { $0.name.contains("macOS13") } ?? dmgs.first).flatMap { URL(string: $0.browser_download_url) }
+        }
         /// 給人看的版本：0.2.0 或 0.2.0 測試版（build 80）
         var display: String {
             let p = parsed, v = p.version.map(String.init).joined(separator: ".")

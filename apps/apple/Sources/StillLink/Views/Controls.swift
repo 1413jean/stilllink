@@ -70,7 +70,21 @@ struct ZColumnList<Item: Hashable, ID: Hashable>: View {
     @State private var position: ID?
 
     var body: some View {
-        ScrollView {
+        Group {
+            if #available(macOS 14, *) {
+                ScrollView { rows.scrollTargetLayout().padding(4) }
+                    .scrollPosition(id: $position, anchor: .center)
+                    .onAppear { position = selected }
+                    .onChange(of: items.map { $0[keyPath: id] }) { _ in position = selected }
+            } else {
+                ScrollView { rows.padding(4) }   // macOS 13：不自動捲到選中項
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: 9).fill(Color.zCard))
+        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
+    }
+
+    private var rows: some View {
             LazyVStack(spacing: 1) {
                 ForEach(items, id: id) { item in
                     let on = item[keyPath: id] == selected
@@ -88,14 +102,6 @@ struct ZColumnList<Item: Hashable, ID: Hashable>: View {
                     .buttonStyle(.plain)
                 }
             }
-            .scrollTargetLayout()
-            .padding(4)
-        }
-        .scrollPosition(id: $position, anchor: .center)
-        .onAppear { position = selected }
-        .onChange(of: items.map { $0[keyPath: id] }) { _, _ in position = selected }
-        .background(RoundedRectangle(cornerRadius: 9).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
     }
 }
 
