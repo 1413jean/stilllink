@@ -121,7 +121,7 @@ if [ "$ACTION" = "dmg" ]; then
   echo "dmg $DMG"
   # 正式版：產生簽好名的版本清單（App 內更新讀它），要跟 DMG 一起放進同一個 Release
   if [ $CHANNEL = release ]; then
-    AC=.build/appcast && rm -rf $AC && mkdir -p $AC && cp "$DMG" $AC/
+    AC=.build/appcast && rm -rf $AC && mkdir -p $AC && cp "$DMG" $AC/ && rm -f "build/$FEED"   # 每次從頭產生，不沿用舊清單
     .build/artifacts/sparkle/Sparkle/bin/generate_appcast --account stilllink \
       --download-url-prefix "https://github.com/1413jean/stilllink/releases/download/v$VER/" -o "build/$FEED" $AC >/dev/null
     echo "appcast build/$FEED"
