@@ -177,7 +177,11 @@ struct RootView: View {
         if let t = env["ZIWEI_THEME"], let a = Appearance(rawValue: t) { store.appearance = a }
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
         if env["ZIWEI_NEW"] != nil { go(.new) }
-        if env["ZIWEI_SETTINGS"] != nil { go(.settings) }
+        if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
+            if let s = SettingsPage.Section.allCases.first(where: { "\($0)" == v }) {
+                NotificationCenter.default.post(name: .openSettings, object: s)
+            } else { go(.settings) }
+        }
         if let name = env["ZIWEI_EDIT"], let p = store.people.first(where: { $0.name == name }) { go(.edit(p.id)) }
         if let t = env["ZIWEI_NEW_AFTER"].flatMap(Double.init) {
             DispatchQueue.main.asyncAfter(deadline: .now() + t) { go(.new) }

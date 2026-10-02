@@ -109,12 +109,13 @@ struct ChartScreen: View {
                     }
                     .frame(width: boardW * zoom)
                     .padding(.top, 14)
-                    .padding(.bottom, 150)
+                    .padding(.bottom, store.settings.showComposer ? 150 : 40)
                     .frame(width: max(usable, boardW * zoom + 48))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .defaultScrollAnchor(.top)
 
+                if store.settings.showComposer {
                 AIComposer()
                     .frame(width: min(boardW, 720))
                     .padding(.top, 28)
@@ -126,6 +127,7 @@ struct ChartScreen: View {
                             .padding(.trailing, 16) // 不蓋到捲軸
                             .allowsHitTesting(false)
                     )
+                }
             }
             .dimmedBlur()
             .overlay(alignment: .topTrailing) {
@@ -146,7 +148,7 @@ struct ChartScreen: View {
             .overlay(alignment: .bottomTrailing) {
                 VStack(alignment: .trailing, spacing: 10) {
                     if zoom > 1 {
-                        Button { withAnimation(Motion.snap) { zoom = 1; zoomBase = 1 } } label: {
+                        Button { withAnimation(Motion.snap) { zoom = 1; zoomBase = 1 }; sharpZoom = 1 } label: {
                             Label("\(Int(zoom * 100))%", systemImage: "arrow.down.right.and.arrow.up.left")
                                 .font(Font.zCaptionStrong).foregroundStyle(Color.zText)
                                 .padding(.horizontal, 10).frame(height: 30)
@@ -196,13 +198,13 @@ private struct AIComposer: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            TextField("問問這張盤…", text: $text, axis: .vertical)
+            TextField("AI 解盤未來推出，敬請期待…", text: $text, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...6)
                 .font(Font.zBody)
             HStack(spacing: 10) {
                 Image(systemName: "plus").font(Font.zBody).foregroundStyle(Color.zText2)
-                Label("AI 解盤 · 即將推出", systemImage: "sparkle")
+                Label("AI 解盤 · 未來推出", systemImage: "sparkle")
                     .font(Font.zCaption)
                     .foregroundStyle(Color.zText3)
                 Spacer()
@@ -210,7 +212,7 @@ private struct AIComposer: View {
                     .font(Font.zIconBold).foregroundStyle(Color.zOnColor)
                     .frame(width: 28, height: 28)
                     .background(Circle().fill(Color.zText3.opacity(0.45)))
-                    .help("AI 解盤即將推出")
+                    .help("AI 解盤未來推出")
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 12)

@@ -29,6 +29,7 @@ struct ZSettings: Codable, Equatable {
     var showSelf = true         // 自化箭頭
     var showTransfer = true     // 轉宮宮名（點選宮位當太極，顯示 X之Y）
     var showCompass = true      // 方位
+    var showComposer = false    // 命盤下方的 AI 對話框（AI 還沒推出，預設隱藏）
 
     // 音效與動畫
     var motion = true
@@ -84,7 +85,15 @@ struct ZSettings: Codable, Equatable {
 extension ZSettings {
     /// 從偏好設定讀出目前的設定（給還拿不到 environment 的地方用，例如 View 的 init）
     static func stored() -> ZSettings {
-        guard let d = UserDefaults.standard.data(forKey: "settings"), let s = try? JSONDecoder().decode(ZSettings.self, from: d) else { return ZSettings() }
+        guard let d = UserDefaults.standard.data(forKey: "settings") else { return ZSettings() }
+        if let s = try? JSONDecoder().decode(ZSettings.self, from: d) { return s }
+        // 新增設定欄位後舊資料會缺 key：把存的值疊在預設值上再解，其他設定才不會整組被重置
+        guard let saved = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any],
+              let defData = try? JSONEncoder().encode(ZSettings()),
+              var merged = (try? JSONSerialization.jsonObject(with: defData)) as? [String: Any] else { return ZSettings() }
+        merged.merge(saved) { _, new in new }
+        guard let md = try? JSONSerialization.data(withJSONObject: merged),
+              let s = try? JSONDecoder().decode(ZSettings.self, from: md) else { return ZSettings() }
         return s
     }
 
