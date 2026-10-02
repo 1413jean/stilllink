@@ -16,6 +16,30 @@ enum Bench {
             exit(0)
         }
         guard let path = ProcessInfo.processInfo.environment["ZIWEI_BENCH"] else { return }
+        // 切換外觀自測：ZIWEI_THEME_BENCH=1 → 量快照與換色重畫各花多久
+        if ProcessInfo.processInfo.environment["ZIWEI_THEME_BENCH"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                MainActor.assumeIsolated {
+                    guard let store = Store.current, let win = NSApp.windows.first(where: { $0.isVisible }), let view = win.contentView else { return }
+                    var lines: [String] = []
+                    func ms(_ t: Date) -> String { String(format: "%.0fms", Date().timeIntervalSince(t) * 1000) }
+                    for next in [Appearance.dark, .light, .dark, .light] {
+                        var t = Date()
+                        _ = view
+                        var applied = false
+                        ThemeTransition.change { store.appearance = next; applied = true }
+                        let snap = ms(t) + (applied ? "" : "?")
+                        t = Date()
+                        RunLoop.main.run(until: Date().addingTimeInterval(0.001))
+                        view.layoutSubtreeIfNeeded(); view.displayIfNeeded()
+                        lines.append("→\(next.rawValue)  轉場準備 \(snap)  換色重畫 \(ms(t))")
+                    }
+                    try? lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+                    exit(0)
+                }
+            }
+            return
+        }
         // 備份自測：ZIWEI_BACKUP_TEST=1（務必搭配 ZIWEI_DATA_DIR）→ 備份、清空、還原，回報前後是否一致
         if ProcessInfo.processInfo.environment["ZIWEI_BACKUP_TEST"] != nil, ProcessInfo.processInfo.environment["ZIWEI_DATA_DIR"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
