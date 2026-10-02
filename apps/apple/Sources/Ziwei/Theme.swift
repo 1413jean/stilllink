@@ -29,8 +29,8 @@ extension Color {
     static let wmGreen = dynamic(0x1F8A3A, 0x5BCB8A)
     static let wmBlack = dynamic(0x1C1B19, 0xECEAE4)
     static let wmEarth = dynamic(0xB5701A, 0xE0A84A)
-    static let wmSF = dynamic(0xF4F0E6, 0x3E3C37)
-    static let wmSel = dynamic(0xFBEDEA, 0x3A2E2C)
+    static let wmSF = dynamic(0xF2F1EE, 0x3E3C37)       // 三方四正：淺暖灰（跟側欄同一家）
+    static let wmSel = dynamic(0xFBF0EC, 0x392C26)      // 選取宮：主色 10% 淡底
 
     static let mLu = dynamic(0x1F8A3A, 0x4FBF7E)
     static let mQuan = dynamic(0x7B48C8, 0xA987EC)

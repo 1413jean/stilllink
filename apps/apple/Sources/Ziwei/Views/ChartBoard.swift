@@ -6,11 +6,13 @@ struct ChartBoard: View, Equatable {
     let person: Person
     let model: ChartModel
     let level: Int
+    /// 放大倍率：直接用放大後的尺寸重新排版（字是向量，放大不會糊）
+    var zoom: CGFloat = 1
     var onResetLevel: () -> Void = {}
 
     /// 只有資料真的換了才重畫（點運限表時，盤面不會先拿舊資料多畫一次）
     static func == (a: ChartBoard, b: ChartBoard) -> Bool {
-        a.person == b.person && a.model.id == b.model.id && a.level == b.level
+        a.person == b.person && a.model.id == b.model.id && a.level == b.level && a.zoom == b.zoom
     }
     @State private var sel: Int?
     @State private var appeared = false
@@ -24,10 +26,10 @@ struct ChartBoard: View, Equatable {
         let selected = sel ?? chart.soulIndex
         let sf = ZW.sanFang(selected)
         GeometryReader { geo in
-            let m: CGFloat = 18
+            let m: CGFloat = 18 * zoom
             let cw = (geo.size.width - m * 2) / 4
             let ch = (geo.size.height - m * 2) / 4
-            let fs = ChartType.base(cellWidth: cw)
+            let fs = ChartType.base(cellWidth: cw / zoom) * zoom
             let lsf = locked.map(ZW.sanFang) ?? []
             ZStack(alignment: .topLeading) {
                 ForEach(0..<12, id: \.self) { i in
@@ -283,7 +285,7 @@ private struct PalaceCell: View {
         // 鎖定的宮位：粗實線；它的三方四正：細一點的強調色邊框
         .overlay(isLocked ? Rectangle().strokeBorder(Color.zAccent, lineWidth: 3) : nil)
         .overlay(inLockedSF ? Rectangle().strokeBorder(Color.zAccent.opacity(0.8), lineWidth: 1.6) : nil)
-        .overlay(selected ? Rectangle().stroke(Color.wmRed, lineWidth: 1.5) : nil)
+        .overlay(selected ? Rectangle().stroke(Color.zAccent, lineWidth: 1.5) : nil)
         .overlay(alignment: .topLeading) {
             if isLocked {
                 Image(systemName: "lock.fill").font(.system(size: max(8, fs * 0.6))).foregroundStyle(Color.zAccent).padding(3)

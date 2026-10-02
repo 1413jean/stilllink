@@ -48,6 +48,8 @@ struct ChartScreen: View {
     @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
     @State private var zoomBase: CGFloat = 1
+    /// 盤面實際排版用的倍率：捏合中先用 scaleEffect（順），放手後用這個倍率重排，字才清楚
+    @State private var sharpZoom: CGFloat = 1
 
     /// level 沒指定時照設定「打開命盤時預設顯示大限」（預設關閉＝本命）
     init(person: Person, level: Int? = nil) {
@@ -56,6 +58,10 @@ struct ChartScreen: View {
         var p = Pick.today(); p.level = lv
         _pick = State(initialValue: p)
         _shownLevel = State(initialValue: lv)
+        // 驗證用：ZIWEI_ZOOM=2 直接以放大倍率開啟
+        if let z = ProcessInfo.processInfo.environment["ZIWEI_ZOOM"].flatMap(Double.init) {
+            _zoom = State(initialValue: z); _zoomBase = State(initialValue: z); _sharpZoom = State(initialValue: z)
+        }
     }
 
     private var magnify: some Gesture {
@@ -64,6 +70,8 @@ struct ChartScreen: View {
             .onEnded { _ in
                 if zoom < 1.05 { withAnimation(Motion.snap) { zoom = 1 } }
                 zoomBase = zoom
+                var t = Transaction(); t.disablesAnimations = true
+                withTransaction(t) { sharpZoom = zoom }
             }
     }
 
@@ -78,7 +86,7 @@ struct ChartScreen: View {
                     VStack(spacing: 12) {
                         Group {
                             if let model {
-                                ChartBoard(person: person, model: model, level: shownLevel) { pick.level = 0 }
+                                ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom) { pick.level = 0 }
                                     .equatable()
                                     .transaction(value: pick) { $0.animation = nil }
                                     .transition(.opacity)
@@ -86,8 +94,8 @@ struct ChartScreen: View {
                                 BoardSkeleton().transition(.opacity)
                             }
                         }
-                        .frame(width: boardW, height: boardW * boardAspect)
-                        .scaleEffect(zoom, anchor: .top)
+                        .frame(width: boardW * sharpZoom, height: boardW * boardAspect * sharpZoom)
+                        .scaleEffect(zoom / sharpZoom, anchor: .top)
                         .frame(width: boardW * zoom, height: boardW * boardAspect * zoom, alignment: .top)
                         .gesture(magnify)
 
