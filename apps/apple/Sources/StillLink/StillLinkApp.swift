@@ -53,6 +53,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.global(qos: .utility).async { _ = Places.all }
         Snapshot.scheduleIfRequested()
         Bench.runIfRequested()
+        AppUpdater.shared.start()
+        // 開啟時不要把鍵盤焦點放在第一顆按鈕（側欄開關）上，不然會一直有藍色光圈
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            for w in NSApp.windows where w.isVisible { w.makeFirstResponder(nil) }
+        }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }
 }

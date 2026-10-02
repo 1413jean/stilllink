@@ -19,12 +19,13 @@ struct ChartBoard: View, Equatable {
     @State private var locked: Int?    // 長按鎖定的宮位（比較兩組三方四正）
     @State private var taiji: Int?     // 轉宮：以這一宮為命
     @State private var userPicked = false   // 使用者自己點的宮位（自動跳到運限命宮時不算）
+    @State private var cleared = false      // 再點一次已選的宮位＝取消選取（不顯示三方四正、飛化）
     @Environment(\.zSettings) private var settings
 
     var body: some View {
         let chart = model.chart
         let selected = sel ?? chart.soulIndex
-        let sf = ZW.sanFang(selected)
+        let sf = cleared ? [] : ZW.sanFang(selected)
         GeometryReader { geo in
             let m: CGFloat = 18 * zoom
             let cw = (geo.size.width - m * 2) / 4
@@ -35,16 +36,21 @@ struct ChartBoard: View, Equatable {
                 ForEach(0..<12, id: \.self) { i in
                     let (r, c) = ZW.grid[i]
                     PalaceCell(model: model, index: i, level: level, fs: fs,
-                               selected: selected == i, inSF: sf.contains(i) && selected != i,
+                               selected: !cleared && selected == i, inSF: sf.contains(i) && selected != i,
                                isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
                                taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart) },
-                               flyStars: Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
+                               flyStars: cleared ? [:] : Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipped()
                         .contentShape(Rectangle())
                         // 長按：鎖定／解除；點一下：選宮位
                         .gesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in toggleLock(i, chart) }
-                            .exclusively(before: TapGesture().onEnded { Sound.tap(settings); userPicked = true; withAnimation(Motion.snap) { sel = i } }))
+                            .exclusively(before: TapGesture().onEnded {
+                                Sound.tap(settings); userPicked = true
+                                withAnimation(Motion.snap) {
+                                    if !cleared && selected == i { cleared = true } else { cleared = false; sel = i }
+                                }
+                            }))
                         .contextMenu {
                             if taiji == i {
                                 Button("取消轉宮") { setTaiji(nil, chart) }
@@ -60,7 +66,7 @@ struct ChartBoard: View, Equatable {
                     if settings.showCompass { compassLabel(i, r: r, c: c, cw: cw, ch: ch, m: m) }
                     if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
-                CenterInfo(person: person, model: model, selected: selected, locked: locked, taiji: taiji,
+                CenterInfo(person: person, model: model, selected: selected, cleared: cleared, locked: locked, taiji: taiji,
                            fs: fs, level: level, onResetLevel: onResetLevel, onClearTaiji: { setTaiji(nil, chart) })
                     .enterFromBelow(appeared, index: 8)
                     .frame(width: cw * 2, height: ch * 2)
@@ -71,11 +77,14 @@ struct ChartBoard: View, Equatable {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
         .onAppear { appeared = true; sel = focusIndex }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
-        .onChange(of: model.id) { _ in
+        // 新命宮的位置直接放進偵測的值裡：macOS 13 的 onChange 拿到的是上一次的 model，不能在裡面再算
+        .onChange(of: FocusKey(model: model.id, focus: focusIndex)) { k in
             userPicked = false
-            withAnimation(Motion.snap) { sel = focusIndex }
+            withAnimation(Motion.snap) { cleared = false; sel = k.focus }
         }
     }
+
+    private struct FocusKey: Equatable { let model: UUID; let focus: Int }
 
     /// 目前層級的命宮所在宮位
     private var focusIndex: Int {
@@ -425,6 +434,7 @@ private struct CenterInfo: View {
     let person: Person
     let model: ChartModel
     let selected: Int
+    var cleared = false
     let locked: Int?
     let taiji: Int?
     let fs: CGFloat
@@ -440,7 +450,7 @@ private struct CenterInfo: View {
         ZStack {
             SanFangShape(points: Quad(ZW.sanFang(selected).map { ZW.anchor[$0] }))
                 .stroke(Color.zText3.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
-                .opacity(settings.showSanfang ? 1 : 0)
+                .opacity(settings.showSanfang && !cleared ? 1 : 0)
             if let locked {
                 SanFangShape(points: Quad(ZW.sanFang(locked).map { ZW.anchor[$0] }))
                     .stroke(Color.zAccent, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, dash: [7, 4]))

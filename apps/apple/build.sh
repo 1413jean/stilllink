@@ -22,10 +22,16 @@ for a in "$@"; do
 done
 
 VER=$(cat VERSION)
+MIN_OS=13.0     # macOS 13 版
+# App 內更新（Sparkle）：讀最新 Release 裡的版本清單；macOS 13 版讀自己那份
+[ $MIN_OS = 13.0 ] && SUFFIX=-macOS13 || SUFFIX=""
+FEED=appcast$SUFFIX.xml
+FEED_URL="https://github.com/1413jean/stilllink/releases/latest/download/$FEED"
+SPARKLE_KEY="DrJn02h9hrchC6ZEoinYEMopn53XnAHmcpWKRsz9DCY="   # 公開金鑰（私鑰在鑰匙圈 stilllink，不進 repo）
 BUILD=$(git rev-list --count HEAD 2>/dev/null || echo 1)
 if [ $CHANNEL = release ]; then
   NAME="StillLink"; BUNDLE_ID="app.stilllink.mac"; ICON=Resources/icon-1024.png
-  DMG_NAME="StillLink-$VER.dmg"
+  DMG_NAME="StillLink-$VER$SUFFIX.dmg"
 else
   NAME="StillLink Beta"; BUNDLE_ID="app.stilllink.mac.beta"; ICON=Resources/icon-1024-beta.png
   DMG_NAME="StillLink-Beta-$VER-b$BUILD.dmg"
@@ -35,15 +41,18 @@ APP="build/$NAME.app"
 if [ "$ACTION" = "dmg" ]; then
   swift build -c release --arch arm64 --arch x86_64
   BIN=.build/apple/Products/Release/StillLink
+  FW=.build/apple/Products/Release/Sparkle.framework
 else
   swift build -c release
   BIN=.build/release/StillLink
+  FW=.build/release/Sparkle.framework
 fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/StillLink"
 cp Resources/*.js Resources/zone.tab "$APP/Contents/Resources/"
 cp -R Resources/sfx "$APP/Contents/Resources/sfx"
+mkdir -p "$APP/Contents/Frameworks" && cp -R "$FW" "$APP/Contents/Frameworks/"
 # App 圖示（改圖示：swift scripts/make-icon.swift Resources/icon-1024.png，測試版加參數 beta）
 ICONSET=.build/AppIcon.iconset
 rm -rf $ICONSET && mkdir -p $ICONSET
@@ -66,13 +75,17 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>$VER</string>
   <key>CFBundleVersion</key><string>$BUILD</string>
   <key>StillLinkChannel</key><string>$CHANNEL</string>
-  <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>LSMinimumSystemVersion</key><string>$MIN_OS</string>
+  <key>SUFeedURL</key><string>$FEED_URL</string>
+  <key>SUPublicEDKey</key><string>$SPARKLE_KEY</string>
+  <key>SUEnableAutomaticChecks</key><true/>
+  <key>SUScheduledCheckInterval</key><integer>86400</integer>
   <key>NSHighResolutionCapable</key><true/>
   <key>CFBundleDevelopmentRegion</key><string>zh_TW</string>
 </dict>
 </plist>
 PLIST
-codesign --force --sign - "$APP" >/dev/null 2>&1 || true
+codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
 echo "built $APP（$CHANNEL $VER build $BUILD）"
 
 # 裝到「應用程式」資料夾（測試版、正式版各裝各的）
@@ -106,4 +119,11 @@ if [ "$ACTION" = "dmg" ]; then
     "$NAME" "$DMG" >/dev/null
   swift scripts/set-file-icon.swift "$APP/Contents/Resources/AppIcon.icns" "$DMG" >/dev/null
   echo "dmg $DMG"
+  # 正式版：產生簽好名的版本清單（App 內更新讀它），要跟 DMG 一起放進同一個 Release
+  if [ $CHANNEL = release ]; then
+    AC=.build/appcast && rm -rf $AC && mkdir -p $AC && cp "$DMG" $AC/
+    .build/artifacts/sparkle/Sparkle/bin/generate_appcast --account stilllink \
+      --download-url-prefix "https://github.com/1413jean/stilllink/releases/download/v$VER/" -o "build/$FEED" $AC >/dev/null
+    echo "appcast build/$FEED"
+  fi
 fi
