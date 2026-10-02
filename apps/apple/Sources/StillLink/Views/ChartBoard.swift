@@ -183,6 +183,18 @@ private struct PalaceCell: View {
     let taijiLabel: String?
     let flyStars: [String: Mutagen]
 
+    /// 流月：這一宮是流年的哪個農曆月＋月干。流年斗君＝子斗順數到流年地支，從那宮起正月順排；月干用五虎遁由流年天干推
+    private var monthLabel: String? {
+        let b = ZW.branches
+        guard let dou = b.firstIndex(of: model.bazi.ziDou),
+              let yb = b.firstIndex(of: model.horo.yearly.branch),
+              let ys = ZW.stems.firstIndex(of: model.horo.yearly.stem),
+              let pb = b.firstIndex(of: model.chart.palaces[index].branch) else { return nil }
+        let douJun = (dou + yb) % 12
+        let m = (pb - douJun + 12) % 12 + 1
+        return ZW.lunarMonths[m - 1] + ZW.stems[((ys % 5) * 2 + 2 + m - 1) % 10]
+    }
+
     var body: some View {
         let chart = model.chart, horo = model.horo
         let p = chart.palaces[index]
@@ -202,12 +214,15 @@ private struct PalaceCell: View {
             .layoutPriority(-1)
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
+                    // 流月（同文墨天機，例：冬月庚）：寫在神煞欄最上面
+                    if let monthLabel { Text(monthLabel).foregroundStyle(Color.wmEarth) }
                     if settings.showGods {
                     Text(p.boshi).foregroundStyle(Color.wmGreen)
                     Text(p.jiangqian)
                     Text(p.suiqian)
                     }
                 }
+                .fixedSize()   // 這一欄不被右邊的宮名擠扁
                 .font(ChartType.font(ChartType.gods(fs)))
                 .foregroundStyle(Color.zText)
                 Spacer(minLength: 0)
@@ -237,9 +252,17 @@ private struct PalaceCell: View {
                     let rest = Array(tags.dropFirst(2))            // 往左的欄，每欄 3 個
                     let restCols = stride(from: 0, to: rest.count, by: 3).map { Array(rest[$0..<min($0 + 3, rest.count)]) }
                     HStack(alignment: .bottom, spacing: 4) {
-                        if let taijiLabel {
-                            Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
-                                .lineLimit(1).fixedSize()
+                        // 小限宮名在上、轉宮名在下（同一欄）
+                        if minor || taijiLabel != nil {
+                            VStack(alignment: .leading, spacing: 0) {
+                                if minor {
+                                    tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
+                                }
+                                if let taijiLabel {
+                                    Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
+                                        .lineLimit(1).fixedSize()
+                                }
+                            }
                         }
                         // 越後面的欄越靠左
                         ForEach(Array(restCols.enumerated().reversed()), id: \.offset) { _, col in
@@ -255,14 +278,6 @@ private struct PalaceCell: View {
                                 Text(p.name).font(ChartType.font(ChartType.palace(fs))).foregroundStyle(Color.wmRed)
                                     .lineLimit(1).fixedSize()
                                     .alignmentGuide(.nameCenter) { $0[HorizontalAlignment.center] }
-                                if minor {
-                                    tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
-                                }
-                                if laiyin {
-                                    Text("來因").font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zOnColor)
-                                        .padding(.horizontal, 2).background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
-                                        .fixedSize()
-                                }
                             }
                         }
                     }
@@ -275,6 +290,13 @@ private struct PalaceCell: View {
                             .padding(.vertical, 3).padding(.horizontal, 1)
                             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
                             .padding(.bottom, 3)
+                    }
+                    // 來因宮：直排紅底，放在長生上面
+                    if laiyin {
+                        VerticalText("來因", size: ChartType.meta(fs), color: .zOnColor, weight: .semibold)
+                            .padding(.vertical, 2).padding(.horizontal, 1)
+                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
+                            .padding(.bottom, 2)
                     }
                     VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
                         .padding(.bottom, 2)
@@ -316,12 +338,16 @@ extension PalaceCell {
     }
 
     func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> some View {
-        FlowLayout(spacing: 1, lineSpacing: 4) {
+        // 流月以下不含生年與大限：流月＝流年～流月、流日＝流年～流日、流時＝流月～流時（兩個設定可各自改回顯示）
+        let lowest = level < 3 || settings.showOuterBelowMonth ? 0
+            : (level == 5 && !settings.showYearAtHour ? 3 : 2)
+        return FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, fly: flyStars[s.name],
-
-                           minor: minor && settings.showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
-                           scopes: (1...max(1, level)).compactMap { lv in
+                           hideOuter: lowest > 0,
+                           yearInMain: !settings.showOuterBelowMonth,
+                           minor: minor && settings.showMinorMutagen && lowest <= 2 ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
+                           scopes: (max(1, lowest)...max(1, level)).compactMap { lv in
                                level >= lv ? ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) } : nil
                            })
             }
@@ -336,6 +362,8 @@ private struct StarColumn: View {
     let star: Star
     let fs: CGFloat
     let fly: Mutagen?   // 點選宮位的宮干四化落在這顆星
+    let hideOuter: Bool // 流月以下：不顯示生年與大限四化
+    let yearInMain: Bool // 流年四化也放進主欄（生年＋大限＋流年同一直排）；設定要流月以下也顯示全部時改回並排
     let minor: Mutagen? // 小限四化
     let scopes: [(Int, Mutagen)]
 
@@ -370,13 +398,13 @@ private struct StarColumn: View {
         .frame(minWidth: fs * 1.18)
     }
 
-    /// 四化方塊分兩欄：主欄＝生年、大限（直排在星名下）；側欄＝小限、流年、流月、流日、流時
+    /// 四化方塊分兩欄：主欄＝生年、大限（預設連流年也在這欄，直排在星名下）；側欄＝小限、流月以後（設定全顯示時流年也在側欄）
     private var columns: ([(String, Color)], [(String, Color)]) {
         var main: [(String, Color)] = [], side: [(String, Color)] = []
-        if !star.mutagen.isEmpty { main.append((star.mutagen, .fBirth)) }
+        if !star.mutagen.isEmpty && !hideOuter { main.append((star.mutagen, .fBirth)) }
         if let minor { side.append((minor.rawValue, .fMinor)) }
-        for (lv, m) in scopes {
-            if lv == 1 { main.append((m.rawValue, Color.fScopes[0])) } else { side.append((m.rawValue, Color.fScopes[lv - 1])) }
+        for (lv, m) in scopes where !(hideOuter && lv == 1) {
+            if lv == 1 || (lv == 2 && yearInMain) { main.append((m.rawValue, Color.fScopes[lv - 1])) } else { side.append((m.rawValue, Color.fScopes[lv - 1])) }
         }
         return (main, side)
     }

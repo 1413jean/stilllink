@@ -23,6 +23,8 @@ struct ZSettings: Codable, Equatable {
     var showAges = true         // 流年／小限歲數
     var showMinor = true        // 小限疊盤（選流年時一起顯示）
     var showMinorMutagen = true // 小限四化方塊（小限疊盤開著時才有作用）
+    var showOuterBelowMonth = false // 選到流月／流日／流時時，仍顯示生年與大限四化（預設不顯示，盤面比較乾淨）
+    var showYearAtHour = false      // 選到流時時，仍顯示流年（含小限）四化（預設只顯示流月、流日、流時）
     var openWithDecade = false  // 打開命盤時預設停在大限（關閉＝本命）
     var showBody = true         // 身宮
     var showLaiyin = true       // 來因宮
