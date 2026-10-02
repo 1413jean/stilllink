@@ -1,6 +1,6 @@
 # 設計系統
 
-這是原生 SwiftUI app，沒有 WebView。所有顏色和字級都定義在 `apps/apple/Sources/Ziwei/Theme.swift`。畫面上不直接寫數字或系統色，一律引用 token。
+這是原生 SwiftUI app，沒有 WebView。所有顏色和字級都定義在 `apps/apple/Sources/StillLink/Theme.swift`。畫面上不直接寫數字或系統色，一律引用 token。
 
 ## 字型
 - 全部用 SF Pro（`.system`），中文由系統自動用蘋方補字。不用宋體或其他字型。

@@ -6,14 +6,14 @@ APP=build/StillLink.app
 # ./build.sh dmg → Apple 晶片＋Intel 通用版，給別人下載用
 if [ "$1" = "dmg" ]; then
   swift build -c release --arch arm64 --arch x86_64
-  BIN=.build/apple/Products/Release/Ziwei
+  BIN=.build/apple/Products/Release/StillLink
 else
   swift build -c release
-  BIN=.build/release/Ziwei
+  BIN=.build/release/StillLink
 fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/Ziwei"
+cp "$BIN" "$APP/Contents/MacOS/StillLink"
 cp Resources/*.js Resources/zone.tab "$APP/Contents/Resources/"
 cp -R Resources/sfx "$APP/Contents/Resources/sfx"
 # App 圖示：icon-1024.png → AppIcon.icns（改圖示：swift scripts/make-icon.swift Resources/icon-1024.png）
@@ -32,7 +32,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleName</key><string>StillLink</string>
   <key>CFBundleDisplayName</key><string>StillLink</string>
   <key>CFBundleIdentifier</key><string>app.stilllink.mac</string>
-  <key>CFBundleExecutable</key><string>Ziwei</string>
+  <key>CFBundleExecutable</key><string>StillLink</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>

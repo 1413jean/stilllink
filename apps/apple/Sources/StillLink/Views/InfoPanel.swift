@@ -2,12 +2,10 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-/// 附件資料夾：~/Library/Application Support/Ziwei/media
+/// 附件資料夾：~/Library/Application Support/StillLink/media
 enum Media {
     static let dir: URL = {
-        let base = ProcessInfo.processInfo.environment["ZIWEI_DATA_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
-            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Ziwei", isDirectory: true)
-        let d = base.appendingPathComponent("media", isDirectory: true)
+        let d = Store.dataDir.appendingPathComponent("media", isDirectory: true)
         try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         return d
     }()

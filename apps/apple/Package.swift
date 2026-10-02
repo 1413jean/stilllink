@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "Ziwei",
+    name: "StillLink",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "Ziwei",
-            path: "Sources/Ziwei",
+            name: "StillLink",
+            path: "Sources/StillLink",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]

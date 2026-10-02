@@ -31,7 +31,7 @@
 - 觸控板捏合放大盤面
 - 淺色／深色模式、介面音效與觸覺回饋
 
-資料都存在這台 Mac（`~/Library/Application Support/Ziwei`）。Apple／Google 登入與雲端同步還在準備中。
+資料都存在這台 Mac（`~/Library/Application Support/StillLink`）。Apple／Google 登入與雲端同步還在準備中。
 
 ## 從原始碼建置
 
@@ -50,7 +50,7 @@ cd apps/apple
 
 ```
 apps/apple/
-  Sources/Ziwei/
+  Sources/StillLink/
     Engine/     排盤引擎：iztro 在 JavaScriptCore 裡計算（只算資料，不用 WebView），
                 農曆、八字、真太陽時、飛化／自化分析用 Swift 寫
     Views/      SwiftUI 介面：側欄、盤面、運限表、資訊卡、設定

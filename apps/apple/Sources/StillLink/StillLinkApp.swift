@@ -8,7 +8,7 @@ enum Route: Hashable {
 }
 
 @main
-struct ZiweiApp: App {
+struct StillLinkApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var store = Store()
 

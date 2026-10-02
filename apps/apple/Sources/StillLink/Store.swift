@@ -30,7 +30,7 @@ struct Person: Codable, Identifiable, Hashable {
     var clock: String? = nil      // 鐘錶時間 yyyy-M-d HH:mm
     var trueSolar: String? = nil  // 真太陽時 yyyy-M-d HH:mm
     var place: BirthPlace? = nil
-    var photos: [String]? = nil   // 附件照片檔名（存在 Application Support/Ziwei/media）
+    var photos: [String]? = nil   // 附件照片檔名（存在 Application Support/StillLink/media）
     var avatar: String? = nil     // 頭貼檔名（裁切壓縮後的 256×256 JPEG）
 
     var birthYear: Int { Int(solar.split(separator: "-").first ?? "0") ?? 0 }
@@ -44,7 +44,7 @@ enum Appearance: String, Codable, CaseIterable {
     var scheme: ColorScheme? { self == .light ? .light : self == .dark ? .dark : nil }
 }
 
-/// 命盤資料：先存在本機 JSON（~/Library/Application Support/Ziwei），之後換 SQLite＋雲端同步
+/// 命盤資料：先存在本機 JSON（~/Library/Application Support/StillLink），之後換 SQLite＋雲端同步
 @MainActor
 final class Store: ObservableObject {
     @Published var people: [Person] = [] {
@@ -97,14 +97,20 @@ final class Store: ObservableObject {
 
     private static func loadSettings() -> ZSettings { ZSettings.stored() }
 
-    private let url: URL = {
-        // ZIWEI_DATA_DIR：驗證／測試用的另一份資料夾，不會動到正式資料
-        let dir = ProcessInfo.processInfo.environment["ZIWEI_DATA_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
-            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("Ziwei", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("people.json")
+    /// 資料資料夾：~/Library/Application Support/StillLink（舊版叫 Ziwei，第一次開會自動搬過來）
+    /// ZIWEI_DATA_DIR：驗證／測試用的另一份資料夾，不會動到正式資料
+    nonisolated static let dataDir: URL = {
+        if let d = ProcessInfo.processInfo.environment["ZIWEI_DATA_DIR"] { return URL(fileURLWithPath: d, isDirectory: true) }
+        let fm = FileManager.default
+        let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let dir = base.appendingPathComponent("StillLink", isDirectory: true)
+        let old = base.appendingPathComponent("Ziwei", isDirectory: true)
+        if !fm.fileExists(atPath: dir.path), fm.fileExists(atPath: old.path) { try? fm.moveItem(at: old, to: dir) }
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
     }()
+
+    private let url: URL = Store.dataDir.appendingPathComponent("people.json")
 
     /// 目前的 Store（給自測用）
     static weak var current: Store?
