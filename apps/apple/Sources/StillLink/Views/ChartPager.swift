@@ -32,7 +32,7 @@ struct ChartPager: View {
                 .scrollTargetBehavior(.paging)
                 .scrollPosition(id: $page)
                 .scrollIndicators(.never)
-                .scrollDisabled(extras.isEmpty)
+                // 不要用 scrollDisabled：它會連裡面的捲動（整頁往下捲、運限表）一起關掉；只有一頁時本來就滑不動
             }
             .ignoresSafeArea(edges: .top)
         }
