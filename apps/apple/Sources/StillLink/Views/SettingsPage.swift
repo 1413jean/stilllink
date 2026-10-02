@@ -5,6 +5,7 @@ struct SettingsPage: View {
     @EnvironmentObject var store: Store
     var onClose: () -> Void
     @State private var section: Section
+    @State private var doc: LegalDoc?        // 關於 → 隱私權政策／使用條款／刪除資料
     @State private var nameDraft = ""
     @State private var confirmErase = false
     @ObservedObject private var updater = AppUpdater.shared
@@ -12,6 +13,10 @@ struct SettingsPage: View {
     init(initial: Section = .profile, onClose: @escaping () -> Void) {
         self.onClose = onClose
         _section = State(initialValue: initial)
+        // 驗證用：ZIWEI_LEGAL=privacy／terms／delete 直接打開說明頁
+        if let v = ProcessInfo.processInfo.environment["ZIWEI_LEGAL"] {
+            _doc = State(initialValue: LegalDoc.allCases.first { "\($0)" == v })
+        }
     }
 
     enum Section: String, CaseIterable, Identifiable {
@@ -38,7 +43,7 @@ struct SettingsPage: View {
                 Text("設定").font(Font.zCaption).foregroundStyle(Color.zText3)
                     .padding(.horizontal, 10).padding(.bottom, 6)
                 ForEach(Section.allCases) { s in
-                    Button { withAnimation(Motion.snap) { section = s } } label: {
+                    Button { withAnimation(Motion.snap) { section = s; doc = nil } } label: {
                         HStack(spacing: 9) {
                             Image(systemName: s.icon).font(Font.zIcon).foregroundStyle(Color.zText2).frame(width: 16)
                             Text(s.rawValue).font(Font.zBody).foregroundStyle(Color.zText)
@@ -61,13 +66,13 @@ struct SettingsPage: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    content
+                    if let doc { legalPage(doc) } else { content }
                 }
                 .frame(maxWidth: 720, alignment: .leading)
                 .padding(.horizontal, 32)
                 .padding(.top, 20)
                 .padding(.bottom, 40)
-                .id(section)
+                .id(doc?.id ?? section.rawValue)
                 .transition(.opacity)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -259,9 +264,9 @@ struct SettingsPage: View {
             row("排盤計算", "開源紫微斗數引擎") {
                 HStack { Spacer(); Text("iztro（MIT License）").font(Font.zCallout).foregroundStyle(Color.zText2) }
             }
-            row("隱私權政策", "資料只存在你的 Mac，不會上傳") { legalButton("privacy") }
-            row("使用條款", "使用 StillLink 前請先閱讀") { legalButton("terms") }
-            row("刪除資料", "如何清空或完整移除 App 與資料", last: true) { legalButton("delete-account") }
+            row("隱私權政策", "資料只存在你的 Mac，不會上傳") { legalButton(.privacy) }
+            row("使用條款", "使用 StillLink 前請先閱讀") { legalButton(.terms) }
+            row("刪除資料", "如何清空或完整移除 App 與資料", last: true) { legalButton(.delete) }
         }
     }
 
@@ -278,16 +283,37 @@ struct SettingsPage: View {
         }
     }
 
-    /// 用瀏覽器打開 App 內附的說明頁（離線也能看）
-    private func legalButton(_ name: String) -> some View {
+    /// 「關於」裡的說明列：點了在右邊直接顯示文字
+    private func legalButton(_ d: LegalDoc) -> some View {
         HStack {
             Spacer()
-            Button {
-                if let url = Bundle.main.url(forResource: name, withExtension: "html", subdirectory: "legal") {
-                    NSWorkspace.shared.open(url)
-                }
-            } label: { Label("打開", systemImage: "arrow.up.right.square") }
-            .buttonStyle(ZSecondaryButton(small: true))
+            Button("查看") { withAnimation(Motion.snap) { doc = d } }
+                .buttonStyle(ZSecondaryButton(small: true))
+        }
+    }
+
+    /// 說明頁：簡單的標題＋段落
+    private func legalPage(_ d: LegalDoc) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button { withAnimation(Motion.snap) { doc = nil } } label: {
+                Label("關於", systemImage: "chevron.left").font(Font.zCallout).foregroundStyle(Color.zText2)
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 12)
+            title(d.rawValue)
+            Text(LegalDoc.updated).font(Font.zCaption).foregroundStyle(Color.zText3).padding(.bottom, 14)
+            Text(d.summary).font(Font.zBody).foregroundStyle(Color.zText)
+                .fixedSize(horizontal: false, vertical: true).padding(.bottom, 20)
+            ForEach(Array(d.sections.enumerated()), id: \.offset) { _, s in
+                Text(s.0).font(Font.zBodyStrong).foregroundStyle(Color.zText).padding(.bottom, 4)
+                Text(s.1).font(Font.zBody).foregroundStyle(Color.zText2).lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .padding(.bottom, 18)
+            }
+            Text(LegalDoc.contact).font(Font.zCallout).foregroundStyle(Color.zText3)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
         }
     }
 
