@@ -19,7 +19,8 @@ struct ZSettings: Codable, Equatable {
 
     // 盤面顯示
     var showAdj = true          // 雜曜
-    var showShensha = false     // 博士／將前／歲前、長生十二神（預設關，盤面乾淨；換新名字讓舊設定也變成關）
+    var showShensha = false     // 博士／將前／歲前十二神（預設關，盤面乾淨；換新名字讓舊設定也變成關）
+    var showChangsheng = false  // 長生十二神（預設關）
     var showAgeLines = false    // 流年／小限歲數（預設關）
     var showMinorOverlay = false // 小限疊盤（預設關閉；流年列會標出小限宮）。換新名字讓舊設定也變成關
     var showMinorMutagen = true // 小限四化方塊（小限疊盤開著時才有作用）

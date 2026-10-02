@@ -63,7 +63,7 @@ struct InfoPanel: View {
                         }
                         .padding(.bottom, 4)
                         row("calendar", "國曆", mask(chart?.solarDate ?? current.solar))
-                        row("moon", "農曆", mask(chart.map { "\($0.lunarDate) \($0.time)" } ?? ""))
+                        row("moon", "農曆", mask(chart.map { "\($0.lunarGanzhiDate) \($0.time)" } ?? ""))
                         if let ts = current.trueSolar {
                             row("sun.max", "真太陽時", mask(ts))
                             row("clock", "鐘錶時間", mask(current.clock ?? ""))
@@ -113,7 +113,7 @@ struct InfoPanel: View {
                 card("看盤小提示") {
                     VStack(alignment: .leading, spacing: 6) {
                         tip("hand.tap", "點宮位：看三方四正和宮干飛化；再點一次取消")
-                        tip("lock", "長按宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按一次解鎖")
+                        tip("lock", "長按或點兩下宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按或點兩下解鎖")
                         tip("arrow.triangle.2.circlepath", "右鍵宮位：以這一宮為命（轉宮）")
                     }
                 }

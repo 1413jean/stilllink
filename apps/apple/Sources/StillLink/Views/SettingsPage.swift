@@ -156,7 +156,8 @@ struct SettingsPage: View {
         case .stars:
             title("星曜")
             toggle("顯示雜曜", "天姚、紅鸞等小星", s.showAdj)
-            toggle("顯示神煞", "博士、將前、歲前十二神，以及長生十二神", s.showShensha)
+            toggle("顯示神煞", "博士、將前、歲前十二神", s.showShensha)
+            toggle("顯示長生十二神", "長生、沐浴、冠帶…養，寫在每宮天干地支上面", s.showChangsheng)
             toggle("顯示流曜", "選到大限、流年時，宮內加上大祿、大羊、年鸞、年喜…這些流曜", s.showFlowStars, last: true)
             Text("星曜顏色").font(Font.zBodyStrong).foregroundStyle(Color.zText).padding(.top, 18)
             note("五類星曜各用一種顏色，一眼分出主星、輔星、吉星、凶星、雜曜。")

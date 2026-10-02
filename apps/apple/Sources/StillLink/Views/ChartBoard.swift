@@ -23,6 +23,7 @@ struct ChartBoard: View, Equatable {
     @State private var locked: Int?    // 長按鎖定的宮位（比較兩組三方四正）
     @State private var taiji: Int?     // 轉宮：以這一宮為命
     @State private var userPicked = false   // 使用者自己點的宮位（自動跳到運限命宮時不算）
+    @State private var lastTap: (Int, Date)?   // 上一次點的宮位與時間（判斷點兩下）
     @State private var cleared = false      // 再點一次已選的宮位＝取消選取（不顯示三方四正、飛化）
     @Environment(\.zSettings) private var settings
 
@@ -47,9 +48,18 @@ struct ChartBoard: View, Equatable {
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipped()
                         .contentShape(Rectangle())
-                        // 長按：鎖定／解除；點一下：選宮位
+                        // 長按或點兩下：鎖定／解除；點一下：選宮位（單擊不等雙擊判定，選取不會慢半拍）
                         .gesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in toggleLock(i, chart) }
                             .exclusively(before: TapGesture().onEnded {
+                                // 同一宮在系統雙擊間隔內點第二下＝點兩下：鎖定（不是取消選取）
+                                let now = Date()
+                                if let (j, t) = lastTap, j == i, now.timeIntervalSince(t) < NSEvent.doubleClickInterval {
+                                    lastTap = nil
+                                    withAnimation(Motion.snap) { cleared = false; sel = i }
+                                    toggleLock(i, chart)
+                                    return
+                                }
+                                lastTap = (i, now)
                                 Sound.tap(settings); userPicked = true
                                 withAnimation(Motion.snap) {
                                     if !cleared && selected == i { cleared = true } else { cleared = false; sel = i }
@@ -110,7 +120,7 @@ struct ChartBoard: View, Equatable {
                 Toast.show("已解除鎖定")
             } else {
                 locked = i
-                Toast.show("已鎖定「\(chart.palaces[i].name)」三方四正，點其他宮位比較；長按解除")
+                Toast.show("已鎖定「\(chart.palaces[i].name)」三方四正，點其他宮位比較；長按或點兩下解除")
             }
         }
     }
@@ -328,8 +338,8 @@ private struct PalaceCell: View {
                             .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
                             .padding(.bottom, 2)
                     }
-                    // 長生十二神屬於神煞，跟著「顯示神煞」開關
-                    if settings.showShensha {
+                    // 長生十二神：自己一個開關（預設關）
+                    if settings.showChangsheng {
                         VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
                             .padding(.bottom, 2)
                     }
@@ -494,7 +504,7 @@ private struct CenterInfo: View {
                     } else {
                         GridRow { label("國曆"); Text(mask("\(chart.solarDate) \(ZW.hours[person.hour])時（\(chart.timeRange)）")) }
                     }
-                    GridRow { label("農曆"); Text(mask("\(chart.lunarDate) \(chart.time)")) }
+                    GridRow { label("農曆"); Text(mask("\(chart.lunarGanzhiDate) \(chart.time)")) }
                     GridRow { label("命主"); Text("\(chart.soul)　身主: \(chart.body)　子斗: \(ziDou)") }
                 }
                 .font(ChartType.font(ChartType.centerBody(fs)))
