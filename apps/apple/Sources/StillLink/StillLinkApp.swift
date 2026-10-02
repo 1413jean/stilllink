@@ -182,6 +182,7 @@ struct RootView: View {
         if let t = env["ZIWEI_THEME"], let a = Appearance(rawValue: t) { store.appearance = a }
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
         if env["ZIWEI_NEW"] != nil { go(.new) }
+        if env["ZIWEI_NEWSELF"] != nil { go(.newSelf) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
             if let s = SettingsPage.Section.allCases.first(where: { "\($0)" == v }) {
                 NotificationCenter.default.post(name: .openSettings, object: s)

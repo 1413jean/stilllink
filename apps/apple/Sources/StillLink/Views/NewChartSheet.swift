@@ -7,6 +7,8 @@ struct NewChartSheet: View {
     var asSelf = false              // 填自己的命盤（個人檔案）
     var defaultGroup: String? = nil // 從側欄資料夾的 ＋ 進來時預設的分組
     var temporary = false           // 臨時命盤：不存檔，排好直接用（加第二張盤時）
+    /// 填自己的命盤、或編輯自己的命盤
+    private var isSelfChart: Bool { asSelf || (editing != nil && editing?.id == store.selfID) }
     var onClose: () -> Void
     var onCreated: (Person) -> Void
 
@@ -52,14 +54,16 @@ struct NewChartSheet: View {
                     row("頭貼", "上傳後可裁切，會自動壓縮") {
                         AvatarField(name: $avatar)
                     }
-                    row("姓名", "客人的名字或代稱") {
+                    row("姓名", isSelfChart ? "你的名字" : "客人的名字或代稱") {
                         TextField("例如：林小姐", text: $name).textFieldStyle(.plain)
                             .focused($nameFocused)
                             .inputBox()
                     }
-                    row("性別", "影響大限順逆") {
+                    row("性別", "影響大限順逆", last: isSelfChart) {
                         ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
                     }
+                    // 自己的命盤固定在「自己」，不用選分組
+                    if !isSelfChart {
                     row("分組", "顯示在側欄的資料夾，可自己新增", last: true) {
                         if addingGroup {
                             HStack(spacing: 8) {
@@ -81,6 +85,7 @@ struct NewChartSheet: View {
                                     } else { group = v }
                                 }))
                         }
+                    }
                     }
 
                     sectionTitle("出生時間")
