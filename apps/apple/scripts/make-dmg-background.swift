@@ -4,6 +4,7 @@ import AppKit
 
 let W: CGFloat = 660, H: CGFloat = 540
 let out = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "."
+let appName = CommandLine.arguments.count > 2 ? CommandLine.arguments[2] : "StillLink"
 
 func rgb(_ hex: UInt32, _ a: CGFloat = 1) -> NSColor {
     NSColor(srgbRed: CGFloat((hex >> 16) & 0xff) / 255, green: CGFloat((hex >> 8) & 0xff) / 255, blue: CGFloat(hex & 0xff) / 255, alpha: a)
@@ -60,7 +61,7 @@ func render(scale: CGFloat, to path: String) {
         .foregroundColor: rgb(0x9C9A93),
         .paragraphStyle: para,
     ]
-    NSString(string: "把 StillLink 拖到 Applications 就安裝好了").draw(in: NSRect(x: 0, y: H - 290, width: W, height: 20), withAttributes: attrs)
+    NSString(string: "把 \(appName) 拖到 Applications 就安裝好了").draw(in: NSRect(x: 0, y: H - 290, width: W, height: 20), withAttributes: attrs)
     // 分隔線＋安裝說明提示（說明檔放在下面）
     rgb(0xE4DED3).setFill()
     NSRect(x: 60, y: H - 305, width: W - 120, height: 1).fill()

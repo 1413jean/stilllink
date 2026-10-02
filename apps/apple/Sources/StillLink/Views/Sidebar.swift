@@ -25,8 +25,16 @@ struct Sidebar: View {
         VStack(spacing: 0) {
             // 側欄頂端：產品名（像 Codex）；右邊搜尋目前關閉
             HStack(spacing: 4) {
-                Text("StillLink").font(Font.zBrand).foregroundStyle(Color.zText)
-                    .padding(.horizontal, 8).frame(height: 30)
+                HStack(spacing: 6) {
+                    Text("StillLink").font(Font.zBrand).foregroundStyle(Color.zText)
+                    // 測試版：產品名旁邊一個小標籤
+                    if AppInfo.isBeta {
+                        Text("Beta").font(Font.zMicroStrong).foregroundStyle(Color.zAccent)
+                            .padding(.horizontal, 6).frame(height: 18)
+                            .background(Capsule().fill(Color.zAccent.opacity(0.12)))
+                    }
+                }
+                .padding(.horizontal, 8).frame(height: 30)
                 Spacer()
                 if Self.searchEnabled {
                 Button {

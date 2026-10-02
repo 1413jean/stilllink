@@ -199,6 +199,9 @@ struct SettingsPage: View {
         case .data:
             title("資料")
             note("命盤、備註、照片和設定都存在這台 Mac（不在 App 本身裡面），所以刪掉或重新安裝 App 資料都還在。換電腦或想保險時，可以先備份成一個檔案。")
+            if AppInfo.isBeta {
+                note("這是測試版，資料和正式版分開存放。想用真實命盤測試：先在正式版「備份」，再到這裡「還原」。")
+            }
             row("備份", "把所有命盤、照片、個人檔案與設定存成一個 .stilllink 檔") {
                 HStack { Spacer(); Button { store.exportBackup() } label: { Label("備份…", systemImage: "square.and.arrow.down") }
                     .buttonStyle(ZSecondaryButton(small: true)) }
@@ -227,8 +230,8 @@ struct SettingsPage: View {
             HStack(spacing: 14) {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 64, height: 64)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("StillLink").font(Font.zTitle).foregroundStyle(Color.zText)
-                    Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                    Text(AppInfo.name).font(Font.zTitle).foregroundStyle(Color.zText)
+                    Text("版本 \(AppInfo.displayVersion)")
                         .font(Font.zCallout).foregroundStyle(Color.zText2)
                 }
             }

@@ -1,4 +1,4 @@
-// 產生 App 圖示：swift scripts/make-icon.swift <輸出.png>
+// 產生 App 圖示：swift scripts/make-icon.swift <輸出.png> [beta]（beta：右下角加 BETA 標籤）
 // 暖白圓角方塊＋淡淡的命盤十二宮格線＋中間赭紅四芒星（色票同 Theme.swift 的 zAccent）
 import AppKit
 
@@ -71,6 +71,22 @@ let center = CGPoint(x: body.midX, y: body.midY)
 ctx.addPath(sparkle(center: center, r: 210, waist: 34)); ctx.setFillColor(rgb(0xD96B43)); ctx.fillPath()
 ctx.addPath(sparkle(center: CGPoint(x: center.x + 200, y: center.y + 190), r: 52, waist: 9)); ctx.setFillColor(rgb(0xD96B43, 0.85)); ctx.fillPath()
 ctx.restoreGState()
+
+// 測試版：右下角深色膠囊＋白字 BETA
+if CommandLine.arguments.count > 2 && CommandLine.arguments[2] == "beta" {
+    let pill = CGRect(x: body.maxX - 430, y: body.minY + 70, width: 380, height: 150)
+    ctx.addPath(CGPath(roundedRect: pill, cornerWidth: 75, cornerHeight: 75, transform: nil))
+    ctx.setFillColor(rgb(0x1C1B19)); ctx.fillPath()
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
+    let para = NSMutableParagraphStyle(); para.alignment = .center
+    let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 96, weight: .heavy), .foregroundColor: NSColor.white,
+                                                .paragraphStyle: para, .kern: 6]
+    let t = NSAttributedString(string: "BETA", attributes: attrs)
+    let h = t.size().height
+    t.draw(in: CGRect(x: pill.minX, y: pill.midY - h / 2, width: pill.width, height: h))
+    NSGraphicsContext.restoreGraphicsState()
+}
 
 let img = ctx.makeImage()!
 let rep = NSBitmapImageRep(cgImage: img)

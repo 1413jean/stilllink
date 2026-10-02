@@ -13,7 +13,7 @@ struct StillLinkApp: App {
     @StateObject private var store = Store()
 
     var body: some Scene {
-        WindowGroup("StillLink") {
+        WindowGroup(AppInfo.name) {
             RootView()
                 .environmentObject(store)
                 .preferredColorScheme(store.appearance.scheme)

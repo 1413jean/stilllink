@@ -97,15 +97,16 @@ final class Store: ObservableObject {
 
     private static func loadSettings() -> ZSettings { ZSettings.stored() }
 
-    /// 資料資料夾：~/Library/Application Support/StillLink（舊版叫 Ziwei，第一次開會自動搬過來）
+    /// 資料資料夾：~/Library/Application Support/StillLink（測試版是 StillLink Beta；舊版叫 Ziwei，正式版第一次開會自動搬過來）
     /// ZIWEI_DATA_DIR：驗證／測試用的另一份資料夾，不會動到正式資料
     nonisolated static let dataDir: URL = {
         if let d = ProcessInfo.processInfo.environment["ZIWEI_DATA_DIR"] { return URL(fileURLWithPath: d, isDirectory: true) }
         let fm = FileManager.default
         let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let dir = base.appendingPathComponent("StillLink", isDirectory: true)
+        let dir = base.appendingPathComponent(AppInfo.dataFolder, isDirectory: true)
+        // 正式版：舊版的 Ziwei 資料夾搬過來
         let old = base.appendingPathComponent("Ziwei", isDirectory: true)
-        if !fm.fileExists(atPath: dir.path), fm.fileExists(atPath: old.path) { try? fm.moveItem(at: old, to: dir) }
+        if !AppInfo.isBeta, !fm.fileExists(atPath: dir.path), fm.fileExists(atPath: old.path) { try? fm.moveItem(at: old, to: dir) }
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }()
