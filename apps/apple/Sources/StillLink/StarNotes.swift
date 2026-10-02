@@ -146,6 +146,7 @@ struct StarNotesPage: View {
     @State private var key = "紫微"
     @State private var draft = StarNote()
     @State private var search = ""
+    @State private var editingDoc = false   // 參考文件：false＝看排好版的內容，true＝改文字
 
     /// 每顆星一個小圖示（照星的意思：紫微皇帝＝皇冠、太陽＝太陽…）；雙星組合統一用 sparkles
     static let starIcon: [String: String] = [
@@ -251,6 +252,11 @@ struct StarNotesPage: View {
                     Text(key).font(.zTitle).foregroundStyle(Color.zText)
                     Text(notes.isCustom(key) ? "已自己改寫" : "預設內容").font(Font.zCaption).foregroundStyle(Color.zText3)
                     Spacer()
+                    if StarNotes.isDoc(key) {
+                        Button(editingDoc ? "完成" : "編輯") { withAnimation(Motion.fast) { editingDoc.toggle() } }
+                            .buttonStyle(.plain).font(Font.zCallout).foregroundStyle(Color.zAccent)
+                            .padding(.trailing, 8)
+                    }
                     if notes.isCustom(key) {
                         Button("還原成預設") { notes.reset(key); draft = notes.note(key); Toast.show("「\(key)」已還原成預設") }
                             .buttonStyle(.plain).font(Font.zCallout).foregroundStyle(Color.zAccent)
@@ -261,9 +267,15 @@ struct StarNotesPage: View {
                 Text(doc ? "參考內容，可以自己改寫。改了會自動存。" : "點宮位時，右側會顯示這顆星的總論和「落在這一宮」的意思。改了會自動存。")
                     .font(Font.zCallout).foregroundStyle(Color.zText3).padding(.bottom, 16)
 
-                label(doc ? "內容" : "總論")
-                field(Binding(get: { draft.summary }, set: { draft.summary = $0; commit() }), minH: doc ? 320 : 110)
-                    .padding(.bottom, 18)
+                if doc && !editingDoc {
+                    DocView(text: draft.summary)
+                        .padding(.bottom, 18)
+                } else {
+                    label(doc ? "內容" : "總論")
+                    if doc { Text("格式：「## 」開頭是小標題、「・」開頭是條列、用「｜」隔開是表格（第一列是表頭）。").font(Font.zCaption).foregroundStyle(Color.zText3).padding(.bottom, 6) }
+                    field(Binding(get: { draft.summary }, set: { draft.summary = $0; commit() }), minH: doc ? 320 : 110)
+                        .padding(.bottom, 18)
+                }
 
                 if !doc {
                     label("落在各宮")
@@ -299,6 +311,7 @@ struct StarNotesPage: View {
 
     private func pick(_ k: String) {
         key = k
+        editingDoc = false
         draft = notes.note(k)
     }
 
@@ -311,4 +324,93 @@ struct StarNotesPage: View {
 
 extension Notification.Name {
     static let openStarNotes = Notification.Name("zw.openStarNotes")
+}
+
+/// 參考文件的排版：「## 」小標題、「・」條列（「鍵：值」的鍵加粗）、「A｜B」表格、數字開頭的步驟、空行分段
+struct DocView: View {
+    let text: String
+
+    private enum Block { case heading(String), bullet(String), step(String), table([[String]]), para(String), gap }
+
+    private var blocks: [Block] {
+        var out: [Block] = []
+        var rows: [[String]] = []
+        func flush() { if !rows.isEmpty { out.append(.table(rows)); rows = [] } }
+        for raw in text.components(separatedBy: "\n") {
+            let l = raw.trimmingCharacters(in: .whitespaces)
+            if l.contains("｜") { rows.append(l.components(separatedBy: "｜")); continue }
+            flush()
+            if l.isEmpty { out.append(.gap) }
+            else if l.hasPrefix("## ") { out.append(.heading(String(l.dropFirst(3)))) }
+            else if l.hasPrefix("・") { out.append(.bullet(String(l.dropFirst()))) }
+            else if l.first?.isNumber == true, l.contains(".") { out.append(.step(l)) }
+            else { out.append(.para(l)) }
+        }
+        flush()
+        return out
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(blocks.enumerated()), id: \.offset) { i, b in
+                switch b {
+                case .heading(let t):
+                    Text(t).font(Font.zBodyStrong).foregroundStyle(Color.zText).padding(.top, i == 0 ? 0 : 10)
+                case .bullet(let t):
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Circle().fill(Color.zText3).frame(width: 4, height: 4).alignmentGuide(.firstTextBaseline) { $0[.bottom] + 4 }
+                        keyed(t)
+                    }
+                case .step(let t):
+                    let parts = t.split(separator: ".", maxSplits: 1).map(String.init)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(parts[0]).font(Font.zCalloutStrong.monospacedDigit()).foregroundStyle(Color.zAccent).frame(width: 16, alignment: .trailing)
+                        Text(parts.count > 1 ? parts[1].trimmingCharacters(in: .whitespaces) : "").font(Font.zCallout).foregroundStyle(Color.zText)
+                    }
+                case .table(let rows):
+                    table(rows)
+                case .para(let t):
+                    Text(t).font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+                case .gap:
+                    Color.clear.frame(height: 2)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .textSelection(.enabled)
+    }
+
+    /// 「鍵：值」：鍵加粗
+    private func keyed(_ t: String) -> some View {
+        let parts = t.split(separator: "：", maxSplits: 1).map(String.init)
+        let text: Text = parts.count == 2 && parts[0].count <= 12
+            ? Text(parts[0] + "：").font(Font.zCalloutStrong).foregroundColor(Color.zText) + Text(parts[1]).font(Font.zCallout).foregroundColor(Color.zText)
+            : Text(t).font(Font.zCallout).foregroundColor(Color.zText)
+        return text.fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func table(_ rows: [[String]]) -> some View {
+        let cols = rows.map(\.count).max() ?? 1
+        return Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { r, row in
+                GridRow {
+                    ForEach(0..<cols, id: \.self) { c in
+                        Text(c < row.count ? row[c] : "")
+                            .font(r == 0 ? Font.zCaptionStrong : Font.zCallout)
+                            .foregroundStyle(r == 0 ? Color.zText3 : (c == 0 ? Color.zText : Color.zText2))
+                            .fixedSize(horizontal: c == 0, vertical: true)
+                            .padding(.vertical, 7)
+                    }
+                }
+                // 整列一條分隔線（最後一列不畫）
+                if r < rows.count - 1 {
+                    Rectangle().fill(Color.zLine).frame(height: 0.5).gridCellColumns(cols)
+                }
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 4)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.zCard))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.zLine))
+        .padding(.vertical, 4)
+    }
 }

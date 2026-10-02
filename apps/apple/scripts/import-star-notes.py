@@ -56,7 +56,19 @@ def block(ls):
     return "\n".join(c for c in (clean(l) for l in ls) if c)
 
 
+def bullets(ls):
+    """一行一點；行內的「•」也拆開"""
+    out = []
+    for l in ls:
+        for part in norm(l).replace("•", "\n").split("\n"):
+            c = clean(part)
+            if c:
+                out.append("・" + c)
+    return out
+
+
 def docs(lines):
+    """參考文件排版：「## 小標題」、「・條列」、「A｜B｜C」表格（第一列是表頭）、空行分段"""
     L = [norm(l) for l in lines]
     def at(text, start=0):
         return next((i for i in range(start, len(L)) if L[i].strip().startswith(text)), len(L))
@@ -66,53 +78,121 @@ def docs(lines):
     i_app = next((i for i in range(i_cs, len(L)) if L[i].strip() == "附錄"), len(L))
     i_other = at("其他備註", i_app)
 
-    # 十干四化表：每 5 格一列（年尾、天干、祿權科忌、代表數、色彩）
+    # 十干四化表
     cells = [c for c in (l.strip() for l in L[i_ten + 1:i_jia]) if c]
     k = cells.index("代表色彩/元素") + 1 if "代表色彩/元素" in cells else 0
-    rows = [f"{st}（西元年尾 {y}）：{sh}｜代表數 {n}｜{c}"
-            for y, st, sh, n, c in (cells[j:j + 5] for j in range(k, len(cells) - 4, 5)) if st in STEMS]
-    out["十干四化表"] = "\n".join(rows + [f"\n看盤順序：{L[i_order].strip()}"])
-    # 甲干四化…癸干四化：四顆星化的人物、事件形象
+    rows = ["天干｜西元年尾｜祿權科忌｜代表數｜代表色彩、元素"]
+    rows += [f"{st}｜{y}｜{sh}｜{n}｜{c.replace('/', '、')}"
+             for y, st, sh, n, c in (cells[j:j + 5] for j in range(k, len(cells) - 4, 5)) if st in STEMS]
+    order = L[i_order].strip()
+    out["十干四化表"] = "\n".join(rows) + f"\n\n## 看盤順序\n{order.replace('→', ' → ')}"
+
+    # 甲干四化…癸干四化：每顆星化一個小標題
     for st in STEMS:
         a = at(st + "天干四化", i_jia)
         b = next((i for i in range(a + 1, i_order + 1) if L[i].strip().endswith("天干四化") or i == i_order), i_order)
-        out[st + "干四化"] = block(L[a + 1:b])
-    out["化忌解方"] = block(L[i_cure + 1:i_zz])
-    out["紫占"] = block(L[i_zz + 1:i_cs])
-    # 長生十二宮：開頭一段說明＋12 個長生神
-    intro = block(L[i_cs + 1:i_cs + 2])
+        parts = []
+        for l in L[a + 1:b]:
+            c = clean(l)
+            if not c:
+                continue
+            if re.match(r"^[\u4e00-\u9fff]{2}化[祿權科忌]$", c):
+                parts.append(("\n" if parts else "") + "## " + c)
+            else:
+                parts.append("・" + c)
+        out[st + "干四化"] = "\n".join(parts)
+
+    # 化忌解方：甲太陽化忌 → 「## 甲干 太陽化忌」
+    parts = []
+    for l in L[i_cure + 1:i_zz]:
+        c = clean(l)
+        m = re.match(r"^([甲乙丙丁戊己庚辛壬癸])([\u4e00-\u9fff]{2}化忌)$", c)
+        if m:
+            parts.append(("\n" if parts else "") + f"## {m.group(1)}干・{m.group(2)}")
+        elif c:
+            parts.append("・" + c)
+    out["化忌解方"] = "\n".join(parts)
+
+    # 紫占
+    zz = [clean(l) for l in L[i_zz + 1:i_cs] if clean(l)]
+    steps = [c for c in zz if re.match(r"^\d+\.", c)]
+    demo = [c for c in zz if c.startswith("步驟")]
+    notes = [c for c in zz if "須知" in c or c.startswith("空宮")]
+    out["紫占"] = "\n".join(["## 操作步驟"] + steps + ["", "## 怎麼解盤"]
+                            + ["・" + re.sub(r"^步驟(\d)：", r"第\1步：", c) for c in demo]
+                            + ["", "## 須知"] + ["・" + c.replace("紫占須知：", "") for c in notes])
+
+    # 長生十二宮：說明＋一覽表；每個長生神：意義、特點、落宮
+    intro = clean(L[i_cs + 1])
+    table = ["順序｜長生神｜階段"]
     cur = None
     for l in L[i_cs + 2:i_app]:
         c = clean(l)
-        m = re.match(r"^\d+\.(\S+?)（(.+?)）(.*)$", c)
-        if m and m.group(1) in CHANGSHENG:
-            cur = m.group(1)
-            out[cur] = f"{m.group(2)}\n{m.group(3).strip()}"
+        m = re.match(r"^(\d+)\.(\S+?)（(.+?)）(.*)$", c)
+        if m and m.group(2) in CHANGSHENG:
+            cur = m.group(2)
+            table.append(f"{m.group(1)}｜{cur}｜{m.group(3)}")
+            out[cur] = f"## {m.group(3)}\n" + "・" + m.group(4).strip()
         elif cur and c:
-            out[cur] += "\n" + c
-    out["長生十二宮"] = intro + "\n" + "、".join(CHANGSHENG)
-    # 附錄：表格整理成「星名\n欄位：內容」一段一段
+            out[cur] += "\n・" + c
+    out["長生十二宮"] = intro + "\n\n" + "\n".join(table)
+
+    # 附錄
     tags = list(APPENDIX)
     for n, tag in enumerate(tags):
         a = next((i for i in range(i_app, len(L)) if L[i].strip().startswith(tag)), None)
         if a is None:
             continue
         b = next((i for i in range(a + 1, len(L)) if any(L[i].strip().startswith(t) for t in tags[n + 1:]) or L[i].strip().startswith("其他備註")), len(L))
-        cells = [c for c in (clean(l) for l in L[a + 1:b]) if c]
-        if tag in ("附錄6", "附錄8"):
-            out[APPENDIX[tag]] = "\n".join(cells)
+        raw = L[a + 1:b]
+        cells = [c for c in (clean(l) for l in raw) if c]
+        if tag == "附錄6":       # 疾厄：每顆主星一個小標題，下面條列
+            parts = []
+            for l in raw:
+                c = clean(l)
+                name = c[:-1] if c.endswith("星") else c
+                if name in MAJORS:
+                    parts.append(("\n" if parts else "") + "## " + name)
+                elif c:
+                    parts += bullets([l])
+            out[APPENDIX[tag]] = "\n".join(parts)
+            continue
+        if tag == "附錄8":       # 地支 → 部位，照子丑寅卯排成表
+            pairs = dict(re.findall(r"([子丑寅卯辰巳午未申酉戌亥])：(\S+)", "\n".join(cells)))
+            order = "子 丑 寅 卯 辰 巳 午 未 申 酉 戌 亥".split()
+            out[APPENDIX[tag]] = "命盤上每個地支宮位對應的身體部位。\n\n地支｜部位\n" + "\n".join(f"{z}｜{pairs[z]}" for z in order if z in pairs)
             continue
         cells = cells[1:] if cells and cells[0] == "代表星曜" else cells
         first = next((j for j, c in enumerate(cells) if c[:2] in MAJORS), None)
         if first is None:
             continue
-        heads, parts, j = cells[:first], [], first
+        heads, j = cells[:first], first
+        if tag == "附錄7":       # 神明：一欄，排成表
+            rows = ["星曜｜代表神明"]
+            while j < len(cells):
+                rows.append(f"{cells[j]}｜{cells[j + 1] if j + 1 < len(cells) else ''}")
+                j += 2
+            out[APPENDIX[tag]] = "\n".join(rows)
+            continue
+        parts = []
         while j < len(cells):
             vals = cells[j + 1:j + 1 + len(heads)]
-            parts.append(cells[j] + "\n" + "\n".join(f"{h}：{v}" for h, v in zip(heads, vals)))
+            parts.append(("\n" if parts else "") + "## " + cells[j])
+            parts += [f"・{h}：{v}" for h, v in zip(heads, vals)]
             j += 1 + len(heads)
-        out[APPENDIX[tag]] = "\n\n".join(parts)
-    out["其他備註"] = block(L[i_other + 1:])
+        out[APPENDIX[tag]] = "\n".join(parts)
+
+    # 其他備註：分成小技巧、靈力值、猜餐點
+    oc = [clean(l) for l in L[i_other + 1:] if clean(l)]
+    def idx(t):
+        return next((i for i, c in enumerate(oc) if c.startswith(t)), len(oc))
+    a_ling, a_meal, a_food = idx("靈力值"), idx("紫占猜餐點"), idx("猜食物")
+    food = [c.split("：", 1) for c in oc[a_food + 1:] if "：" in c]
+    out["其他備註"] = "\n".join(
+        ["## 小技巧"] + ["・" + c for c in oc[:a_ling]]
+        + ["", "## 靈力值紫占"] + ["・" + c for c in oc[a_ling + 1:a_meal]]
+        + ["", "## 紫占猜餐點"] + ["・" + c for c in oc[a_meal + 1:a_food]]
+        + ["", "## 星曜對應的食物", "星曜｜食物"] + [f"{a}｜{b}" for a, b in food])
     return {k: v.strip() for k, v in out.items() if v.strip()}
 
 
