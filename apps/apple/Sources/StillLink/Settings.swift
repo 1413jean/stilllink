@@ -21,10 +21,11 @@ struct ZSettings: Codable, Equatable {
     var showAdj = true          // 雜曜
     var showGods = true         // 博士／將前／歲前
     var showAges = true         // 流年／小限歲數
-    var showMinor = true        // 小限疊盤（選流年時一起顯示）
+    var showMinorOverlay = false // 小限疊盤（預設關閉；流年列會標出小限宮）。換新名字讓舊設定也變成關
     var showMinorMutagen = true // 小限四化方塊（小限疊盤開著時才有作用）
-    var showOuterBelowMonth = false // 選到流月／流日／流時時，仍顯示生年與大限四化（預設不顯示，盤面比較乾淨）
-    var showYearAtHour = false      // 選到流時時，仍顯示流年（含小限）四化（預設只顯示流月、流日、流時）
+    var showFlowStars = true    // 流曜：大限、流年的祿羊陀魁鉞昌曲鸞喜馬（大祿、年鸞…）
+    var luckyStarsGreen = true  // 吉星（左右魁鉞昌曲祿存天馬）用綠色，跟主星的紅色分開
+    var toughStarsBlack = true  // 六煞星用黑色字（關掉改褐色）
     var openWithDecade = false  // 打開命盤時預設停在大限（關閉＝本命）
     var showBody = true         // 身宮
     var showLaiyin = true       // 來因宮

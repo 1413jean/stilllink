@@ -53,6 +53,8 @@ struct HoroScope: Codable {
     let branch: String
     let palaceNames: [String]
     let mutagen: [String]
+    /// 流曜（大祿、年鸞…）：依宮位索引；大限、流年才有
+    var stars: [[String]]? = nil
 }
 
 struct Horoscope: Codable {

@@ -113,11 +113,13 @@ enum ZW {
         }
     }
 
-    enum Tone { case red, black, blue }
-    static func tone(_ type: String) -> Tone {
+    enum Tone { case red, black, blue, green, earth }
+    /// 星曜顏色（照文墨天機）：主星紅、吉星（左右魁鉞昌曲祿存天馬）綠、六煞黑、其他小星藍；兩個設定可改
+    static func tone(_ type: String, luckyGreen: Bool = true, toughBlack: Bool = true) -> Tone {
         switch type {
-        case "major", "soft", "lucun", "tianma": return .red
-        case "tough": return .black
+        case "major": return .red
+        case "soft", "lucun", "tianma": return luckyGreen ? .green : .red
+        case "tough": return toughBlack ? .black : .earth
         default: return .blue
         }
     }

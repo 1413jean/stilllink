@@ -8,11 +8,13 @@ struct ChartBoard: View, Equatable {
     let level: Int
     /// 放大倍率：直接用放大後的尺寸重新排版（字是向量，放大不會糊）
     var zoom: CGFloat = 1
+    /// 合盤（對方出生年）；nil＝沒合盤
+    var hepan: Hepan? = nil
     var onResetLevel: () -> Void = {}
 
     /// 只有資料真的換了才重畫（點運限表時，盤面不會先拿舊資料多畫一次）
     static func == (a: ChartBoard, b: ChartBoard) -> Bool {
-        a.person == b.person && a.model.id == b.model.id && a.level == b.level && a.zoom == b.zoom
+        a.person == b.person && a.model.id == b.model.id && a.level == b.level && a.zoom == b.zoom && a.hepan == b.hepan
     }
     @State private var sel: Int?
     @State private var appeared = false
@@ -35,7 +37,7 @@ struct ChartBoard: View, Equatable {
             ZStack(alignment: .topLeading) {
                 ForEach(0..<12, id: \.self) { i in
                     let (r, c) = ZW.grid[i]
-                    PalaceCell(model: model, index: i, level: level, fs: fs,
+                    PalaceCell(model: model, index: i, level: level, fs: fs, hepan: hepan,
                                selected: !cleared && selected == i, inSF: sf.contains(i) && selected != i,
                                isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
                                taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart) },
@@ -185,6 +187,7 @@ private struct PalaceCell: View {
     let index: Int
     let level: Int
     let fs: CGFloat
+    let hepan: Hepan?
     let selected: Bool
     let inSF: Bool
     let isLocked: Bool
@@ -194,6 +197,7 @@ private struct PalaceCell: View {
 
     /// 流月：這一宮是流年的哪個農曆月＋月干。流年斗君＝子斗順數到流年地支，從那宮起正月順排；月干用五虎遁由流年天干推
     private var monthLabel: String? {
+        guard level >= 2 else { return nil }   // 選到流年以後才顯示
         let b = ZW.branches
         guard let dou = b.firstIndex(of: model.bazi.ziDou),
               let yb = b.firstIndex(of: model.horo.yearly.branch),
@@ -208,10 +212,14 @@ private struct PalaceCell: View {
         let chart = model.chart, horo = model.horo
         let p = chart.palaces[index]
         let curDecade = level >= 1 && horo.decadal.index == index
-        let minor = level >= 2 && settings.showMinor
+        let minor = level >= 2 && settings.showMinorOverlay
         // 來因宮：生年天干所在的宮（寅～亥，子丑與寅卯同干不算）
         let laiyin = settings.showLaiyin && index < 10 && p.stem == String(chart.chineseDate.prefix(1))
         VStack(alignment: .leading, spacing: 2) {
+            // 合盤：對方的宮名（合命、合兄…）寫在左上角
+            if let n = hepan?.palaceName(at: p.branch) {
+                Text(n).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmEarth).lineLimit(1)
+            }
             // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
             ViewThatFits(in: .vertical) {
                 ForEach(Array([(1.0, 1.0), (1.0, 0.78), (0.86, 0.68), (0.74, 0.62)].enumerated()), id: \.offset) { _, k in
@@ -307,8 +315,11 @@ private struct PalaceCell: View {
                             .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
                             .padding(.bottom, 2)
                     }
-                    VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
-                        .padding(.bottom, 2)
+                    // 長生十二神屬於神煞，跟著「顯示神煞」開關
+                    if settings.showGods {
+                        VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
+                            .padding(.bottom, 2)
+                    }
                     Text(p.stem).font(ChartType.font(ChartType.ganzhi(fs)))
                     Text(p.branch).font(ChartType.font(ChartType.ganzhi(fs)))
                 }
@@ -346,76 +357,84 @@ extension PalaceCell {
         Text(t).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(c).lineLimit(1).fixedSize()
     }
 
+    /// 宮內的流曜（大限、流年）和合盤星
+    func extraStars(_ p: Palace, _ horo: Horoscope) -> [(String, Color)] {
+        var out: [(String, Color)] = []
+        if settings.showFlowStars {
+            if level >= 1, let st = horo.decadal.stars, index < st.count { out += st[index].map { ($0, Color.scopeColors[0]) } }
+            if level >= 2, let st = horo.yearly.stars, index < st.count { out += st[index].map { ($0, Color.scopeColors[1]) } }
+        }
+        if let hepan { out += hepan.stars(at: p.branch).map { ($0, Color.wmEarth) } }
+        return out
+    }
+
     func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> some View {
-        // 流月以下不含生年與大限：流月＝流年～流月、流日＝流年～流日、流時＝流月～流時（兩個設定可各自改回顯示）
-        let lowest = level < 3 || settings.showOuterBelowMonth ? 0
-            : (level == 5 && !settings.showYearAtHour ? 3 : 2)
+        // 四化只顯示最近三層（0 生年、1 大限、2 流年、3 流月、4 流日、5 流時）＋小限（有流年時）
+        // 例：選到流月＝大限、流年、流月；選到流時＝流月、流日、流時
+        let lowest = max(0, level - 2)
+        let showMinorMutagen = minor && settings.showMinorMutagen && lowest <= 2
         return FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, fly: flyStars[s.name],
-                           hideOuter: lowest > 0,
-                           yearInMain: !settings.showOuterBelowMonth,
-                           minor: minor && settings.showMinorMutagen && lowest <= 2 ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
-                           scopes: (max(1, lowest)...max(1, level)).compactMap { lv in
-                               level >= lv ? ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) } : nil
+                           showBirth: lowest == 0,
+                           minor: showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
+                           hepanMut: hepan?.mutagen(star: s.name),
+                           scopes: level < 1 ? [] : (max(1, lowest)...level).compactMap { lv in
+                               ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) }
                            })
             }
             ForEach(settings.showAdj ? p.adj : [], id: \.name) { s in
                 VerticalText(s.name, size: adjF, color: .wmBlue)
+            }
+            // 流曜（大祿、年鸞…）與合盤的合祿／合羊／合陀
+            ForEach(extraStars(p, horo), id: \.0) { name, color in
+                VerticalText(name, size: adjF, color: color)
             }
         }
     }
 }
 
 private struct StarColumn: View {
+    @Environment(\.zSettings) private var settings
     let star: Star
     let fs: CGFloat
-    let fly: Mutagen?   // 點選宮位的宮干四化落在這顆星
-    let hideOuter: Bool // 流月以下：不顯示生年與大限四化
-    let yearInMain: Bool // 流年四化也放進主欄（生年＋大限＋流年同一直排）；設定要流月以下也顯示全部時改回並排
-    let minor: Mutagen? // 小限四化
+    let fly: Mutagen?    // 點選宮位的宮干四化落在這顆星
+    let showBirth: Bool  // 生年四化是否在顯示範圍（最近三層）內
+    let minor: Mutagen?  // 小限四化
+    var hepanMut: Mutagen? = nil   // 合盤：對方年干的四化
     let scopes: [(Int, Mutagen)]
 
     var body: some View {
-        let tone = ZW.tone(star.type)
-        let (main, side) = columns
-        let two = !main.isEmpty && !side.isEmpty
-        let size: CGFloat = two ? 0.95 : 1.12
-        // 星名對齊右邊那一欄（本命＋大限）；流年以後的四化排在左邊另一欄
-        VStack(alignment: .trailing, spacing: 0.5) {
-            VStack(spacing: 0.5) {
-                VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,
-                             weight: star.type == "major" ? .semibold : .regular)
-                    .padding(.vertical, 1)
-                    .frame(width: fs * 1.18)
-                    .background(fly?.fill ?? .clear)
-                Text(star.brightness.isEmpty ? " " : star.brightness)
-                    .font(ChartType.font(ChartType.meta(fs)))
-                    .foregroundStyle(Color.zText2)
-            }
-            .frame(width: fs * 1.18)
-            HStack(alignment: .top, spacing: 1) {
-                if two {
-                    VStack(spacing: 1) { ForEach(Array(side.enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1, size: size) } }
-                }
-                VStack(spacing: 1) {
-                    ForEach(Array((two ? main : main + side).enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1, size: size) }
-                }
+        let tone = ZW.tone(star.type, luckyGreen: settings.luckyStarsGreen, toughBlack: settings.toughStarsBlack)
+        let list = boxes
+        let size: CGFloat = list.count > 3 ? 0.98 : 1.12
+        // 星名下同一直排：生年 → 大限 → 流年 → 小限 → 流月…（最多三層＋小限）
+        VStack(spacing: 0.5) {
+            VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,
+                         weight: star.type == "major" ? .semibold : .regular)
+                .padding(.vertical, 1)
                 .frame(width: fs * 1.18)
+                .background(fly?.fill ?? .clear)
+            Text(star.brightness.isEmpty ? " " : star.brightness)
+                .font(ChartType.font(ChartType.meta(fs)))
+                .foregroundStyle(Color.zText2)
+            VStack(spacing: 1) {
+                ForEach(Array(list.enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1, size: size) }
             }
         }
         .frame(minWidth: fs * 1.18)
     }
 
-    /// 四化方塊分兩欄：主欄＝生年、大限（預設連流年也在這欄，直排在星名下）；側欄＝小限、流月以後（設定全顯示時流年也在側欄）
-    private var columns: ([(String, Color)], [(String, Color)]) {
-        var main: [(String, Color)] = [], side: [(String, Color)] = []
-        if !star.mutagen.isEmpty && !hideOuter { main.append((star.mutagen, .fBirth)) }
-        if let minor { side.append((minor.rawValue, .fMinor)) }
-        for (lv, m) in scopes where !(hideOuter && lv == 1) {
-            if lv == 1 || (lv == 2 && yearInMain) { main.append((m.rawValue, Color.fScopes[lv - 1])) } else { side.append((m.rawValue, Color.fScopes[lv - 1])) }
+    private var boxes: [(String, Color)] {
+        var b: [(String, Color)] = []
+        if showBirth, !star.mutagen.isEmpty { b.append((star.mutagen, .fBirth)) }
+        for (lv, m) in scopes {
+            b.append((m.rawValue, Color.fScopes[lv - 1]))
+            if lv == 2, let minor { b.append((minor.rawValue, .fMinor)) }   // 小限跟在流年後面
         }
-        return (main, side)
+        if let minor, !scopes.contains(where: { $0.0 == 2 }) { b.append((minor.rawValue, .fMinor)) }
+        if let hepanMut { b.append((hepanMut.rawValue, .wmEarth)) }   // 合四化放最後
+        return b
     }
 
     private func box(_ t: String, fill: Color, size: CGFloat = 1.12) -> some View {
@@ -487,18 +506,22 @@ private struct CenterInfo: View {
                     // 八字起運與大運
                     Text("出生後 \(qy.years)年 \(qy.months)月 \(qy.days)天 八字起運")
                         .font(ChartType.font(ChartType.centerSmall(fs), .medium))
-                    HStack(alignment: .top, spacing: fs * 0.32) {
+                    HStack(alignment: .top, spacing: 0) {
                         ForEach(Array(dayun.enumerated()), id: \.offset) { k, gz in
                             let age = qy.years + 1 + k * 10
                             VStack(spacing: 0) {
-                                HStack(alignment: .top, spacing: 0) {
-                                    Text(String(gz.prefix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.prefix(1))).color)
-                                    VerticalText(Bazi.tenGod(day: dayStem, other: String(gz.prefix(1))), size: ChartType.godLabel(fs), color: .mQuan)
-                                }
+                                // 十神小字掛在天干右邊、不佔寬度，干支和歲數才會對齊同一條中線
+                                Text(String(gz.prefix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.prefix(1))).color)
+                                    .overlay(alignment: .topTrailing) {
+                                        VerticalText(Bazi.tenGod(day: dayStem, other: String(gz.prefix(1))), size: ChartType.godLabel(fs), color: .mQuan)
+                                            .fixedSize()
+                                            .offset(x: ChartType.godLabel(fs) + 1)
+                                    }
                                 Text(String(gz.suffix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.suffix(1))).color)
                                 Text("\(age)歲").font(ChartType.font(ChartType.godLabel(fs))).foregroundStyle(Color.zText2)
                                 Text(verbatim: "\(birthYear + age - 1)").font(ChartType.font(ChartType.godLabel(fs)).monospacedDigit()).foregroundStyle(Color.zText3)
                             }
+                            .frame(width: fs * 1.75)
                         }
                     }
                 }

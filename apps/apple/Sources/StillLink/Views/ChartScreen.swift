@@ -34,7 +34,7 @@ struct NowChart: View {
 }
 
 /// 盤面寬度上限（約文墨天機的比例）
-let boardMaxWidth: CGFloat = 780
+let boardMaxWidth: CGFloat = 920
 let infoPanelWidth: CGFloat = 300
 /// 盤面高寬比：略高於正方形，宮位底部（歲數、運限宮名、宮名）才放得下又不擠星曜
 let boardAspect: CGFloat = 1.06
@@ -47,6 +47,7 @@ struct ChartScreen: View {
     /// 盤面旁邊的「＋」：加第二張盤
     var onAdd: (() -> Void)? = nil
     @State private var pick: Pick
+    @State private var hepanYear: Int?          // 合盤：對方出生年
     @AppStorage("showInfoPanel") private var showInfo = true
     @State private var model: ChartModel?
     @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
@@ -65,6 +66,8 @@ struct ChartScreen: View {
         var p = Pick.today(); p.level = lv
         _pick = State(initialValue: p)
         _shownLevel = State(initialValue: lv)
+        // 驗證用：ZIWEI_HEPAN=1995 直接合盤
+        _hepanYear = State(initialValue: ProcessInfo.processInfo.environment["ZIWEI_HEPAN"].flatMap(Int.init))
         // 驗證用：ZIWEI_ZOOM=2 直接以放大倍率開啟
         if let z = ProcessInfo.processInfo.environment["ZIWEI_ZOOM"].flatMap(Double.init) {
             _zoom = State(initialValue: z); _zoomBase = State(initialValue: z); _sharpZoom = State(initialValue: z)
@@ -87,13 +90,13 @@ struct ChartScreen: View {
         GeometryReader { geo in
             let panelSpace: CGFloat = showInfo ? infoPanelWidth + 24 : 0
             let usable = geo.size.width - panelSpace
-            let boardW = min(usable - 48, boardMaxWidth, max(460, geo.size.height - 180))
+            let boardW = min(usable - 48, boardMaxWidth, max(520, geo.size.height - 110))
             ZStack(alignment: .bottom) {
                 ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                     VStack(spacing: 12) {
                         Group {
                             if let model {
-                                ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom) { pick.level = 0 }
+                                ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, hepan: hepanYear.map(Hepan.init)) { pick.level = 0 }
                                     .equatable()
                                     .transaction(value: pick) { $0.animation = nil }
                                     .transition(.opacity)
@@ -144,7 +147,7 @@ struct ChartScreen: View {
             .overlay(alignment: .topTrailing) {
                 if showInfo {
                     ScrollView(showsIndicators: false) {
-                        InfoPanel(person: person, chart: model?.chart)
+                        InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear)
                             .padding(.top, 12)
                             .padding(.bottom, 96) // 底部留給右下角的快捷鈕
                             .padding(.horizontal, 16) // 留空間給卡片陰影

@@ -34,7 +34,8 @@ struct PeriodTable: View {
             row("流年\n小限") {
                 ForEach(0..<10, id: \.self) { k in
                     let y = start + k
-                    cell("\(y)年", hideBirth ? ZW.yearGanzhi(y) : "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲", group: "year", on: y == pick.year && pick.level >= 2) {
+                    cell("\(y)年", hideBirth ? ZW.yearGanzhi(y) : "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲",
+                         extra: minorPalace(age: y - birthYear + 1), group: "year", on: y == pick.year && pick.level >= 2) {
                         pick.level = (y == pick.year && pick.level == 2) ? 1 : 2; pick.year = y
                     }
                 }
@@ -98,7 +99,12 @@ struct PeriodTable: View {
         }
     }
 
-    private func cell(_ main: String, _ sub: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
+    /// 那一歲的小限在哪一宮（小命、小兄…）
+    private func minorPalace(age: Int) -> String? {
+        chart.palaces.first { $0.ages.contains(age) }.map { "小" + String($0.name.prefix(1)) }
+    }
+
+    private func cell(_ main: String, _ sub: String? = nil, extra: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
         Button {
             Sound.tap(settings, ["dec": .decade, "year": .year, "month": .month, "day": .day, "hour": .hour][group] ?? .palace)
             action()   // 選取底色直接跳過去：盤面同時要重畫，滑動動畫會被卡住，看起來反而頓
@@ -106,6 +112,7 @@ struct PeriodTable: View {
             VStack(spacing: 1) {
                 Text(main).font(Font.zCaption)
                 if let sub { Text(sub).font(Font.zMicro).opacity(0.7) }
+                if let extra { Text(extra).font(Font.zMicro).foregroundStyle(on ? Color.zBg : Color.minorColor) }
             }
             .foregroundStyle(on ? Color.zBg : Color.zText)
             .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)
