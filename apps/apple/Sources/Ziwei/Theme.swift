@@ -130,5 +130,17 @@ enum ChartType {
     static func dayun(_ fs: CGFloat) -> CGFloat { fs * 0.95 }               // 大運干支
     static func godLabel(_ fs: CGFloat) -> CGFloat { max(7.5, fs * 0.55) }  // 十神小字、大運歲數
 
-    static func font(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .system(size: size, weight: weight) }
+    /// 命盤字體一律比介面細一階（Jean：盤面字要細一點）：semibold→medium、medium→regular、regular→light
+    static func font(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .system(size: size, weight: lighter(weight)) }
+
+    static func lighter(_ w: Font.Weight) -> Font.Weight {
+        switch w {
+        case .heavy, .black: .bold
+        case .bold: .semibold
+        case .semibold: .medium
+        case .medium: .regular
+        case .regular: .light
+        default: .light
+        }
+    }
 }

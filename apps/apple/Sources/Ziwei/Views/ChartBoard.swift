@@ -160,7 +160,7 @@ struct VerticalText: View {
     /// 一個 Text 換行排直（不用每個字一個 Text，盤面上上百個字時差很多）
     var body: some View {
         Text(text.map(String.init).joined(separator: "\n"))
-            .font(.system(size: size, weight: weight))
+            .font(ChartType.font(size, weight))
             .foregroundStyle(color)
             .multilineTextAlignment(.center)
             .lineSpacing(-size * 0.18)

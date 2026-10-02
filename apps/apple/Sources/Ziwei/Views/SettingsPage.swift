@@ -13,11 +13,12 @@ struct SettingsPage: View {
     }
 
     enum Section: String, CaseIterable, Identifiable {
-        case profile = "個人檔案", chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀"
+        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀"
         var id: String { rawValue }
         var icon: String {
             switch self {
             case .profile: "person.crop.circle"
+            case .account: "icloud"
             case .chart: "square.grid.3x3"
             case .mutagen: "sparkle"
             case .display: "eye"
@@ -105,6 +106,21 @@ struct SettingsPage: View {
                 }
             }
             toggle("在側欄顯示我的命盤", "關閉後側欄不會出現「我」", $store.showSelfInSidebar, last: true)
+        case .account:
+            title("帳號與同步")
+            note("登入後，命盤、備註、照片、頭貼和設定都會存在你的帳號，換電腦或之後用手機版登入同一個帳號就能看到。")
+            row("目前狀態", "尚未登入，資料只存在這台 Mac") {
+                HStack { Spacer(); Label("本機", systemImage: "laptopcomputer").font(Font.zCallout).foregroundStyle(Color.zText2) }
+            }
+            row("使用 Apple 登入", "Sign in with Apple") {
+                HStack { Spacer(); Button { Toast.show("雲端同步還在準備中，資料目前存在本機") } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
+                    .buttonStyle(ZSecondaryButton(small: true)) }
+            }
+            row("使用 Google 登入", "Google 帳號", last: true) {
+                HStack { Spacer(); Button { Toast.show("雲端同步還在準備中，資料目前存在本機") } label: { Label("使用 Google 登入", systemImage: "g.circle") }
+                    .buttonStyle(ZSecondaryButton(small: true)) }
+            }
+            note("雲端同步還在準備中：登入按鈕先放好，資料目前都存在本機，不會遺失。")
         case .chart:
             title("排盤")
             row("安星派別", "影響部分雜曜與流曜的安法") {

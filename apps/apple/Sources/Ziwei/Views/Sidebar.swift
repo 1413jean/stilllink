@@ -305,8 +305,9 @@ private struct AccountBar: View {
                 }
                 .pickerStyle(.inline)
                 Divider()
-                Button { } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
-                Button { } label: { Label("使用 Google 登入", systemImage: "g.circle") }
+                Button { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.account) } label: {
+                    Label("帳號與同步…", systemImage: "icloud")
+                }
                 Divider()
                 Button("個人檔案…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
                 Button("設定…") { NotificationCenter.default.post(name: .openSettings, object: nil) }
