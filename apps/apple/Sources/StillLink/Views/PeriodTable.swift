@@ -26,7 +26,7 @@ struct PeriodTable: View {
                     if cur == nil && pick.level == 1 { pick.level = 0 } else { pick.level = 1; pick.year = birthYear }
                 }
                 ForEach(Array(decades.enumerated()), id: \.offset) { k, d in
-                    cell("\(d.0[0])~\(d.0[1])", d.1 + "限", group: "dec", on: cur == k && pick.level >= 1) {
+                    cell("\(d.0[0])~\(d.0[1])", d.1, group: "dec", on: cur == k && pick.level >= 1) {
                         if cur == k && pick.level == 1 { pick.level = 0 } else { pick.level = 1; pick.year = birthYear + d.0[0] - 1 }
                     }
                 }
