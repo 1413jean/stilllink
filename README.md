@@ -7,10 +7,13 @@
 到 [Releases](../../releases) 下載最新的 `StillLink-x.y.z.dmg`，打開後把 StillLink 拖進「應用程式」。
 
 - 需要 macOS 14 以上，Apple 晶片與 Intel 都可以用。
-- 目前還沒有經過 Apple 公證，第一次打開會被擋下：
-  1. 到「應用程式」對 StillLink **按右鍵 → 打開**，再按一次「打開」。
-  2. 如果還是打不開：到 **系統設定 → 隱私權與安全性**，往下找到 StillLink，按「強制打開」。
-  3. 之後就能正常點兩下開啟。
+- 目前還沒有經過 Apple 公證，第一次打開會出現「未打開 StillLink」，先按「完成」（不要丟到垃圾桶），再用下面任一種方式允許一次：
+  - **系統設定**：系統設定 → 隱私權與安全性 → 往下找到「已阻擋 StillLink…」→ 按「強制打開」→ 輸入密碼確認。
+  - **終端機**：貼上這行按 Enter，再重新打開 StillLink：
+    ```sh
+    xattr -dr com.apple.quarantine /Applications/StillLink.app
+    ```
+- DMG 裡也有一份 `安裝說明.txt`，步驟寫得更細。
 
 ## 功能
 
