@@ -1,7 +1,5 @@
 # StillLink
 
-給命理師用的紫微斗數排盤工具。原生 macOS app（SwiftUI），盤面照文墨天機的排法，外框是 Claude／Codex 式的側欄介面。之後會延伸到 iOS 與 Android。
-
 ![StillLink 畫面](docs/screenshot.png)
 
 ## 下載
