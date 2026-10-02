@@ -136,6 +136,23 @@ struct StarNotesPage: View {
     @State private var draft = StarNote()
     @State private var search = ""
 
+    /// 每顆星一個小圖示（照星的意思：紫微皇帝＝皇冠、太陽＝太陽…）；雙星用兩顆星的圖示
+    static let starIcon: [String: String] = [
+        "紫微": "crown", "天機": "lightbulb", "太陽": "sun.max", "武曲": "dollarsign.circle", "天同": "cup.and.saucer",
+        "廉貞": "checklist", "天府": "building.columns", "太陰": "moon", "貪狼": "heart", "巨門": "bubble.left",
+        "天相": "checkmark.seal", "天梁": "book", "七殺": "bolt", "破軍": "hammer",
+        "左輔": "figure.stand", "右弼": "figure.stand.dress", "文昌": "pencil", "文曲": "music.note",
+        "天魁": "shield", "天鉞": "shield.lefthalf.filled", "祿存": "plus.circle", "天馬": "figure.run",
+        "擎羊": "scissors", "陀羅": "tortoise", "火星": "flame", "鈴星": "bell", "地空": "circle.dashed", "地劫": "minus.circle",
+        "紅鸞": "heart.circle", "天喜": "gift", "天姚": "wineglass", "天刑": "exclamationmark.shield", "咸池": "drop",
+        "化祿": "leaf", "化權": "bolt.circle", "化科": "star", "化忌": "exclamationmark.triangle",
+    ]
+    static func icons(_ key: String) -> [String] {
+        if let i = starIcon[key] { return [i] }
+        if key.count == 4 { return [String(key.prefix(2)), String(key.suffix(2))].compactMap { starIcon[$0] } }
+        return []
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             list.frame(width: 280)
@@ -167,6 +184,10 @@ struct StarNotesPage: View {
                             ForEach(items, id: \.self) { k in
                                 Button { pick(k) } label: {
                                     HStack {
+                                        HStack(spacing: 1) {
+                                            ForEach(Self.icons(k), id: \.self) { Image(systemName: $0) }
+                                        }
+                                        .font(Font.zCaption).foregroundStyle(Color.zText).frame(width: 26)
                                         Text(k).font(Font.zBody).foregroundStyle(Color.zText)
                                         Spacer()
                                         if notes.isCustom(k) { Circle().fill(Color.zAccent).frame(width: 6, height: 6).help("已自己改寫") }
