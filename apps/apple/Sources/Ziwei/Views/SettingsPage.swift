@@ -148,6 +148,7 @@ struct SettingsPage: View {
             toggle("顯示神煞", "博士、將前、歲前十二神", s.showGods)
             toggle("打開命盤時預設顯示大限", "開啟後打開命盤會停在目前大限並選到大命；關閉則顯示本命", s.openWithDecade)
             toggle("小限疊盤", "選流年時，一起疊上小限宮名與小限四化", s.showMinor)
+            toggle("顯示小限四化", "小限疊盤時，星曜旁的青色四化方塊；關掉只留小限宮名", s.showMinorMutagen)
             toggle("顯示流年／小限歲數", "每宮的流年與小限虛歲", s.showAges)
             toggle("顯示身宮", "身宮標記", s.showBody)
             toggle("顯示來因宮", "生年天干所在的宮位", s.showLaiyin)

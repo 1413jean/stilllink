@@ -22,6 +22,7 @@ struct ZSettings: Codable, Equatable {
     var showGods = true         // 博士／將前／歲前
     var showAges = true         // 流年／小限歲數
     var showMinor = true        // 小限疊盤（選流年時一起顯示）
+    var showMinorMutagen = true // 小限四化方塊（小限疊盤開著時才有作用）
     var openWithDecade = false  // 打開命盤時預設停在大限（關閉＝本命）
     var showBody = true         // 身宮
     var showLaiyin = true       // 來因宮

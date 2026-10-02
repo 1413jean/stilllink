@@ -321,7 +321,7 @@ extension PalaceCell {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, fly: flyStars[s.name],
 
-                           minor: minor ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
+                           minor: minor && settings.showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                            scopes: (1...max(1, level)).compactMap { lv in
                                level >= lv ? ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) } : nil
                            })
