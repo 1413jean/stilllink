@@ -26,19 +26,23 @@ struct ChartPager: View {
                             .id(i)
                     }
                 }
-                if #available(macOS 14, *) {
+                // 不要用 scrollDisabled：它會連裡面的捲動（整頁往下捲、運限表）一起關掉
+                // 驗證用：ZIWEI_FORCE13=1 在新系統上也走 macOS 13 的做法
+                if #available(macOS 14, *), ProcessInfo.processInfo.environment["ZIWEI_FORCE13"] == nil {
                     ScrollView(.horizontal) { row.scrollTargetLayout() }
                         .scrollTargetBehavior(.paging)
                         .scrollPosition(id: $page)
                         .scrollIndicators(.never)
-                        .scrollDisabled(extras.isEmpty)
                 } else {
-                    // macOS 13：沒有整頁吸附，改成點頁籤滑過去（不能用手勢拖，免得停在兩頁中間）
-                    ScrollViewReader { proxy in
-                        ScrollView(.horizontal) { row }
-                            .scrollIndicators(.never)
-                            .scrollDisabled(true)
-                            .onChange(of: page) { p in withAnimation(Motion.base) { proxy.scrollTo(p ?? 0, anchor: .leading) } }
+                    // macOS 13：沒有整頁吸附 → 不用橫向捲動，所有頁疊在一起只顯示目前那頁，點頁籤切換（每頁狀態都保留）
+                    ZStack {
+                        ForEach(Array(pages.enumerated()), id: \.element.id) { i, p in
+                            ChartScreen(person: p, level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
+                                .padding(.top, top)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .opacity(i == current ? 1 : 0)
+                                .allowsHitTesting(i == current)
+                        }
                     }
                 }
             }
