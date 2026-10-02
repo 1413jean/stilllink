@@ -1,8 +1,8 @@
 // DMG 視窗背景：暖白底、圓潤的主色箭頭、幾顆小星星、底下一行提示
-// 用法：swift scripts/make-dmg-background.swift <輸出資料夾>  → background.png（660×420）＋ background@2x.png
+// 用法：swift scripts/make-dmg-background.swift <輸出資料夾>  → background.png（660×540）＋ background@2x.png
 import AppKit
 
-let W: CGFloat = 660, H: CGFloat = 420
+let W: CGFloat = 660, H: CGFloat = 540
 let out = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "."
 
 func rgb(_ hex: UInt32, _ a: CGFloat = 1) -> NSColor {
@@ -33,7 +33,7 @@ func render(scale: CGFloat, to path: String) {
     NSRect(x: 0, y: 0, width: W, height: H).fill()
 
     // 箭頭：兩個圖示中間（Finder 座標 y 由上往下，這裡由下往上）
-    let midY = H - 200
+    let midY = H - 170
     let arrow = NSBezierPath()
     arrow.move(to: CGPoint(x: 290, y: midY))
     arrow.line(to: CGPoint(x: 362, y: midY))
@@ -60,7 +60,11 @@ func render(scale: CGFloat, to path: String) {
         .foregroundColor: rgb(0x9C9A93),
         .paragraphStyle: para,
     ]
-    NSString(string: "把 StillLink 拖到 Applications 就安裝好了").draw(in: NSRect(x: 0, y: 46, width: W, height: 20), withAttributes: attrs)
+    NSString(string: "把 StillLink 拖到 Applications 就安裝好了").draw(in: NSRect(x: 0, y: H - 290, width: W, height: 20), withAttributes: attrs)
+    // 分隔線＋安裝說明提示（說明檔放在下面）
+    rgb(0xE4DED3).setFill()
+    NSRect(x: 60, y: H - 305, width: W - 120, height: 1).fill()
+    NSString(string: "第一次打開被擋下？請看這份說明").draw(in: NSRect(x: 0, y: H - 340, width: W, height: 20), withAttributes: attrs)
 
     NSGraphicsContext.restoreGraphicsState()
     try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: path))

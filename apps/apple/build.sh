@@ -68,7 +68,7 @@ if [ "$1" = "dmg" ]; then
   DMG=build/StillLink-$VER.dmg
   rm -f "$DMG"
   $DMGENV/bin/dmgbuild -s scripts/dmg-settings.py \
-    -D app="$APP" -D bg=$BG/background.png -D icon="$APP/Contents/Resources/AppIcon.icns" \
+    -D app="$APP" -D bg=$BG/background.png -D icon="$APP/Contents/Resources/AppIcon.icns" -D guide="Resources/安裝說明.txt" \
     "StillLink" "$DMG" >/dev/null
   swift scripts/set-file-icon.swift "$APP/Contents/Resources/AppIcon.icns" "$DMG" >/dev/null
   echo "dmg $DMG"
