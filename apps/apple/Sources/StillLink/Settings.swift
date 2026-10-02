@@ -25,7 +25,6 @@ struct ZSettings: Codable, Equatable {
     var showMinorOverlay = false // 小限疊盤（預設關閉；流年列會標出小限宮）。換新名字讓舊設定也變成關
     var showMinorMutagen = true // 小限四化方塊（小限疊盤開著時才有作用）
     var showFlowStars = true    // 流曜：大限、流年的祿羊陀魁鉞昌曲鸞喜馬（大祿、年鸞…）
-    var starColors: [String: String] = [:]   // 星曜類別 → 顏色（ZW.StarClass → ZW.Tone），沒設的用預設
     var openWithDecade = false  // 打開命盤時預設停在大限（關閉＝本命）
     var showBody = true         // 身宮
     var showLaiyin = true       // 來因宮
@@ -103,7 +102,7 @@ extension ZSettings {
     }
 
     /// 這一類星曜目前的顏色
-    func tone(_ c: ZW.StarClass) -> ZW.Tone { starColors[c.rawValue].flatMap(ZW.Tone.init(rawValue:)) ?? c.defaultTone }
+    func tone(_ c: ZW.StarClass) -> ZW.Tone { c.defaultTone }   // 顏色固定，不開放設定
     func starTone(type: String) -> ZW.Tone { tone(ZW.StarClass(type: type)) }
 
     /// 打開命盤時的預設運限層級

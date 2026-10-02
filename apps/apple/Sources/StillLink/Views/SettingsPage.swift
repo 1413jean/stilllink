@@ -160,15 +160,14 @@ struct SettingsPage: View {
             toggle("顯示長生十二神", "長生、沐浴、冠帶…養，寫在每宮天干地支上面", s.showChangsheng)
             toggle("顯示流曜", "選到大限、流年時，宮內加上大祿、大羊、年鸞、年喜…這些流曜", s.showFlowStars, last: true)
             Text("星曜顏色").font(Font.zBodyStrong).foregroundStyle(Color.zText).padding(.top, 18)
-            note("五類星曜各用一種顏色，一眼分出主星、輔星、吉星、凶星、雜曜。")
+            note("盤面上五類星曜各用一種顏色，一眼分出主星、輔星、吉星、凶星、雜曜。")
             ForEach(ZW.StarClass.allCases, id: \.self) { c in
                 row(c.label, c.members, last: c == .misc) {
                     HStack(spacing: 10) {
                         Spacer()
                         Text(c == .major ? "紫微" : c == .aux ? "右弼" : c == .lucky ? "祿存" : c == .tough ? "擎羊" : "紅鸞")
                             .font(ChartType.font(15, .medium)).foregroundStyle(store.settings.tone(c).color)
-                        ZMenuField(options: ZW.Tone.allCases.map(\.label), selection: starColorBinding(c))
-                            .frame(width: 96)
+                        Text(store.settings.tone(c).label).font(Font.zCallout).foregroundStyle(Color.zText3)
                     }
                 }
             }
@@ -363,11 +362,6 @@ struct SettingsPage: View {
     private func saveName() {
         let t = nameDraft.trimmingCharacters(in: .whitespaces)
         if !t.isEmpty && t != store.userName { store.renameUser(t); Toast.show("已改名為「\(t)」") }
-    }
-
-    private func starColorBinding(_ c: ZW.StarClass) -> Binding<String> {
-        Binding(get: { store.settings.tone(c).label },
-                set: { n in if let t = ZW.Tone.allCases.first(where: { $0.label == n }) { store.settings.starColors[c.rawValue] = t.rawValue } })
     }
 
     private func cueBinding(_ e: Sound.Event) -> Binding<String> {
