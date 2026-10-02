@@ -136,7 +136,7 @@ struct StarNotesPage: View {
     @State private var draft = StarNote()
     @State private var search = ""
 
-    /// 每顆星一個小圖示（照星的意思：紫微皇帝＝皇冠、太陽＝太陽…）；雙星用兩顆星的圖示
+    /// 每顆星一個小圖示（照星的意思：紫微皇帝＝皇冠、太陽＝太陽…）；雙星組合統一用 sparkles
     static let starIcon: [String: String] = [
         "紫微": "crown", "天機": "lightbulb", "太陽": "sun.max", "武曲": "dollarsign.circle", "天同": "cup.and.saucer",
         "廉貞": "checklist", "天府": "building.columns", "太陰": "moon", "貪狼": "heart", "巨門": "bubble.left",
@@ -149,7 +149,7 @@ struct StarNotesPage: View {
     ]
     static func icons(_ key: String) -> [String] {
         if let i = starIcon[key] { return [i] }
-        if key.count == 4 { return [String(key.prefix(2)), String(key.suffix(2))].compactMap { starIcon[$0] } }
+        if key.count == 4 { return ["sparkles"] }   // 雙星組合：一個圖示就好
         return []
     }
 
@@ -184,10 +184,8 @@ struct StarNotesPage: View {
                             ForEach(items, id: \.self) { k in
                                 Button { pick(k) } label: {
                                     HStack {
-                                        HStack(spacing: 1) {
-                                            ForEach(Self.icons(k), id: \.self) { Image(systemName: $0) }
-                                        }
-                                        .font(Font.zCaption).foregroundStyle(Color.zText).frame(width: 26)
+                                        Image(systemName: Self.icons(k).first ?? "circle")
+                                            .font(Font.zCaption).foregroundStyle(Color.zText).frame(width: 18)
                                         Text(k).font(Font.zBody).foregroundStyle(Color.zText)
                                         Spacer()
                                         if notes.isCustom(k) { Circle().fill(Color.zAccent).frame(width: 6, height: 6).help("已自己改寫") }
