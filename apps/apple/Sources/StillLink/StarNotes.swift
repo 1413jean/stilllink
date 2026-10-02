@@ -138,7 +138,7 @@ struct StarNotesPage: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            list.frame(width: 220)
+            list.frame(width: 280)
             Rectangle().fill(Color.zLine).frame(width: 0.5)
             editor.frame(maxWidth: .infinity)
         }
@@ -150,10 +150,10 @@ struct StarNotesPage: View {
     private var list: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").font(Font.zCaption).foregroundStyle(Color.zText3)
-                TextField("搜尋星曜", text: $search).textFieldStyle(.plain).font(Font.zCallout)
+                Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText3)
+                TextField("搜尋星曜", text: $search).textFieldStyle(.plain).font(Font.zBody)
             }
-            .padding(.horizontal, 10).frame(height: 32)
+            .padding(.horizontal, 12).frame(height: 40)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.zLine))
             .padding(12)
@@ -167,11 +167,11 @@ struct StarNotesPage: View {
                             ForEach(items, id: \.self) { k in
                                 Button { pick(k) } label: {
                                     HStack {
-                                        Text(k).font(Font.zCallout).foregroundStyle(Color.zText)
+                                        Text(k).font(Font.zBody).foregroundStyle(Color.zText)
                                         Spacer()
                                         if notes.isCustom(k) { Circle().fill(Color.zAccent).frame(width: 6, height: 6).help("已自己改寫") }
                                     }
-                                    .padding(.horizontal, 10).frame(height: 30)
+                                    .padding(.horizontal, 12).frame(height: 38)
                                     .background(RoundedRectangle(cornerRadius: 7).fill(k == key ? Color.zHover : .clear))
                                     .contentShape(Rectangle())
                                 }
@@ -214,9 +214,9 @@ struct StarNotesPage: View {
                     .padding(.bottom, 8)
                 }
             }
-            .frame(maxWidth: 680, alignment: .leading)
-            .padding(.horizontal, 32).padding(.vertical, 20)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: 760, alignment: .leading)
+            .padding(.horizontal, 28).padding(.vertical, 20)
+            .frame(maxWidth: .infinity, alignment: .leading)   // 貼著左邊列表，不置中
         }
     }
 
