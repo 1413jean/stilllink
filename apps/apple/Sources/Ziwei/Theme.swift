@@ -91,6 +91,7 @@ extension Color {
 
 extension Font {
     static let zDisplay = Font.system(size: 32, weight: .medium)        // 首頁大標
+    static let zBrand = Font.system(size: 15, weight: .semibold)        // 側欄頂端產品名
     static let zTitle = Font.system(size: 20, weight: .semibold)        // 彈窗標題
     static let zHeadline = Font.system(size: 14, weight: .medium)       // 卡片內人名
     static let zInput = Font.system(size: 14)                           // 表單輸入框

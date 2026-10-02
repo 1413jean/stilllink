@@ -384,6 +384,8 @@ private struct StarColumn: View {
 
 private struct CenterInfo: View {
     @Environment(\.zSettings) private var settings
+    @AppStorage("hideBirth") private var hideBirth = false
+    private func mask(_ s: String) -> String { hideBirth ? "••••••" : s }
     let person: Person
     let model: ChartModel
     let selected: Int
@@ -413,12 +415,12 @@ private struct CenterInfo: View {
                 Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 1) {
                     GridRow { label("姓名"); Text("\(person.name)　　\(yang ? "陽" : "陰")\(person.gender.rawValue)　\(chart.fiveElementsClass)") }
                     if let ts = person.trueSolar {
-                        GridRow { label("真太陽時"); Text(ts) }
-                        GridRow { label("鐘錶時間"); Text(person.clock ?? "") }
+                        GridRow { label("真太陽時"); Text(mask(ts)) }
+                        GridRow { label("鐘錶時間"); Text(mask(person.clock ?? "")) }
                     } else {
-                        GridRow { label("國曆"); Text("\(chart.solarDate) \(ZW.hours[person.hour])時（\(chart.timeRange)）") }
+                        GridRow { label("國曆"); Text(mask("\(chart.solarDate) \(ZW.hours[person.hour])時（\(chart.timeRange)）")) }
                     }
-                    GridRow { label("農曆"); Text("\(chart.lunarDate) \(chart.time)") }
+                    GridRow { label("農曆"); Text(mask("\(chart.lunarDate) \(chart.time)")) }
                     GridRow { label("命主"); Text("\(chart.soul)　身主: \(chart.body)　子斗: \(ziDou)") }
                 }
                 .font(ChartType.font(ChartType.centerBody(fs)))

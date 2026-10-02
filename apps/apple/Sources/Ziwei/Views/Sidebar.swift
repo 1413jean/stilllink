@@ -11,11 +11,56 @@ struct Sidebar: View {
     @State private var renaming: Person?
     @State private var newName = ""
     @FocusState private var searchFocused: Bool
+    /// 搜尋先關掉（Jean：先不用到），要打開改成 true
+    static let searchEnabled = false
+    @State private var brandHover = false
+    @State private var searchHover = false
 
     private var q: String { search.trimmingCharacters(in: .whitespaces) }
 
     var body: some View {
         VStack(spacing: 0) {
+            // 側欄頂端：產品名（點開是選單）＋右邊搜尋，像 Codex
+            HStack(spacing: 4) {
+                Menu {
+                    Button("個人檔案…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
+                    Button("帳號與同步…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.account) }
+                    Divider()
+                    Button("設定…") { NotificationCenter.default.post(name: .openSettings, object: nil) }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("StillLink").font(Font.zBrand).foregroundStyle(Color.zText)
+                        Image(systemName: "chevron.down").font(Font.zMicroStrong).foregroundStyle(Color.zText3)
+                    }
+                    .padding(.horizontal, 8).frame(height: 30)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(brandHover ? Color.zHover : .clear))
+                    .contentShape(Rectangle())
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .onHover { brandHover = $0 }
+                Spacer()
+                if Self.searchEnabled {
+                Button {
+                    if searching { searching = false; search = "" }
+                    else { searching = true; DispatchQueue.main.async { searchFocused = true } }
+                } label: {
+                    Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(searching ? Color.zText : Color.zText2)
+                        .frame(width: 30, height: 30)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(searching || searchHover ? Color.zHover : .clear))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPressStyle())
+                .onHover { searchHover = $0 }
+                .help("搜尋 ⌘F")
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
                     NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { route = .home }
@@ -47,11 +92,6 @@ struct Sidebar: View {
                         .padding(.horizontal, 10)
                         .frame(height: 30)
                         .background(RoundedRectangle(cornerRadius: 8).fill(Color.zSel))
-                    } else {
-                        NavRow(icon: "magnifyingglass", title: "搜尋", shortcut: "⌘F") {
-                            searching = true
-                            DispatchQueue.main.async { searchFocused = true }
-                        }
                     }
 
                     let pinned = store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID }
@@ -110,6 +150,7 @@ struct Sidebar: View {
         .background(
             Button("") { searching = true; DispatchQueue.main.async { searchFocused = true } }
                 .keyboardShortcut("f").hidden()
+                .disabled(!Self.searchEnabled)
         )
     }
 

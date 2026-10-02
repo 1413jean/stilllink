@@ -13,7 +13,7 @@ struct ZiweiApp: App {
     @StateObject private var store = Store()
 
     var body: some Scene {
-        WindowGroup("紫微") {
+        WindowGroup("StillLink") {
             RootView()
                 .environmentObject(store)
                 .preferredColorScheme(store.appearance.scheme)

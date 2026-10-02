@@ -1,9 +1,9 @@
 #!/bin/zsh
-# 編譯並組成 紫微.app（原生 SwiftUI，沒有 WebView）
+# 編譯並組成 StillLink.app（原生 SwiftUI，沒有 WebView）
 set -e
 cd "$(dirname "$0")"
 swift build -c release
-APP=build/紫微.app
+APP=build/StillLink.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/Ziwei "$APP/Contents/MacOS/Ziwei"
@@ -22,8 +22,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>紫微</string>
-  <key>CFBundleDisplayName</key><string>紫微</string>
+  <key>CFBundleName</key><string>StillLink</string>
+  <key>CFBundleDisplayName</key><string>StillLink</string>
   <key>CFBundleIdentifier</key><string>com.jeanui.ziwei</string>
   <key>CFBundleExecutable</key><string>Ziwei</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
@@ -41,9 +41,11 @@ echo "built $APP"
 
 # ./build.sh install → 裝到「應用程式」資料夾
 if [ "$1" = "install" ]; then
+  osascript -e 'quit app "StillLink"' 2>/dev/null || true
   osascript -e 'quit app "紫微"' 2>/dev/null || true
   sleep 1
-  rm -rf "/Applications/紫微.app"
-  cp -R "$APP" "/Applications/紫微.app"
-  echo "installed /Applications/紫微.app"
+  rm -rf "/Applications/紫微.app"          # 舊名稱
+  rm -rf "/Applications/StillLink.app"
+  cp -R "$APP" "/Applications/StillLink.app"
+  echo "installed /Applications/StillLink.app"
 fi

@@ -33,13 +33,19 @@ struct InfoPanel: View {
     @FocusState private var draftFocused: Bool
 
     @AppStorage("nowGender") private var nowGender: Gender = .male
+    /// 隱藏生辰（幫客人看盤時不讓旁人看到出生日期時間）；全部命盤共用
+    @AppStorage("hideBirth") private var hideBirth = false
+    private func mask(_ s: String) -> String { hideBirth ? "••••••" : s }
     private var current: Person { store.people.first { $0.id == person.id } ?? person }
     private var isNow: Bool { person.id == NowChart.id }
     private var isTemp: Bool { !isNow && !store.people.contains { $0.id == person.id } }
 
     var body: some View {
         VStack(spacing: 12) {
-                card("命主資料", action: isNow ? nil : ("square.and.pencil", { NotificationCenter.default.post(name: .editChart, object: person.id) })) {
+                card("命主資料",
+                     action: isNow ? nil : ("square.and.pencil", { NotificationCenter.default.post(name: .editChart, object: person.id) }),
+                     actions: [(hideBirth ? "eye.slash" : "eye", hideBirth ? "顯示生辰" : "隱藏生辰",
+                                { withAnimation(Motion.fast) { hideBirth.toggle() } })]) {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(spacing: 10) {
                             AvatarButton(name: Binding(
@@ -55,13 +61,13 @@ struct InfoPanel: View {
                             }
                         }
                         .padding(.bottom, 4)
-                        row("calendar", "國曆", chart?.solarDate ?? current.solar)
-                        row("moon", "農曆", chart.map { "\($0.lunarDate) \($0.time)" } ?? "")
+                        row("calendar", "國曆", mask(chart?.solarDate ?? current.solar))
+                        row("moon", "農曆", mask(chart.map { "\($0.lunarDate) \($0.time)" } ?? ""))
                         if let ts = current.trueSolar {
-                            row("sun.max", "真太陽時", ts)
-                            row("clock", "鐘錶時間", current.clock ?? "")
+                            row("sun.max", "真太陽時", mask(ts))
+                            row("clock", "鐘錶時間", mask(current.clock ?? ""))
                         } else {
-                            row("clock", "時辰", ZW.hours[current.hour] + "時")
+                            row("clock", "時辰", mask(ZW.hours[current.hour] + "時"))
                         }
                         if let pl = current.place {
                             row("mappin.and.ellipse", "出生地", pl.name)
@@ -166,11 +172,17 @@ struct InfoPanel: View {
 
     private struct PreviewItem: Identifiable { let name: String; var id: String { name } }
 
-    private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, @ViewBuilder _ content: () -> C) -> some View {
+    private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, actions: [(String, String, () -> Void)] = [],
+                               @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            HStack(spacing: 12) {
                 Text(title).font(Font.zCalloutStrong).foregroundStyle(Color.zText2)
                 Spacer()
+                ForEach(Array(actions.enumerated()), id: \.offset) { _, a in
+                    Button(action: a.2) { Image(systemName: a.0).font(Font.zCallout).foregroundStyle(Color.zText2) }
+                        .buttonStyle(.plain)
+                        .help(a.1)
+                }
                 if let action {
                     Button(action: action.1) { Image(systemName: action.0).font(Font.zCallout).foregroundStyle(Color.zText2) }
                         .buttonStyle(.plain)
