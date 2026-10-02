@@ -31,7 +31,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <dict>
   <key>CFBundleName</key><string>StillLink</string>
   <key>CFBundleDisplayName</key><string>StillLink</string>
-  <key>CFBundleIdentifier</key><string>com.jeanui.ziwei</string>
+  <key>CFBundleIdentifier</key><string>app.stilllink.mac</string>
   <key>CFBundleExecutable</key><string>Ziwei</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
@@ -57,15 +57,19 @@ if [ "$1" = "install" ]; then
   echo "installed /Applications/StillLink.app"
 fi
 
-# ./build.sh dmg → build/StillLink-<版本>.dmg（拖進「應用程式」的安裝畫面）
+# ./build.sh dmg → build/StillLink-<版本>.dmg（有背景、箭頭、App 圖示的安裝視窗）
 if [ "$1" = "dmg" ]; then
   VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
-  STAGE=.build/dmg
-  rm -rf $STAGE && mkdir -p $STAGE
-  cp -R "$APP" $STAGE/
-  ln -s /Applications $STAGE/Applications
+  # dmgbuild 裝在 .build 裡的 venv（第一次會自動建）
+  DMGENV=.build/dmgenv
+  [ -x $DMGENV/bin/dmgbuild ] || { python3.11 -m venv $DMGENV && $DMGENV/bin/pip install -q dmgbuild; }
+  BG=.build/dmg-bg && rm -rf $BG && mkdir -p $BG
+  swift scripts/make-dmg-background.swift $BG >/dev/null
   DMG=build/StillLink-$VER.dmg
   rm -f "$DMG"
-  hdiutil create -volname "StillLink $VER" -srcfolder $STAGE -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
+  $DMGENV/bin/dmgbuild -s scripts/dmg-settings.py \
+    -D app="$APP" -D bg=$BG/background.png -D icon="$APP/Contents/Resources/AppIcon.icns" \
+    "StillLink" "$DMG" >/dev/null
+  swift scripts/set-file-icon.swift "$APP/Contents/Resources/AppIcon.icns" "$DMG" >/dev/null
   echo "dmg $DMG"
 fi

@@ -13,7 +13,7 @@ struct SettingsPage: View {
     }
 
     enum Section: String, CaseIterable, Identifiable {
-        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀"
+        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀", about = "關於"
         var id: String { rawValue }
         var icon: String {
             switch self {
@@ -24,6 +24,7 @@ struct SettingsPage: View {
             case .display: "eye"
             case .feel: "speaker.wave.2"
             case .appearance: "circle.lefthalf.filled"
+            case .about: "info.circle"
             }
         }
     }
@@ -193,6 +194,24 @@ struct SettingsPage: View {
             row("主題", "淺色、深色或跟隨系統", last: true) {
                 ZSegmented(options: Appearance.allCases.map { ($0, $0.label) }, selection: $store.appearance)
             }
+        case .about:
+            title("關於")
+            HStack(spacing: 14) {
+                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 64, height: 64)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("StillLink").font(Font.zTitle).foregroundStyle(Color.zText)
+                    Text("版本 \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                        .font(Font.zCallout).foregroundStyle(Color.zText2)
+                }
+            }
+            .padding(.bottom, 14)
+            row("製作", "設計與開發") {
+                HStack { Spacer(); Text("Jean").font(Font.zBody).foregroundStyle(Color.zText) }
+            }
+            row("排盤計算", "開源紫微斗數引擎", last: true) {
+                HStack { Spacer(); Text("iztro（MIT License）").font(Font.zCallout).foregroundStyle(Color.zText2) }
+            }
+            note("Jean 是 UX/UI 設計師。原本常用的排盤軟體不能用了，就自己做了一個：盤面照傳統排法，看得清楚、操作簡單，方便幫人排盤、看盤。")
         }
     }
 

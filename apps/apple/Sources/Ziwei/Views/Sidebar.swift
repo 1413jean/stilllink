@@ -51,10 +51,10 @@ struct Sidebar: View {
                 VStack(alignment: .leading, spacing: 1) {
                     NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { route = .home }
                     if store.showSelfInSidebar {
-                        NavRow(icon: "person.crop.circle", title: store.me == nil ? "設定我的命盤" : store.userName,
+                        NavRow(icon: "person.crop.circle", title: store.me == nil ? "請填寫個人檔案" : store.userName,
                                selected: store.me.map { route == .person($0.id) } ?? false) {
                             if let me = store.me { route = .person(me.id) }
-                            else { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
+                            else { NotificationCenter.default.post(name: .newSelfChart, object: nil) }   // 還沒有個人檔案：先填，存好後就打開自己的命盤
                         }
                         .contextMenu {
                             Button("從側欄隱藏") { store.showSelfInSidebar = false; Toast.show("已隱藏，可在設定 → 個人檔案重新打開") }

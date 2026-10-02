@@ -95,16 +95,9 @@ final class Engine: @unchecked Sendable {
         }
     }
 
-    /// .app 內在 Contents/Resources；用 swift run 開發時往上找 Resources 資料夾
+    /// .app 內的 Contents/Resources（用 ./build.sh 組 app）
     static func resource(_ name: String, _ ext: String) -> URL? {
-        if let u = Bundle.main.url(forResource: name, withExtension: ext) { return u }
-        var dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-        for _ in 0..<5 {
-            let u = dir.appendingPathComponent("Resources/\(name).\(ext)")
-            if FileManager.default.fileExists(atPath: u.path) { return u }
-            dir.deleteLastPathComponent()
-        }
-        return nil
+        Bundle.main.url(forResource: name, withExtension: ext)
     }
 
     // 以下 _ 開頭的只能在 queue 上呼叫
