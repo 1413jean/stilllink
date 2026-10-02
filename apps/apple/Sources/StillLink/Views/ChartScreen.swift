@@ -91,6 +91,13 @@ struct ChartScreen: View {
             }
     }
 
+    /// 盤面上目前顯示的運限四化（跟盤面一樣最多三層）：給星曜筆記挑三方四正有四化的星
+    private var activeScopes: [(String, [String])] {
+        guard let model, shownLevel >= 1 else { return [] }
+        let names = ["大限", "流年", "流月", "流日", "流時"]
+        return (max(1, shownLevel - 2)...shownLevel).map { (names[$0 - 1], model.horo.scope($0).mutagen) }
+    }
+
     var body: some View {
         // 捲動區佔滿整個寬度（捲軸貼在視窗最右邊）；右側資訊卡固定浮在右上角，不跟著捲
         GeometryReader { geo in
@@ -154,7 +161,8 @@ struct ChartScreen: View {
             .overlay(alignment: .topTrailing) {
                 if showInfo {
                     ScrollView(showsIndicators: false) {
-                        InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace, width: CGFloat(panelW))
+                        InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace, width: CGFloat(panelW),
+                                  notesBirth: max(0, shownLevel - 2) == 0, notesScopes: activeScopes)
                             .padding(.top, 12)
                             .padding(.bottom, 96) // 底部留給右下角的快捷鈕
                             .padding(.horizontal, 16) // 留空間給卡片陰影

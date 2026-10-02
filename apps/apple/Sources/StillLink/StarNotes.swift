@@ -89,6 +89,20 @@ final class StarNotes: ObservableObject {
 struct StarNotesCard: View {
     let chart: Chart
     let index: Int
+    var includeBirth = true                    // 生年四化有沒有在顯示範圍（跟盤面一樣最多三層）
+    var scopes: [(String, [String])] = []      // 目前顯示的運限四化：（大限、流年…, 祿權科忌四顆星）
+
+    /// 對宮、三合只看有四化的星：星名 → 「生年祿・流年忌」
+    private func mutagenTags(_ p: Palace) -> [String: String] {
+        var out: [String: String] = [:]
+        for s in p.stars {
+            var t: [String] = []
+            if includeBirth, !s.mutagen.isEmpty { t.append("生年" + s.mutagen) }
+            for (label, list) in scopes { if let k = list.firstIndex(of: s.name), k < 4 { t.append(label + ["祿", "權", "科", "忌"][k]) } }
+            if !t.isEmpty { out[s.name] = t.joined(separator: "・") }
+        }
+        return out
+    }
 
     var body: some View {
         let sf = ZW.sanFang(index)   // [本宮, 三合, 三合, 對宮]
@@ -102,7 +116,7 @@ struct StarNotesCard: View {
                             .background(Capsule().fill(label == "本宮" ? Color.zAccent : Color.zText3))
                         Text(chart.palaces[i].name).font(Font.zCalloutStrong).foregroundStyle(Color.wmRed)
                     }
-                    PalaceNotes(palace: chart.palaces[i])
+                    PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]))
                 }
             }
         }
@@ -114,14 +128,15 @@ private struct PalaceNotes: View {
     @ObservedObject private var notes = StarNotes.shared
     @Environment(\.zSettings) private var settings
     let palace: Palace
+    var only: [String: String]? = nil   // 只列這些星（對宮、三合：有四化的星 → 四化標籤）
     @State private var expanded: Set<String> = []
 
     var body: some View {
         let pk = StarNotes.palaceKey(palace.name)
-        let list = notes.keys(for: palace)
+        let list = notes.keys(for: palace).filter { only == nil || only![$0.key] != nil }
         VStack(alignment: .leading, spacing: 8) {
             if list.isEmpty {
-                Text(palace.stars.isEmpty ? "空宮" : "沒有星曜筆記").font(Font.zCaption).foregroundStyle(Color.zText3)
+                Text(only != nil ? "沒有四化星" : palace.stars.isEmpty ? "空宮" : "沒有星曜筆記").font(Font.zCaption).foregroundStyle(Color.zText3)
             }
             ForEach(list, id: \.key) { item in
                 let n = notes.note(item.key)
@@ -129,7 +144,9 @@ private struct PalaceNotes: View {
                     HStack(spacing: 6) {
                         Text(item.key).font(Font.zBodyStrong)
                             .foregroundStyle(item.type == "mutagen" ? Color.zText : settings.starTone(type: item.type).color)
-                        if let first = n.summary.split(separator: "\n").first, first.count <= 12 {
+                        if let tag = only?[item.key] {
+                            Text(tag).font(Font.zCaptionStrong).foregroundStyle(Color.zAccent)
+                        } else if let first = n.summary.split(separator: "\n").first, first.count <= 12 {
                             Text(first).font(Font.zCaption).foregroundStyle(Color.zText3)
                         }
                         Spacer(minLength: 0)

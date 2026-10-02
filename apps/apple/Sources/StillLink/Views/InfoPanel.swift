@@ -27,6 +27,8 @@ struct InfoPanel: View {
     @Binding var hepanYear: Int?
     var selectedPalace: Int? = nil
     var width: CGFloat = infoPanelWidth
+    var notesBirth = true                         // 星曜筆記：生年四化在顯示範圍內
+    var notesScopes: [(String, [String])] = []    // 星曜筆記：目前顯示的運限四化
     @State private var hepanDraft = ""
     @State private var preview: String?
     @State private var dropping = false
@@ -83,7 +85,7 @@ struct InfoPanel: View {
                 if let chart, let i = selectedPalace, i < chart.palaces.count {
                     card("星曜筆記 · \(chart.palaces[i].name)三方四正",
                          action: ("book.closed", { NotificationCenter.default.post(name: .openStarNotes, object: nil) })) {
-                        StarNotesCard(chart: chart, index: i).id(i)
+                        StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes).id(i)
                     }
                 }
 
