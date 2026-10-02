@@ -338,8 +338,9 @@ extension PalaceCell {
     }
 
     func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> some View {
-        // 流月以下最多顯示三層、不含生年與大限：流月＝流年～流月、流日＝流年～流日、流時＝流月～流時（設定可改回全部顯示）
-        let lowest = (level >= 3 && !settings.showOuterBelowMonth) ? max(2, level - 2) : 0
+        // 流月以下不含生年與大限：流月＝流年～流月、流日＝流年～流日、流時＝流月～流時（兩個設定可各自改回顯示）
+        let lowest = level < 3 || settings.showOuterBelowMonth ? 0
+            : (level == 5 && !settings.showYearAtHour ? 3 : 2)
         return FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, fly: flyStars[s.name],
