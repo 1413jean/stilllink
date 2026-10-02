@@ -135,18 +135,16 @@ struct UpdateToolbarButton: View {
     var body: some View {
         switch updater.state {
         case .available(let v):
+            // 系統原生的強調按鈕，染成主色（整顆工具列按鈕就是橘色）
             Button { updater.install() } label: {
                 HStack(spacing: 3) {   // icon 和文字靠近一點
                     Image(systemName: "arrow.down.circle.fill")
                     Text("更新")
                 }
-                .font(Font.zCaptionStrong).foregroundStyle(Color.zOnColor)
-                .padding(.horizontal, 8).frame(height: 22)
-                .background(Capsule().fill(Color.zAccent))
-                .contentShape(Capsule())
-                .padding(.horizontal, 4)   // 跟工具列玻璃膠囊的邊留距離
+                .font(Font.zCaptionStrong)
             }
-            .buttonStyle(PressStyle())
+            .buttonStyle(.borderedProminent)
+            .tint(Color.zAccent)
             .help("更新到 \(v)，完成後會自動重新打開")
         case .downloading(let p):
             chip { Text(p.map { "更新中 \(Int($0 * 100))%" } ?? "更新中…").monospacedDigit() }
