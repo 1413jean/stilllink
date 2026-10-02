@@ -1,6 +1,6 @@
 # StillLink
 
-![StillLink 畫面](docs/screenshot.png)
+![StillLink 畫面](docs/screenshot.jpg)
 
 ## 下載
 
