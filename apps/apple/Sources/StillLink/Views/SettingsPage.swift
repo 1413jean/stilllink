@@ -256,9 +256,12 @@ struct SettingsPage: View {
             row("製作", "設計與開發") {
                 HStack { Spacer(); Text("Jean").font(Font.zBody).foregroundStyle(Color.zText) }
             }
-            row("排盤計算", "開源紫微斗數引擎", last: true) {
+            row("排盤計算", "開源紫微斗數引擎") {
                 HStack { Spacer(); Text("iztro（MIT License）").font(Font.zCallout).foregroundStyle(Color.zText2) }
             }
+            row("隱私權政策", "資料只存在你的 Mac，不會上傳") { legalButton("privacy") }
+            row("使用條款", "使用 StillLink 前請先閱讀") { legalButton("terms") }
+            row("刪除資料", "如何清空或完整移除 App 與資料", last: true) { legalButton("delete-account") }
         }
     }
 
@@ -272,6 +275,19 @@ struct SettingsPage: View {
         case .downloading(let p): p.map { "下載中 \(Int($0 * 100))%" } ?? "下載中…"
         case .installing: "安裝中，完成後會自動重新打開"
         case .failed(let why): "無法檢查：\(why)"
+        }
+    }
+
+    /// 用瀏覽器打開 App 內附的說明頁（離線也能看）
+    private func legalButton(_ name: String) -> some View {
+        HStack {
+            Spacer()
+            Button {
+                if let url = Bundle.main.url(forResource: name, withExtension: "html", subdirectory: "legal") {
+                    NSWorkspace.shared.open(url)
+                }
+            } label: { Label("打開", systemImage: "arrow.up.right.square") }
+            .buttonStyle(ZSecondaryButton(small: true))
         }
     }
 

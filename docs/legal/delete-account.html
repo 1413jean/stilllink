@@ -3,176 +3,77 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
-<title>刪除帳號與資料｜StillLink</title>
-<meta name="description" content="StillLink 沒有帳號；本頁說明如何刪除存在你 Mac 上的所有 StillLink 資料。">
-<style>
-  :root {
-    --bg: #FAF9F6;
-    --text: #1C1B19;
-    --muted: #6B6862;
-    --line: #E6E3DC;
-    --surface: #F2F0EA;
-    --accent: #D96B43;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1C1B19;
-      --text: #ECEAE4;
-      --muted: #A29F97;
-      --line: #34322E;
-      --surface: #252421;
-      --accent: #E8865F;
-    }
-  }
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-    font-size: 16px;
-    line-height: 1.8;
-  }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
-  header.site { border-bottom: 1px solid var(--line); }
-  header.site .wrap, footer.site .wrap {
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
-  }
-  header.site .wrap { min-height: 56px; }
-  .brand { font-weight: 600; color: var(--text); text-decoration: none; letter-spacing: .02em; }
-  .brand span { color: var(--accent); }
-  nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
-  nav a {
-    display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px;
-    color: var(--muted); text-decoration: none; font-size: 14px; border-radius: 8px;
-  }
-  nav a:hover { color: var(--text); background: var(--surface); }
-  nav a[aria-current="page"] { color: var(--accent); font-weight: 600; }
-  main { padding: 40px 0 56px; }
-  h1 { font-size: 28px; line-height: 1.35; margin: 0 0 8px; }
-  .meta { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
-  .summary {
-    background: var(--surface); border-left: 3px solid var(--accent);
-    border-radius: 8px; padding: 16px 20px; margin: 0 0 32px;
-  }
-  .summary p { margin: 0; }
-  .warn { background: var(--surface); border-radius: 8px; padding: 12px 16px; }
-  section { padding: 24px 0; border-top: 1px solid var(--line); }
-  h2 { font-size: 19px; line-height: 1.4; margin: 0 0 12px; }
-  h2 .no { color: var(--accent); margin-right: 6px; font-variant-numeric: tabular-nums; }
-  p { margin: 0 0 12px; }
-  ul, ol { margin: 0 0 12px; padding-left: 1.4em; }
-  li { margin: 4px 0; }
-  li > ul { margin: 6px 0 0; }
-  a { color: var(--accent); text-underline-offset: 3px; }
-  strong { font-weight: 600; }
-  code {
-    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
-    padding: 1px 5px; word-break: break-all;
-  }
-  footer.site { border-top: 1px solid var(--line); padding: 16px 0 32px; color: var(--muted); font-size: 14px; }
-  @media (max-width: 480px) {
-    h1 { font-size: 24px; }
-    main { padding: 28px 0 40px; }
-    nav a { padding: 0 8px; }
-  }
-</style>
+<title>刪除資料 · StillLink</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="site">
-  <div class="wrap">
-    <a class="brand" href="privacy.html">Still<span>Link</span></a>
-    <nav aria-label="法律文件">
-      <ul>
-        <li><a href="privacy.html">隱私權政策</a></li>
-        <li><a href="terms.html">使用條款</a></li>
-        <li><a href="delete-account.html" aria-current="page">刪除資料</a></li>
-      </ul>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="star">✦</span>StillLink</div>
+    <nav>
+      <a href="privacy.html">隱私權政策</a>
+      <a href="terms.html">使用條款</a>
+      <a class="on" href="delete-account.html">刪除資料</a>
     </nav>
+  </header>
+
+  <h1>刪除資料</h1>
+  <p class="date">最後更新：2026 年 10 月 2 日</p>
+
+  <div class="hero">
+    <p>一句話：<strong>StillLink 沒有帳號，所以沒有帳號要刪。</strong>所有資料都在你的 Mac 上，你可以自己全部清掉。</p>
   </div>
-</header>
 
-<main>
-  <div class="wrap">
-    <h1>刪除帳號與資料</h1>
-    <p class="meta">生效日期：2026 年 10 月 2 日　·　適用於 StillLink for macOS（含 StillLink Beta）</p>
-
-    <div class="summary">
-      <p><strong>StillLink 沒有帳號，所以沒有帳號需要刪除。</strong>你的所有資料都只存在你自己的 Mac 上，開發者手上沒有任何副本。要刪除資料，照下面任一種方式操作即可。</p>
-    </div>
-
-    <section id="in-app">
-      <h2><span class="no">1.</span>在 App 內清空所有資料</h2>
-      <ol>
-        <li>打開 StillLink。</li>
-        <li>前往 <strong>設定 → 資料</strong>。</li>
-        <li>點選 <strong>清空所有資料</strong>，並確認。</li>
-      </ol>
-      <p class="warn"><strong>清空後立即生效，無法復原。</strong>如果之後還想保留這些資料，請先匯出 <code>.stilllink</code> 備份檔。</p>
-    </section>
-
-    <section id="uninstall">
-      <h2><span class="no">2.</span>完整移除 App 與資料</h2>
-      <p>如果你想把 StillLink 從 Mac 上完全移除：</p>
-      <ol>
-        <li>結束 StillLink。</li>
-        <li>把「應用程式」資料夾中的 <strong>StillLink.app</strong> 拖到垃圾桶。</li>
-        <li>在 Finder 選單列選 <strong>前往 → 前往檔案夾⋯</strong>（<code>⇧⌘G</code>），依序前往並刪除：
-          <ul>
-            <li>資料夾：<code>~/Library/Application Support/StillLink</code></li>
-            <li>測試版資料夾（若有使用）：<code>~/Library/Application Support/StillLink Beta</code></li>
-            <li>偏好設定：<code>~/Library/Preferences/app.stilllink.mac.plist</code></li>
-          </ul>
-        </li>
-        <li>清空垃圾桶。</li>
-      </ol>
-    </section>
-
-    <section id="what">
-      <h2><span class="no">3.</span>會刪除的資料</h2>
-      <ul>
-        <li>所有命盤，包括姓名、出生日期、出生時間、出生地</li>
-        <li>筆記</li>
-        <li>照片與頭像</li>
-        <li>App 設定</li>
-      </ul>
-    </section>
-
-    <section id="kept">
-      <h2><span class="no">4.</span>不會被刪除的資料</h2>
-      <ul>
-        <li><strong>你自己匯出的備份檔</strong>（<code>.stilllink</code>）：這些檔案在你選擇的位置，App 不會去動它們。如果也要刪除，請自行找到並刪除，包括你放在外接硬碟或雲端硬碟上的副本。</li>
-        <li><strong>GitHub 端的紀錄</strong>：App 檢查更新時，GitHub 會收到標準的請求資訊（例如 IP 位址與 App 版本），由 GitHub 依其 <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">隱私權聲明</a> 處理。這部分不包含你在 App 中輸入的任何內容。</li>
-      </ul>
-      <p>除此之外，開發者沒有保存你的任何資料，因此也沒有其他需要申請刪除的資料。</p>
-    </section>
-
-    <section id="future">
-      <h2><span class="no">5.</span>如果未來加入帳號</h2>
-      <p>StillLink 未來可能加入「使用 Apple 登入」或「使用 Google 登入」。若加入帳號功能，本頁會在功能上線前更新，說明如何刪除帳號，以及帳號刪除後哪些資料會被移除。</p>
-    </section>
-
-    <section id="contact">
-      <h2><span class="no">6.</span>需要協助</h2>
-      <p>操作上遇到問題，歡迎來信：[聯絡信箱]。也可以參考 <a href="privacy.html">隱私權政策</a>，了解資料如何儲存。</p>
-    </section>
+  <div class="card">
+    <h2>方法一：在 App 裡清空（最簡單）</h2>
+    <ol class="steps">
+      <li>打開 StillLink，到「設定 → 資料」</li>
+      <li>想留一份的話，先按「備份…」</li>
+      <li>按「清空所有資料」，再確認一次</li>
+    </ol>
+    <p class="warn">清空後沒辦法復原。</p>
   </div>
-</main>
 
-<footer class="site">
-  <div class="wrap">
-    <span>StillLink · 由 Jean 個人開發</span>
-    <nav aria-label="頁尾">
-      <ul>
-        <li><a href="privacy.html">隱私權政策</a></li>
-        <li><a href="terms.html">使用條款</a></li>
-        <li><a href="delete-account.html" aria-current="page">刪除資料</a></li>
-      </ul>
-    </nav>
+  <div class="card">
+    <h2>方法二：連 App 一起移除</h2>
+    <ol class="steps">
+      <li>結束 StillLink，把「應用程式」裡的 StillLink 丟到垃圾桶</li>
+      <li>在 Finder 按 <code>⇧⌘G</code>，貼上 <code>~/Library/Application Support/</code>，刪掉 <code>StillLink</code>（測試版是 <code>StillLink Beta</code>）資料夾</li>
+      <li>再前往 <code>~/Library/Preferences/</code>，刪掉 <code>app.stilllink.mac.plist</code>（測試版是 <code>app.stilllink.mac.beta.plist</code>）</li>
+      <li>清空垃圾桶</li>
+    </ol>
   </div>
-</footer>
+
+  <div class="card">
+    <h2>會刪掉什麼</h2>
+    <ul>
+      <li>所有命盤、備註、照片和頭貼</li>
+      <li>你的個人檔案和所有設定</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>不會刪掉什麼</h2>
+    <ul>
+      <li>你自己匯出的 <code>.stilllink</code> 備份檔（要刪請自己找到它）</li>
+      <li>GitHub 在你檢查更新時留下的一般連線紀錄，由 GitHub 依其政策處理</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>以後有帳號的話</h2>
+    <p>如果未來加入帳號和雲端同步，這一頁會加上「刪除帳號與雲端資料」的方法。</p>
+  </div>
+
+  <div class="card">
+    <h2>需要幫忙</h2>
+    <p>寫信到 <a href="mailto:jean.ui@cinpos.com">jean.ui@cinpos.com</a>，或到 <a href="https://github.com/1413jean/stilllink/issues">GitHub 回報問題</a>。</p>
+  </div>
+
+  <footer>
+    <p>StillLink · 由 Jean 設計與開發</p>
+    <p><a href="privacy.html">隱私權政策</a>　<a href="terms.html">使用條款</a>　<a href="delete-account.html">刪除資料</a></p>
+  </footer>
+</div>
 </body>
 </html>

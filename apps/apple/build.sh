@@ -52,6 +52,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/StillLink"
 cp Resources/*.js Resources/zone.tab "$APP/Contents/Resources/"
 cp -R Resources/sfx "$APP/Contents/Resources/sfx"
+cp -R ../../docs/legal "$APP/Contents/Resources/legal"   # 隱私權政策、使用條款、刪除資料（關於頁打開）
 mkdir -p "$APP/Contents/Frameworks" && cp -R "$FW" "$APP/Contents/Frameworks/"
 # App 圖示（改圖示：swift scripts/make-icon.swift Resources/icon-1024.png，測試版加參數 beta）
 ICONSET=.build/AppIcon.iconset
@@ -121,7 +122,7 @@ if [ "$ACTION" = "dmg" ]; then
   echo "dmg $DMG"
   # 正式版：產生簽好名的版本清單（App 內更新讀它），要跟 DMG 一起放進同一個 Release
   if [ $CHANNEL = release ]; then
-    AC=.build/appcast && rm -rf $AC && mkdir -p $AC && cp "$DMG" $AC/
+    AC=.build/appcast && rm -rf $AC && mkdir -p $AC && cp "$DMG" $AC/ && rm -f "build/$FEED"   # 每次從頭產生，不沿用舊清單
     .build/artifacts/sparkle/Sparkle/bin/generate_appcast --account stilllink \
       --download-url-prefix "https://github.com/1413jean/stilllink/releases/download/v$VER/" -o "build/$FEED" $AC >/dev/null
     echo "appcast build/$FEED"
