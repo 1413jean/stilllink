@@ -292,6 +292,14 @@ private struct PalaceCell: View {
                     let rest = Array(tags.dropFirst(2))            // 往左的欄，每欄 3 個
                     let restCols = stride(from: 0, to: rest.count, by: 3).map { Array(rest[$0..<min($0 + 3, rest.count)]) }
                     HStack(alignment: .bottom, spacing: 4) {
+                        // 小限疊盤關著時：小限命宮這一格標一個小框「小限」
+                        if level >= 2 && !settings.showMinorOverlay && horo.age.index == index {
+                            Text("小限").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText2)
+                                .padding(.horizontal, 2).padding(.vertical, 1)
+                                .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
+                                .fixedSize()
+                                .padding(.bottom, 2)
+                        }
                         // 小限宮名在上、轉宮名在下（同一欄）
                         if minor || taijiLabel != nil {
                             VStack(alignment: .leading, spacing: 0) {

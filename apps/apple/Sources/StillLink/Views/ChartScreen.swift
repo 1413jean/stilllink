@@ -171,11 +171,16 @@ struct ChartScreen: View {
                                 handleHover = h
                                 if h { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
                             }
-                            .gesture(DragGesture(minimumDistance: 1)
+                            // 用視窗座標算位移：把手會跟著面板移動，用自己的座標會一直抖
+                            .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
                                 .onChanged { v in
                                     let start = dragStartW ?? panelW
                                     if dragStartW == nil { dragStartW = start }
-                                    panelW = min(Double(infoPanelRange.upperBound), max(Double(infoPanelRange.lowerBound), start - Double(v.translation.width)))
+                                    let w = min(Double(infoPanelRange.upperBound), max(Double(infoPanelRange.lowerBound), start - Double(v.translation.width)))
+                                    if abs(w - panelW) >= 1 { panelW = w.rounded() }
+                                    // 拉寬超過 400：左側欄自動收起；拉回 360 以下再打開
+                                    let wide = panelW > 400 ? true : panelW < 360 ? false : nil
+                                    if let wide { NotificationCenter.default.post(name: .infoPanelWide, object: wide) }
                                 }
                                 .onEnded { _ in dragStartW = nil })
                             .help("左右拖拉調整寬度")
