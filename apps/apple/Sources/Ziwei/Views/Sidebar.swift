@@ -11,7 +11,6 @@ struct Sidebar: View {
     @State private var renaming: Person?
     @State private var newName = ""
     @FocusState private var searchFocused: Bool
-    @Namespace private var selNS   // 選取底色在列之間滑動
 
     private var q: String { search.trimmingCharacters(in: .whitespaces) }
 
@@ -19,7 +18,7 @@ struct Sidebar: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
-                    NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { withAnimation(Motion.snap) { route = .home } }
+                    NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { route = .home }
                     if store.showSelfInSidebar {
                         NavRow(icon: "person.crop.circle", title: store.me == nil ? "我（尚未設定）" : "我 · \(store.userName)",
                                selected: store.me.map { route == .person($0.id) } ?? false) {
@@ -147,7 +146,7 @@ struct Sidebar: View {
 
     private func personRow(_ p: Person, indent: Bool) -> some View {
         let on = route == .person(p.id)
-        return Button { withAnimation(Motion.snap) { route = .person(p.id) } } label: {
+        return Button { route = .person(p.id) } label: {
             HStack(spacing: 9) {
                 Group {
                     if p.avatar != nil {
@@ -165,7 +164,7 @@ struct Sidebar: View {
             .padding(.horizontal, 8)
             .frame(height: 30)
             .background {
-                if on { RoundedRectangle(cornerRadius: 8).fill(Color.zSel).matchedGeometryEffect(id: "sel", in: selNS) }
+                if on { RoundedRectangle(cornerRadius: 8).fill(Color.zSel) }
             }
             .contentShape(Rectangle())
         }
