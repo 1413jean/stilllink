@@ -212,15 +212,22 @@ final class Store: ObservableObject {
         }
     }
 
-    /// 把命盤拖到另一張命盤前面：順序跟著變，分組／釘選也跟目標一樣
-    func movePerson(_ id: UUID, before target: UUID) {
-        sortMode = .custom   // 拖曳就是自訂順序
+    /// 拖曳就是自訂順序：先把目前看到的排序寫回去，再改成自訂，順序才不會跳
+    private func adoptCustomOrder() {
+        guard sortMode != .custom else { return }
+        people = sorted(people)
+        sortMode = .custom
+    }
+
+    /// 把命盤拖到另一張命盤的前面或後面：分組／釘選也跟目標一樣
+    func movePerson(_ id: UUID, near target: UUID, after: Bool) {
+        adoptCustomOrder()
         guard id != target, let from = people.firstIndex(where: { $0.id == id }),
               let t = people.first(where: { $0.id == target }) else { return }
         var p = people.remove(at: from)
         p.group = t.group
         p.pinned = t.pinned
-        let to = people.firstIndex(where: { $0.id == target }) ?? people.count
+        let to = people.firstIndex(where: { $0.id == target }).map { after ? $0 + 1 : $0 } ?? people.count
         people.insert(p, at: to)
     }
 
@@ -233,12 +240,12 @@ final class Store: ObservableObject {
         people.append(p)
     }
 
-    /// 資料夾拖到另一個資料夾前面
-    func moveGroup(_ g: String, before target: String, current: [String]) {
+    /// 資料夾拖到另一個資料夾的前面或後面
+    func moveGroup(_ g: String, near target: String, after: Bool, current: [String]) {
         guard g != target else { return }
         var order = current
         order.removeAll { $0 == g }
-        order.insert(g, at: order.firstIndex(of: target) ?? order.count)
+        order.insert(g, at: order.firstIndex(of: target).map { after ? $0 + 1 : $0 } ?? order.count)
         groupOrder = order
     }
 

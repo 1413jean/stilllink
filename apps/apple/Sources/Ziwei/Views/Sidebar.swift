@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Claude／Codex 式側欄：平面列、圓角選取底色、小灰字分組標題、分組像 Codex 的資料夾
 struct Sidebar: View {
@@ -8,6 +9,9 @@ struct Sidebar: View {
     @State private var searching = false
     @State private var search = ""
     @State private var collapsed: Set<String> = []
+    /// 拖曳中：正在拖的那一列（原位淡掉）＋要放下的位置（細線）
+    @State private var dragKey: String?
+    @State private var dropLine: DropLine?
     @State private var renaming: Person?
     @State private var newName = ""
     @FocusState private var searchFocused: Bool
@@ -92,11 +96,11 @@ struct Sidebar: View {
                                     if collapsed.contains(g) { collapsed.remove(g) } else { collapsed.insert(g) }
                                 }
                             }
-                            .draggable("g:" + g) {
-                                Label(g, systemImage: "folder").font(Font.zBody).padding(.horizontal, 10).frame(height: 28)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
-                            }
-                            .dropDestination(for: String.self) { items, _ in handleDrop(items, onFolder: g) }
+                            .opacity(dragKey == "g:" + g ? 0.35 : 1)
+                            .modifier(DropMarker(key: "g:" + g, line: dropLine))
+                            .onDrag { beginDrag("g:" + g) } preview: { DragPreview(icon: "folder", title: g) }
+                            .onDrop(of: [.text], delegate: RowDrop(key: "g:" + g, dragKey: $dragKey, line: $dropLine,
+                                                                  accepts: { _ in true }, perform: drop))
                             if !collapsed.contains(g) {
                                 ForEach(list) { p in
                                     personRow(p, indent: true)
@@ -128,6 +132,15 @@ struct Sidebar: View {
         } message: {
             Text("命盤的生辰不會改變")
         }
+        .onAppear {
+            // 驗證用：ZIWEI_DRAGDEMO=1 時停在「拖第二張命盤、放到第一張下面」的畫面
+            guard ProcessInfo.processInfo.environment["ZIWEI_DRAGDEMO"] != nil else { return }
+            let list = groupNames.flatMap { g in store.sorted(store.people.filter { !$0.pinned && $0.group == g && $0.id != store.selfID }) }
+            if list.count >= 2 {
+                dragKey = "p:" + list[1].id.uuidString
+                dropLine = DropLine(key: "p:" + list[0].id.uuidString, pos: .below)
+            }
+        }
         .onChange(of: route) { _, _ in
             if searching { searching = false; search = "" }
         }
@@ -146,25 +159,31 @@ struct Sidebar: View {
         return saved + seen.filter { !saved.contains($0) }
     }
 
-    /// 拖曳內容：命盤用 "p:<id>"、資料夾用 "g:<名稱>"
-    private func handleDrop(_ items: [String], onPerson target: Person) -> Bool {
-        guard let it = items.first, it.hasPrefix("p:"), let id = UUID(uuidString: String(it.dropFirst(2))) else { return false }
-        withAnimation(Motion.base) { store.movePerson(id, before: target.id) }
-        return true
+    /// 開始拖：記下是哪一列；放開滑鼠（不管有沒有放到地方）就清掉
+    private func beginDrag(_ key: String) -> NSItemProvider {
+        dragKey = key
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { t in
+            if NSEvent.pressedMouseButtons & 1 == 0 {
+                t.invalidate()
+                DispatchQueue.main.async { dragKey = nil; dropLine = nil }
+            }
+        }
+        return NSItemProvider(object: key as NSString)
     }
 
-    private func handleDrop(_ items: [String], onFolder g: String) -> Bool {
-        guard let it = items.first else { return false }
-        if it.hasPrefix("p:"), let id = UUID(uuidString: String(it.dropFirst(2))) {
-            withAnimation(Motion.base) { store.movePerson(id, toGroup: g) }
+    /// 放下：命盤用 "p:<id>"、資料夾用 "g:<名稱>"；pos 是放在目標的上、下或正中（只有資料夾有正中）
+    private func drop(_ item: String, on target: String, _ pos: DropLine.Pos) {
+        let id = item.hasPrefix("p:") ? UUID(uuidString: String(item.dropFirst(2))) : nil
+        let tid = target.hasPrefix("p:") ? UUID(uuidString: String(target.dropFirst(2))) : nil
+        let g = target.hasPrefix("g:") ? String(target.dropFirst(2)) : nil
+        if let id, let tid {
+            store.movePerson(id, near: tid, after: pos == .below)
+        } else if let id, let g {
+            store.movePerson(id, toGroup: g)
             Toast.show("已移到「\(g)」")
-            return true
+        } else if item.hasPrefix("g:"), let g {
+            store.moveGroup(String(item.dropFirst(2)), near: g, after: pos == .below, current: groupNames)
         }
-        if it.hasPrefix("g:") {
-            withAnimation(Motion.base) { store.moveGroup(String(it.dropFirst(2)), before: g, current: groupNames) }
-            return true
-        }
-        return false
     }
 
     private func matches(_ p: Person) -> Bool { q.isEmpty || p.name.contains(q) }
@@ -194,11 +213,11 @@ struct Sidebar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(RowButtonStyle(selected: on))
-        .draggable("p:" + p.id.uuidString) {
-            Text(p.name).font(Font.zBody).padding(.horizontal, 10).frame(height: 28)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
-        }
-        .dropDestination(for: String.self) { items, _ in handleDrop(items, onPerson: p) }
+        .opacity(dragKey == "p:" + p.id.uuidString ? 0.35 : 1)
+        .modifier(DropMarker(key: "p:" + p.id.uuidString, line: dropLine))
+        .onDrag { beginDrag("p:" + p.id.uuidString) } preview: { DragPreview(icon: nil, title: p.name, avatar: p.avatar) }
+        .onDrop(of: [.text], delegate: RowDrop(key: "p:" + p.id.uuidString, dragKey: $dragKey, line: $dropLine,
+                                              accepts: { $0.hasPrefix("p:") }, perform: drop))
         .contextMenu {
             Button("重新命名…") { newName = p.name; renaming = p }
             Button(p.pinned ? "取消釘選" : "釘選") { var q = p; q.pinned.toggle(); store.update(q) }
@@ -208,6 +227,90 @@ struct Sidebar: View {
                 store.delete(p.id)
             }
         }
+    }
+}
+
+/// 拖曳放下的位置：某一列的上緣、下緣，或資料夾正中（移進資料夾）
+struct DropLine: Equatable {
+    enum Pos { case above, below, into }
+    let key: String
+    let pos: Pos
+}
+
+/// 列的放下判定：上半部插在前面、下半部插在後面；命盤拖到資料夾正中間＝移進去
+private struct RowDrop: DropDelegate {
+    let key: String
+    @Binding var dragKey: String?
+    @Binding var line: DropLine?
+    let accepts: (String) -> Bool
+    let perform: (String, String, DropLine.Pos) -> Void
+    private let rowHeight: CGFloat = 30
+
+    private func pos(_ info: DropInfo) -> DropLine.Pos {
+        let y = info.location.y
+        if key.hasPrefix("g:"), dragKey?.hasPrefix("p:") == true { return .into }
+        return y < rowHeight / 2 ? .above : .below
+    }
+    func validateDrop(info: DropInfo) -> Bool {
+        guard let d = dragKey else { return false }
+        return d != key && accepts(d)
+    }
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        guard validateDrop(info: info) else { line = nil; return DropProposal(operation: .forbidden) }
+        let new = DropLine(key: key, pos: pos(info))
+        if line != new { line = new }
+        return DropProposal(operation: .move)
+    }
+    func dropExited(info: DropInfo) { if line?.key == key { line = nil } }
+    func performDrop(info: DropInfo) -> Bool {
+        guard let d = dragKey, validateDrop(info: info) else { return false }
+        let p = pos(info)
+        line = nil; dragKey = nil
+        perform(d, key, p)
+        return true
+    }
+}
+
+/// 放下位置的提示：上／下緣一條主色細線（像 Codex），資料夾正中則整列框起來
+private struct DropMarker: ViewModifier {
+    let key: String
+    let line: DropLine?
+    func body(content: Content) -> some View {
+        content.overlay(alignment: line?.pos == .above ? .top : .bottom) {
+            if let line, line.key == key {
+                if line.pos == .into {
+                    RoundedRectangle(cornerRadius: 8).stroke(Color.zAccent, lineWidth: 1.5)
+                } else {
+                    Capsule().fill(Color.zAccent).frame(height: 2)
+                        .padding(.leading, 6)
+                        .offset(y: line.pos == .above ? -1.5 : 1.5)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+    }
+}
+
+/// 拖曳時跟著游標的那一列：長得跟側欄列一樣，半透明
+private struct DragPreview: View {
+    let icon: String?
+    let title: String
+    var avatar: String? = nil
+    var body: some View {
+        HStack(spacing: 9) {
+            if let icon {
+                Image(systemName: icon).font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
+            } else if avatar != nil {
+                AvatarView(name: avatar, size: 16)
+            } else {
+                Circle().stroke(Color.zText3, lineWidth: 1).frame(width: 6, height: 6).frame(width: 16)
+            }
+            Text(title).font(Font.zBody).foregroundStyle(Color.zText).lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .frame(width: 200, height: 30, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.zSel))
+        .opacity(0.9)
     }
 }
 
