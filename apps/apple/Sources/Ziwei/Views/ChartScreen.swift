@@ -54,7 +54,8 @@ struct ChartScreen: View {
     /// level 沒指定時照設定「打開命盤時預設顯示大限」（預設關閉＝本命）
     init(person: Person, level: Int? = nil) {
         self.person = person
-        let lv = level ?? ZSettings.stored().openLevel
+        // 驗證用：ZIWEI_LEVEL=2 直接開到流年
+        let lv = ProcessInfo.processInfo.environment["ZIWEI_LEVEL"].flatMap(Int.init) ?? level ?? ZSettings.stored().openLevel
         var p = Pick.today(); p.level = lv
         _pick = State(initialValue: p)
         _shownLevel = State(initialValue: lv)

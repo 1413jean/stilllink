@@ -342,37 +342,44 @@ private struct StarColumn: View {
 
     var body: some View {
         let tone = ZW.tone(star.type)
-        VStack(spacing: 0.5) {
-            VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,
-                         weight: star.type == "major" ? .semibold : .regular)
-                .padding(.vertical, 1)
-                .frame(width: fs * 1.18)
-                .background(fly?.fill ?? .clear)
-            Text(star.brightness.isEmpty ? " " : star.brightness)
-                .font(ChartType.font(ChartType.meta(fs)))
-                .foregroundStyle(Color.zText2)
-
-            let boxes = allBoxes
-            if boxes.count <= 2 {
-                ForEach(Array(boxes.enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1) }
-            } else {
-                // 三個以上就兩個一列，高度減半，不會往下被切掉
-                let rows = stride(from: 0, to: boxes.count, by: 2).map { Array(boxes[$0..<min($0 + 2, boxes.count)]) }
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                    HStack(spacing: 1) { ForEach(Array(row.enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1, size: 0.95) } }
+        let (main, side) = columns
+        let two = !main.isEmpty && !side.isEmpty
+        let size: CGFloat = two ? 0.95 : 1.12
+        // 星名對齊右邊那一欄（本命＋大限）；流年以後的四化排在左邊另一欄
+        VStack(alignment: .trailing, spacing: 0.5) {
+            VStack(spacing: 0.5) {
+                VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,
+                             weight: star.type == "major" ? .semibold : .regular)
+                    .padding(.vertical, 1)
+                    .frame(width: fs * 1.18)
+                    .background(fly?.fill ?? .clear)
+                Text(star.brightness.isEmpty ? " " : star.brightness)
+                    .font(ChartType.font(ChartType.meta(fs)))
+                    .foregroundStyle(Color.zText2)
+            }
+            .frame(width: fs * 1.18)
+            HStack(alignment: .top, spacing: 1) {
+                if two {
+                    VStack(spacing: 1) { ForEach(Array(side.enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1, size: size) } }
                 }
+                VStack(spacing: 1) {
+                    ForEach(Array((two ? main : main + side).enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1, size: size) }
+                }
+                .frame(width: fs * 1.18)
             }
         }
         .frame(minWidth: fs * 1.18)
     }
 
-    /// 生年 → 小限 → 大限 → 流年 → … 的四化方塊
-    private var allBoxes: [(String, Color)] {
-        var b: [(String, Color)] = []
-        if !star.mutagen.isEmpty { b.append((star.mutagen, .fBirth)) }
-        if let minor { b.append((minor.rawValue, .fMinor)) }
-        for (lv, m) in scopes { b.append((m.rawValue, Color.fScopes[lv - 1])) }
-        return b
+    /// 四化方塊分兩欄：主欄＝生年、大限（直排在星名下）；側欄＝小限、流年、流月、流日、流時
+    private var columns: ([(String, Color)], [(String, Color)]) {
+        var main: [(String, Color)] = [], side: [(String, Color)] = []
+        if !star.mutagen.isEmpty { main.append((star.mutagen, .fBirth)) }
+        if let minor { side.append((minor.rawValue, .fMinor)) }
+        for (lv, m) in scopes {
+            if lv == 1 { main.append((m.rawValue, Color.fScopes[0])) } else { side.append((m.rawValue, Color.fScopes[lv - 1])) }
+        }
+        return (main, side)
     }
 
     private func box(_ t: String, fill: Color, size: CGFloat = 1.12) -> some View {
