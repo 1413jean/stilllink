@@ -6,6 +6,7 @@ struct SettingsPage: View {
     var onClose: () -> Void
     @State private var section: Section
     @State private var nameDraft = ""
+    @State private var confirmErase = false
 
     init(initial: Section = .profile, onClose: @escaping () -> Void) {
         self.onClose = onClose
@@ -13,7 +14,7 @@ struct SettingsPage: View {
     }
 
     enum Section: String, CaseIterable, Identifiable {
-        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀", about = "關於"
+        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀", data = "資料", about = "關於"
         var id: String { rawValue }
         var icon: String {
             switch self {
@@ -24,6 +25,7 @@ struct SettingsPage: View {
             case .display: "eye"
             case .feel: "speaker.wave.2"
             case .appearance: "circle.lefthalf.filled"
+            case .data: "externaldrive"
             case .about: "info.circle"
             }
         }
@@ -194,6 +196,32 @@ struct SettingsPage: View {
             row("主題", "淺色、深色或跟隨系統", last: true) {
                 ZSegmented(options: Appearance.allCases.map { ($0, $0.label) }, selection: $store.appearance)
             }
+        case .data:
+            title("資料")
+            note("命盤、備註、照片和設定都存在這台 Mac（不在 App 本身裡面），所以刪掉或重新安裝 App 資料都還在。換電腦或想保險時，可以先備份成一個檔案。")
+            row("備份", "把所有命盤、照片、個人檔案與設定存成一個 .stilllink 檔") {
+                HStack { Spacer(); Button { store.exportBackup() } label: { Label("備份…", systemImage: "square.and.arrow.down") }
+                    .buttonStyle(ZSecondaryButton(small: true)) }
+            }
+            row("還原", "從備份檔放回來（會取代目前所有資料）") {
+                HStack { Spacer(); Button { store.importBackup() } label: { Label("還原…", systemImage: "arrow.counterclockwise") }
+                    .buttonStyle(ZSecondaryButton(small: true)) }
+            }
+            row("清空所有資料", "刪掉全部命盤、照片、個人檔案與設定，回到第一次打開的樣子", last: true) {
+                HStack { Spacer(); Button(role: .destructive) { confirmErase = true } label: { Label("清空…", systemImage: "trash") }
+                    .buttonStyle(ZSecondaryButton(small: true)) }
+            }
+            Color.clear.frame(height: 0)
+                .alert("要清空所有資料嗎？", isPresented: $confirmErase) {
+                    Button("取消", role: .cancel) {}
+                    Button("先備份再清空") {
+                        store.exportBackup()
+                        store.eraseAll(); Toast.show("已清空")
+                    }
+                    Button("直接清空", role: .destructive) { store.eraseAll(); Toast.show("已清空") }
+                } message: {
+                    Text("全部 \(store.people.count) 張命盤、照片、個人檔案與設定都會刪除，無法復原。")
+                }
         case .about:
             title("關於")
             HStack(spacing: 14) {
@@ -211,7 +239,6 @@ struct SettingsPage: View {
             row("排盤計算", "開源紫微斗數引擎", last: true) {
                 HStack { Spacer(); Text("iztro（MIT License）").font(Font.zCallout).foregroundStyle(Color.zText2) }
             }
-            note("Jean 是 UX/UI 設計師。原本常用的排盤軟體不能用了，就自己做了一個：盤面照傳統排法，看得清楚、操作簡單，方便幫人排盤、看盤。")
         }
     }
 

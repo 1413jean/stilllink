@@ -106,7 +106,11 @@ final class Store: ObservableObject {
         return dir.appendingPathComponent("people.json")
     }()
 
+    /// 目前的 Store（給自測用）
+    static weak var current: Store?
+
     init() {
+        Store.current = self
         Engine.shared.configure(settings)
         Motion.userEnabled = settings.motion
         if let data = try? Data(contentsOf: url), let list = try? JSONDecoder().decode([Person].self, from: data) {

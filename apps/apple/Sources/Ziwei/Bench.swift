@@ -16,6 +16,24 @@ enum Bench {
             exit(0)
         }
         guard let path = ProcessInfo.processInfo.environment["ZIWEI_BENCH"] else { return }
+        // 備份自測：ZIWEI_BACKUP_TEST=1（務必搭配 ZIWEI_DATA_DIR）→ 備份、清空、還原，回報前後是否一致
+        if ProcessInfo.processInfo.environment["ZIWEI_BACKUP_TEST"] != nil, ProcessInfo.processInfo.environment["ZIWEI_DATA_DIR"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                MainActor.assumeIsolated {
+                    guard let store = Store.current else { return }
+                    let before = store.people.map(\.name), name = store.userName
+                    let data = (try? store.makeBackup()) ?? Data()
+                    store.eraseAll()
+                    let erased = store.people.count
+                    try? store.restore(data)
+                    let after = store.people.map(\.name)
+                    let line = "before \(before) name \(name)\nerased \(erased)\nafter \(after) name \(store.userName)\nmatch \(before == after && name == store.userName) bytes \(data.count)"
+                    try? line.write(toFile: path, atomically: true, encoding: .utf8)
+                    exit(0)
+                }
+            }
+            return
+        }
         // 亂數起盤年份自測：ZIWEI_YEARS_TEST=1 時，排西元 1～9999 年的極端年份並回報命宮主星與四柱
         if ProcessInfo.processInfo.environment["ZIWEI_YEARS_TEST"] != nil {
             Task.detached {
