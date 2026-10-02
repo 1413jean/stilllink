@@ -5,8 +5,9 @@ import UniformTypeIdentifiers
 /// 附件資料夾：~/Library/Application Support/Ziwei/media
 enum Media {
     static let dir: URL = {
-        let d = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Ziwei/media", isDirectory: true)
+        let base = ProcessInfo.processInfo.environment["ZIWEI_DATA_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Ziwei", isDirectory: true)
+        let d = base.appendingPathComponent("media", isDirectory: true)
         try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         return d
     }()
@@ -41,11 +42,7 @@ struct InfoPanel: View {
                 card("命主資料", action: isNow ? nil : ("square.and.pencil", { NotificationCenter.default.post(name: .editChart, object: person.id) })) {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(spacing: 10) {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 16))
-                                .foregroundStyle(Color.zText3)
-                                .frame(width: 34, height: 34)
-                                .background(Circle().fill(Color.zSel))
+                            AvatarView(name: current.avatar, size: 34)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(current.name).font(Font.zHeadline)
                                 Text("\(current.gender.rawValue) · \(current.group)\(chart.map { " · " + $0.fiveElementsClass } ?? "")")

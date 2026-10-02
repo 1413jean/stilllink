@@ -149,10 +149,14 @@ struct Sidebar: View {
         let on = route == .person(p.id)
         return Button { withAnimation(Motion.snap) { route = .person(p.id) } } label: {
             HStack(spacing: 9) {
-                Circle()
-                    .stroke(Color.zText3, lineWidth: 1)
-                    .frame(width: 6, height: 6)
-                    .padding(.leading, 7) // 圓點對齊資料夾圖示中心
+                Group {
+                    if p.avatar != nil {
+                        AvatarView(name: p.avatar, size: 16)
+                    } else {
+                        Circle().stroke(Color.zText3, lineWidth: 1).frame(width: 6, height: 6).frame(width: 16)
+                    }
+                }
+                .padding(.leading, 2)
                 Text(p.name).font(Font.zBody).foregroundStyle(Color.zText).lineLimit(1)
                 Spacer(minLength: 6)
                 Text(store.soulStars[p.id] ?? "")
@@ -309,11 +313,7 @@ private struct AccountBar: View {
                     .keyboardShortcut(",")
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.zText3)
-                        .frame(width: 20, height: 20)
-                        .background(Circle().fill(Color.zSel))
+                    AvatarView(name: store.userAvatar, size: 20)
                     Text(store.userName).font(Font.zCallout).foregroundStyle(Color.zText).lineLimit(1)
                     Text("· 本機").font(Font.zCaption).foregroundStyle(Color.zText3)
                     Image(systemName: "chevron.down").font(Font.zMicro).foregroundStyle(Color.zText3)

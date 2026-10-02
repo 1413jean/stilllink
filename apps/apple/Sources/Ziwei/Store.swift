@@ -31,6 +31,7 @@ struct Person: Codable, Identifiable, Hashable {
     var trueSolar: String? = nil  // 真太陽時 yyyy-M-d HH:mm
     var place: BirthPlace? = nil
     var photos: [String]? = nil   // 附件照片檔名（存在 Application Support/Ziwei/media）
+    var avatar: String? = nil     // 頭貼檔名（裁切壓縮後的 256×256 JPEG）
 
     var birthYear: Int { Int(solar.split(separator: "-").first ?? "0") ?? 0 }
     var chartKey: String { "\(solar)|\(hour)|\(gender.rawValue)" }
@@ -59,6 +60,16 @@ final class Store: ObservableObject {
     @AppStorage("userName") var userName: String = "Jean"
     /// 自己的命盤（個人檔案）
     @AppStorage("selfID") var selfIDString: String = ""
+    /// 使用者自己的頭貼（沒有自己的命盤時也能設定）
+    @AppStorage("userAvatar") var userAvatarRaw: String = ""
+    var userAvatar: String? {
+        get { me?.avatar ?? (userAvatarRaw.isEmpty ? nil : userAvatarRaw) }
+        set {
+            userAvatarRaw = newValue ?? ""
+            if var p = me { p.avatar = newValue; update(p) }
+            objectWillChange.send()
+        }
+    }
     /// 側欄是否顯示「我」
     @AppStorage("showSelfInSidebar") var showSelfInSidebar = true
 

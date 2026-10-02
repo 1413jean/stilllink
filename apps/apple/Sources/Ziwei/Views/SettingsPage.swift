@@ -77,6 +77,9 @@ struct SettingsPage: View {
         switch section {
         case .profile:
             title("個人檔案")
+            row("頭貼", "顯示在左下角與你的命盤；上傳後可裁切，會自動壓縮") {
+                AvatarField(name: Binding(get: { store.userAvatar }, set: { store.userAvatar = $0 }))
+            }
             row("名字", "顯示在左下角，也是你自己命盤的名字") {
                 TextField("你的名字", text: $nameDraft)
                     .textFieldStyle(.plain)

@@ -10,6 +10,7 @@ struct NewChartSheet: View {
     var onCreated: (Person) -> Void
 
     @State private var name = ""
+    @State private var avatar: String?
     @State private var gender: Gender = .female
     @State private var group = "客人"
     @State private var calendar = 0 // 0 國曆、1 農曆
@@ -51,6 +52,9 @@ struct NewChartSheet: View {
                         TextField("例如：林小姐", text: $name).textFieldStyle(.plain)
                             .focused($nameFocused)
                             .inputBox()
+                    }
+                    row("頭貼", "上傳後可裁切，會自動壓縮") {
+                        AvatarField(name: $avatar)
                     }
                     row("性別", "影響大限順逆") {
                         ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
@@ -193,7 +197,7 @@ struct NewChartSheet: View {
     private func load() {
         guard !loaded, let p = editing else { return }
         loaded = true
-        name = p.name; gender = p.gender; group = p.group
+        name = p.name; gender = p.gender; group = p.group; avatar = p.avatar
         let src = p.clock ?? "\(p.solar) \(String(format: "%02d", max(0, p.hour * 2 - (p.hour == 12 ? 1 : 0))) ):00"
         let parts = src.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == ":" }).compactMap { Int($0) }
         if parts.count >= 5 { (y, m, d, hh, mi) = (parts[0], parts[1], parts[2], parts[3], parts[4]) }
@@ -319,7 +323,7 @@ struct NewChartSheet: View {
     private func writeEdit() {
         guard var p = editing else { return }
         let r = resolved()
-        p.name = name.trimmingCharacters(in: .whitespaces); p.gender = gender; p.group = group
+        p.name = name.trimmingCharacters(in: .whitespaces); p.gender = gender; p.group = group; p.avatar = avatar
         p.solar = r.solar; p.hour = r.hour; p.clock = r.clock; p.trueSolar = r.trueSolar; p.place = place
         store.update(p)
         if p.id == store.selfID { store.userName = p.name }
@@ -336,8 +340,9 @@ struct NewChartSheet: View {
             onCreated(p)
             return
         }
-        let p = Person(name: name.trimmingCharacters(in: .whitespaces), gender: gender, solar: r.solar, hour: r.hour,
+        var p = Person(name: name.trimmingCharacters(in: .whitespaces), gender: gender, solar: r.solar, hour: r.hour,
                        group: asSelf ? "自己" : group, clock: r.clock, trueSolar: r.trueSolar, place: place)
+        p.avatar = avatar ?? (asSelf ? store.userAvatar : nil)
         store.add(p)
         if asSelf {
             store.selfIDString = p.id.uuidString
