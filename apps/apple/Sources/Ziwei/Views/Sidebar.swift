@@ -13,34 +13,16 @@ struct Sidebar: View {
     @FocusState private var searchFocused: Bool
     /// 搜尋先關掉（Jean：先不用到），要打開改成 true
     static let searchEnabled = false
-    @State private var brandHover = false
     @State private var searchHover = false
 
     private var q: String { search.trimmingCharacters(in: .whitespaces) }
 
     var body: some View {
         VStack(spacing: 0) {
-            // 側欄頂端：產品名（點開是選單）＋右邊搜尋，像 Codex
+            // 側欄頂端：產品名（像 Codex）；右邊搜尋目前關閉
             HStack(spacing: 4) {
-                Menu {
-                    Button("個人檔案…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
-                    Button("帳號與同步…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.account) }
-                    Divider()
-                    Button("設定…") { NotificationCenter.default.post(name: .openSettings, object: nil) }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("StillLink").font(Font.zBrand).foregroundStyle(Color.zText)
-                        Image(systemName: "chevron.down").font(Font.zMicroStrong).foregroundStyle(Color.zText3)
-                    }
+                Text("StillLink").font(Font.zBrand).foregroundStyle(Color.zText)
                     .padding(.horizontal, 8).frame(height: 30)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(brandHover ? Color.zHover : .clear))
-                    .contentShape(Rectangle())
-                }
-                .menuStyle(.button)
-                .buttonStyle(.plain)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .onHover { brandHover = $0 }
                 Spacer()
                 if Self.searchEnabled {
                 Button {
