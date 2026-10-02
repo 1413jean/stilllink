@@ -47,7 +47,7 @@ struct Sidebar: View {
                 VStack(alignment: .leading, spacing: 1) {
                     NavRow(icon: "house", title: "此刻", selected: route == .home || route == nil) { route = .home }
                     if store.showSelfInSidebar {
-                        NavRow(icon: "person.crop.circle", title: store.me == nil ? "我（尚未設定）" : "我 · \(store.userName)",
+                        NavRow(icon: "person.crop.circle", title: store.me == nil ? "設定我的命盤" : store.userName,
                                selected: store.me.map { route == .person($0.id) } ?? false) {
                             if let me = store.me { route = .person(me.id) }
                             else { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }

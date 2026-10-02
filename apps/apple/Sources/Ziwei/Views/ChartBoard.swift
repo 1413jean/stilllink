@@ -425,26 +425,34 @@ private struct CenterInfo: View {
                 }
                 .font(ChartType.font(ChartType.centerBody(fs)))
 
-                // 節氣四柱／非節氣四柱
-                HStack(alignment: .top, spacing: fs * 1.6) {
-                    pillarSet("節氣四柱", pillars)
-                    pillarSet("非節氣四柱", lunarPillars)
-                }
+                // 隱藏生辰時：四柱、起運、大運都不顯示（看得出出生時間）
+                if hideBirth {
+                    Label("生辰已隱藏（四柱、起運、大運）", systemImage: "eye.slash")
+                        .font(ChartType.font(ChartType.centerSmall(fs)))
+                        .foregroundStyle(Color.zText3)
+                        .padding(.vertical, fs * 0.6)
+                } else {
+                    // 節氣四柱／非節氣四柱
+                    HStack(alignment: .top, spacing: fs * 1.6) {
+                        pillarSet("節氣四柱", pillars)
+                        pillarSet("非節氣四柱", lunarPillars)
+                    }
 
-                // 八字起運與大運
-                Text("出生後 \(qy.years)年 \(qy.months)月 \(qy.days)天 八字起運")
-                    .font(ChartType.font(ChartType.centerSmall(fs), .medium))
-                HStack(alignment: .top, spacing: fs * 0.32) {
-                    ForEach(Array(dayun.enumerated()), id: \.offset) { k, gz in
-                        let age = qy.years + 1 + k * 10
-                        VStack(spacing: 0) {
-                            HStack(alignment: .top, spacing: 0) {
-                                Text(String(gz.prefix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.prefix(1))).color)
-                                VerticalText(Bazi.tenGod(day: dayStem, other: String(gz.prefix(1))), size: ChartType.godLabel(fs), color: .mQuan)
+                    // 八字起運與大運
+                    Text("出生後 \(qy.years)年 \(qy.months)月 \(qy.days)天 八字起運")
+                        .font(ChartType.font(ChartType.centerSmall(fs), .medium))
+                    HStack(alignment: .top, spacing: fs * 0.32) {
+                        ForEach(Array(dayun.enumerated()), id: \.offset) { k, gz in
+                            let age = qy.years + 1 + k * 10
+                            VStack(spacing: 0) {
+                                HStack(alignment: .top, spacing: 0) {
+                                    Text(String(gz.prefix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.prefix(1))).color)
+                                    VerticalText(Bazi.tenGod(day: dayStem, other: String(gz.prefix(1))), size: ChartType.godLabel(fs), color: .mQuan)
+                                }
+                                Text(String(gz.suffix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.suffix(1))).color)
+                                Text("\(age)歲").font(ChartType.font(ChartType.godLabel(fs))).foregroundStyle(Color.zText2)
+                                Text(verbatim: "\(birthYear + age - 1)").font(ChartType.font(ChartType.godLabel(fs)).monospacedDigit()).foregroundStyle(Color.zText3)
                             }
-                            Text(String(gz.suffix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.suffix(1))).color)
-                            Text("\(age)歲").font(ChartType.font(ChartType.godLabel(fs))).foregroundStyle(Color.zText2)
-                            Text(verbatim: "\(birthYear + age - 1)").font(ChartType.font(ChartType.godLabel(fs)).monospacedDigit()).foregroundStyle(Color.zText3)
                         }
                     }
                 }

@@ -5,7 +5,8 @@ struct PeriodTable: View {
     let chart: Chart
     let birthYear: Int
     @Binding var pick: Pick
-    @Environment(\.zSettings) private var settings   // 每一列的選取底色共用一個 id，切換時會滑過去（類似 GSAP Flip）
+    @Environment(\.zSettings) private var settings
+    @AppStorage("hideBirth") private var hideBirth = false   // 隱藏生辰時不顯示歲數（可推出生年）   // 每一列的選取底色共用一個 id，切換時會滑過去（類似 GSAP Flip）
 
     var body: some View {
         let decades = chart.palaces.map { ($0.range, $0.stem + $0.branch) }.sorted { $0.0[0] < $1.0[0] }
@@ -33,7 +34,7 @@ struct PeriodTable: View {
             row("流年\n小限") {
                 ForEach(0..<10, id: \.self) { k in
                     let y = start + k
-                    cell("\(y)年", "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲", group: "year", on: y == pick.year && pick.level >= 2) {
+                    cell("\(y)年", hideBirth ? ZW.yearGanzhi(y) : "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲", group: "year", on: y == pick.year && pick.level >= 2) {
                         pick.level = (y == pick.year && pick.level == 2) ? 1 : 2; pick.year = y
                     }
                 }
