@@ -26,6 +26,7 @@ struct InfoPanel: View {
     let chart: Chart?
     @Binding var hepanYear: Int?
     var selectedPalace: Int? = nil
+    var width: CGFloat = infoPanelWidth
     @State private var hepanDraft = ""
     @State private var preview: String?
     @State private var dropping = false
@@ -197,7 +198,7 @@ struct InfoPanel: View {
                 }
                 }
         }
-        .frame(width: infoPanelWidth)
+        .frame(width: width)
         .enterFromBelow(appeared, index: 4)
         .onAppear { appeared = true }
         .sheet(item: Binding(get: { preview.map { PreviewItem(name: $0) } }, set: { preview = $0?.name })) { item in
