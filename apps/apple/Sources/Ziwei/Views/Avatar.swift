@@ -173,3 +173,35 @@ struct AvatarField: View {
 
     private struct PickedImage: Identifiable { let image: NSImage; var id: ObjectIdentifier { ObjectIdentifier(image) } }
 }
+
+/// 可以直接點的頭貼：點了選照片 → 裁切 → 換掉；滑過顯示相機圖示
+struct AvatarButton: View {
+    @Binding var name: String?
+    let size: CGFloat
+    var enabled = true
+    @State private var picked: NSImage?
+    @State private var hover = false
+
+    var body: some View {
+        AvatarView(name: name, size: size)
+            .overlay {
+                if enabled && hover {
+                    Circle().fill(Color.black.opacity(0.35))
+                        .overlay(Image(systemName: "camera.fill").font(.system(size: size * 0.36)).foregroundStyle(.white))
+                        .transition(.opacity)
+                }
+            }
+            .contentShape(Circle())
+            .onHover { h in withAnimation(Motion.fast) { hover = h } }
+            .onTapGesture { if enabled { picked = AvatarStore.pick() } }
+            .help(enabled ? "點一下上傳或更換頭貼" : "")
+            .sheet(item: Binding(get: { picked.map(Picked.init) }, set: { picked = $0?.image })) { p in
+                AvatarCropSheet(image: p.image) { saved in
+                    if let saved { AvatarStore.remove(name); name = saved }
+                    picked = nil
+                }
+            }
+    }
+
+    private struct Picked: Identifiable { let image: NSImage; var id: ObjectIdentifier { ObjectIdentifier(image) } }
+}

@@ -48,13 +48,13 @@ struct NewChartSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     sectionTitle("基本資料")
+                    row("頭貼", "上傳後可裁切，會自動壓縮") {
+                        AvatarField(name: $avatar)
+                    }
                     row("姓名", "客人的名字或代稱") {
                         TextField("例如：林小姐", text: $name).textFieldStyle(.plain)
                             .focused($nameFocused)
                             .inputBox()
-                    }
-                    row("頭貼", "上傳後可裁切，會自動壓縮") {
-                        AvatarField(name: $avatar)
                     }
                     row("性別", "影響大限順逆") {
                         ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)

@@ -42,7 +42,12 @@ struct InfoPanel: View {
                 card("命主資料", action: isNow ? nil : ("square.and.pencil", { NotificationCenter.default.post(name: .editChart, object: person.id) })) {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(spacing: 10) {
-                            AvatarView(name: current.avatar, size: 34)
+                            AvatarButton(name: Binding(
+                                get: { current.avatar },
+                                set: { v in
+                                    var p = current; p.avatar = v; store.update(p)
+                                    if p.id == store.selfID { store.userAvatarRaw = v ?? "" }
+                                }), size: 34, enabled: !isNow && !isTemp)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(current.name).font(Font.zHeadline)
                                 Text("\(current.gender.rawValue) · \(current.group)\(chart.map { " · " + $0.fiveElementsClass } ?? "")")
