@@ -58,7 +58,7 @@ final class Store: ObservableObject {
     @Published var soulStars: [UUID: String] = [:]
     @AppStorage("appearance") var appearance: Appearance = .system
     /// 使用者（左下角帳號列）顯示的名字
-    @AppStorage("userName") var userName: String = "Jean"
+    @AppStorage("userName") var userName: String = "我"
     /// 自己的命盤（個人檔案）
     @AppStorage("selfID") var selfIDString: String = ""
     /// 使用者自己的頭貼（沒有自己的命盤時也能設定）
@@ -250,7 +250,7 @@ final class Store: ObservableObject {
     }
 
     static let samples: [Person] = [
-        Person(name: "Jean", gender: .female, solar: "1990-6-15", hour: 6, group: "自己", pinned: true),
+        Person(name: "範例命盤", gender: .female, solar: "1990-6-15", hour: 6, group: "範例", pinned: true),
         Person(name: "林小姐", gender: .female, solar: "1988-11-2", hour: 3, group: "客人"),
         Person(name: "陳先生", gender: .male, solar: "1979-3-21", hour: 9, group: "客人"),
         Person(name: "王小美", gender: .female, solar: "1996-8-8", hour: 11, group: "客人"),

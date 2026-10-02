@@ -2,11 +2,18 @@
 # 編譯並組成 StillLink.app（原生 SwiftUI，沒有 WebView）
 set -e
 cd "$(dirname "$0")"
-swift build -c release
 APP=build/StillLink.app
+# ./build.sh dmg → Apple 晶片＋Intel 通用版，給別人下載用
+if [ "$1" = "dmg" ]; then
+  swift build -c release --arch arm64 --arch x86_64
+  BIN=.build/apple/Products/Release/Ziwei
+else
+  swift build -c release
+  BIN=.build/release/Ziwei
+fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build/release/Ziwei "$APP/Contents/MacOS/Ziwei"
+cp "$BIN" "$APP/Contents/MacOS/Ziwei"
 cp Resources/*.js Resources/zone.tab "$APP/Contents/Resources/"
 cp -R Resources/sfx "$APP/Contents/Resources/sfx"
 # App 圖示：icon-1024.png → AppIcon.icns（改圖示：swift scripts/make-icon.swift Resources/icon-1024.png）
@@ -48,4 +55,17 @@ if [ "$1" = "install" ]; then
   rm -rf "/Applications/StillLink.app"
   cp -R "$APP" "/Applications/StillLink.app"
   echo "installed /Applications/StillLink.app"
+fi
+
+# ./build.sh dmg → build/StillLink-<版本>.dmg（拖進「應用程式」的安裝畫面）
+if [ "$1" = "dmg" ]; then
+  VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
+  STAGE=.build/dmg
+  rm -rf $STAGE && mkdir -p $STAGE
+  cp -R "$APP" $STAGE/
+  ln -s /Applications $STAGE/Applications
+  DMG=build/StillLink-$VER.dmg
+  rm -f "$DMG"
+  hdiutil create -volname "StillLink $VER" -srcfolder $STAGE -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
+  echo "dmg $DMG"
 fi
