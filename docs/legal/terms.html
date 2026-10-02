@@ -3,194 +3,101 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
-<title>使用條款｜StillLink</title>
-<meta name="description" content="StillLink 紫微斗數 macOS App 的使用條款：免費提供、結果僅供參考、資料由你保管。">
-<style>
-  :root {
-    --bg: #FAF9F6;
-    --text: #1C1B19;
-    --muted: #6B6862;
-    --line: #E6E3DC;
-    --surface: #F2F0EA;
-    --accent: #D96B43;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1C1B19;
-      --text: #ECEAE4;
-      --muted: #A29F97;
-      --line: #34322E;
-      --surface: #252421;
-      --accent: #E8865F;
-    }
-  }
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-    font-size: 16px;
-    line-height: 1.8;
-  }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
-  header.site { border-bottom: 1px solid var(--line); }
-  header.site .wrap, footer.site .wrap {
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
-  }
-  header.site .wrap { min-height: 56px; }
-  .brand { font-weight: 600; color: var(--text); text-decoration: none; letter-spacing: .02em; }
-  .brand span { color: var(--accent); }
-  nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
-  nav a {
-    display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px;
-    color: var(--muted); text-decoration: none; font-size: 14px; border-radius: 8px;
-  }
-  nav a:hover { color: var(--text); background: var(--surface); }
-  nav a[aria-current="page"] { color: var(--accent); font-weight: 600; }
-  main { padding: 40px 0 56px; }
-  h1 { font-size: 28px; line-height: 1.35; margin: 0 0 8px; }
-  .meta { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
-  .summary {
-    background: var(--surface); border-left: 3px solid var(--accent);
-    border-radius: 8px; padding: 16px 20px; margin: 0 0 32px;
-  }
-  .summary p { margin: 0; }
-  section { padding: 24px 0; border-top: 1px solid var(--line); }
-  h2 { font-size: 19px; line-height: 1.4; margin: 0 0 12px; }
-  h2 .no { color: var(--accent); margin-right: 6px; font-variant-numeric: tabular-nums; }
-  p { margin: 0 0 12px; }
-  ul, ol { margin: 0 0 12px; padding-left: 1.4em; }
-  li { margin: 4px 0; }
-  a { color: var(--accent); text-underline-offset: 3px; }
-  strong { font-weight: 600; }
-  code {
-    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
-    padding: 1px 5px; word-break: break-all;
-  }
-  footer.site { border-top: 1px solid var(--line); padding: 16px 0 32px; color: var(--muted); font-size: 14px; }
-  @media (max-width: 480px) {
-    h1 { font-size: 24px; }
-    main { padding: 28px 0 40px; }
-    nav a { padding: 0 8px; }
-  }
-</style>
+<title>使用條款 · StillLink</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="site">
-  <div class="wrap">
-    <a class="brand" href="privacy.html">Still<span>Link</span></a>
-    <nav aria-label="法律文件">
-      <ul>
-        <li><a href="privacy.html">隱私權政策</a></li>
-        <li><a href="terms.html" aria-current="page">使用條款</a></li>
-        <li><a href="delete-account.html">刪除資料</a></li>
-      </ul>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="star">✦</span>StillLink</div>
+    <nav>
+      <a href="privacy.html">隱私權政策</a>
+      <a class="on" href="terms.html">使用條款</a>
+      <a href="delete-account.html">刪除資料</a>
     </nav>
+  </header>
+
+  <h1>使用條款</h1>
+  <p class="date">最後更新：2026 年 10 月 2 日　·　適用 StillLink for Mac（含測試版 StillLink Beta）</p>
+
+  <div class="hero">
+    <p>一句話：<strong>StillLink 是免費的排盤工具，盤上的內容給你參考，決定還是在你自己手上。</strong>開始使用，就表示你同意下面這些約定。</p>
   </div>
-</header>
 
-<main>
-  <div class="wrap">
-    <h1>使用條款</h1>
-    <p class="meta">生效日期：2026 年 10 月 2 日　·　適用於 StillLink for macOS（含 StillLink Beta）</p>
-
-    <div class="summary">
-      <p>下載、安裝或使用 StillLink，即表示你同意以下條款。如果你不同意，請不要使用本 App。</p>
-    </div>
-
-    <section id="service">
-      <h2><span class="no">1.</span>服務內容</h2>
-      <p>StillLink 是一款在 macOS 上使用的紫微斗數排盤 App，由個人開發者 Jean 製作與維護。你可以用它建立命盤、查看盤面、記錄筆記，並為命盤加上照片或頭像。</p>
-    </section>
-
-    <section id="price">
-      <h2><span class="no">2.</span>費用與取得方式</h2>
-      <ul>
-        <li>StillLink 目前<strong>免費</strong>提供，沒有付費方案或 App 內購買。</li>
-        <li>App 透過 <a href="https://github.com/1413jean/stilllink/releases" rel="noopener">GitHub Releases</a> 發佈，目前尚未上架 App Store。請只從這個官方來源下載，以免取得被竄改的版本。</li>
-      </ul>
-    </section>
-
-    <section id="reference">
-      <h2><span class="no">3.</span>結果僅供參考</h2>
-      <p>StillLink 呈現的命盤與解讀<strong>僅供參考與娛樂</strong>，不構成任何專業建議，包括但不限於醫療、心理、法律、財務或投資建議。請不要只依據 App 的內容做出重大決定；遇到相關問題時，請諮詢合格的專業人士。</p>
-    </section>
-
-    <section id="account">
-      <h2><span class="no">4.</span>帳號</h2>
-      <p>StillLink 目前<strong>不需要也不提供帳號</strong>，不用註冊或登入。未來若加入帳號功能（例如使用 Apple 或 Google 登入），會在上線前更新本條款與 <a href="privacy.html">隱私權政策</a>。</p>
-    </section>
-
-    <section id="data">
-      <h2><span class="no">5.</span>你輸入的資料</h2>
-      <ul>
-        <li>你輸入的命盤、筆記、照片與設定都只存在你的 Mac 上，詳見 <a href="privacy.html">隱私權政策</a>。</li>
-        <li>這些內容屬於你。開發者不會取得，也不主張任何權利。</li>
-        <li>當你輸入<strong>他人</strong>的姓名、出生日期、時間或出生地時，你有責任事先取得對方同意，並妥善保管這些資料。</li>
-      </ul>
-    </section>
-
-    <section id="backup">
-      <h2><span class="no">6.</span>備份與資料遺失</h2>
-      <p>因為資料只存在本機，開發者沒有任何副本，<strong>無法替你復原資料</strong>。電腦故障、系統重灌、誤刪或執行「清空所有資料」都可能讓資料永久遺失。建議定期從 App 匯出 <code>.stilllink</code> 備份檔，並存放在你信任的位置。</p>
-    </section>
-
-    <section id="updates">
-      <h2><span class="no">7.</span>更新與服務變更</h2>
-      <ul>
-        <li>App 會連到 GitHub 檢查並下載更新。更新內容可能新增、修改或移除功能。</li>
-        <li>測試版（StillLink Beta）可能不穩定或出現錯誤，請自行斟酌使用。</li>
-        <li>由於本 App 由個人開發與維護，開發者不保證持續提供更新，也可能暫停或終止開發。</li>
-      </ul>
-    </section>
-
-    <section id="opensource">
-      <h2><span class="no">8.</span>開源元件</h2>
-      <p>StillLink 使用了開源軟體，包括排盤函式庫 <a href="https://github.com/SylarLong/iztro" rel="noopener">iztro</a> 與更新框架 Sparkle。這些元件依各自的開源授權條款提供，相關權利歸其原作者所有。</p>
-    </section>
-
-    <section id="prohibited">
-      <h2><span class="no">9.</span>禁止行為</h2>
-      <p>使用 StillLink 時，請不要：</p>
-      <ul>
-        <li>在未經同意的情況下，利用 App 蒐集或散布他人的個人資料；</li>
-        <li>散布經過修改的 App 並冒用 StillLink 名義，讓他人誤以為是官方版本；</li>
-        <li>將 App 用於任何違法用途。</li>
-      </ul>
-    </section>
-
-    <section id="liability">
-      <h2><span class="no">10.</span>免責與責任限制</h2>
-      <p>StillLink 以「現況」提供，不附帶任何明示或默示的保證，包括內容的正確性、完整性，或適合特定用途。在法律允許的最大範圍內，開發者對你因使用或無法使用本 App 所產生的任何損失（包括資料遺失，或依據命盤內容所做的決定）不負賠償責任。</p>
-    </section>
-
-    <section id="changes">
-      <h2><span class="no">11.</span>條款修改</h2>
-      <p>開發者可能會修改本條款，修改後會更新本頁上方的生效日期。條款修改後你仍繼續使用 StillLink，即視為同意修改後的條款。</p>
-    </section>
-
-    <section id="contact">
-      <h2><span class="no">12.</span>聯絡我們</h2>
-      <p>對本條款有任何疑問，歡迎來信：[聯絡信箱]</p>
-    </section>
+  <div class="card">
+    <h2>StillLink 是什麼</h2>
+    <p>一款 Mac 上的紫微斗數排盤 App，由 Jean 一個人設計與開發。你可以用它排盤、看運限、寫備註、加照片和頭貼。</p>
   </div>
-</main>
 
-<footer class="site">
-  <div class="wrap">
-    <span>StillLink · 由 Jean 個人開發</span>
-    <nav aria-label="頁尾">
-      <ul>
-        <li><a href="privacy.html">隱私權政策</a></li>
-        <li><a href="terms.html" aria-current="page">使用條款</a></li>
-        <li><a href="delete-account.html">刪除資料</a></li>
-      </ul>
-    </nav>
+  <div class="card">
+    <h2>要錢嗎？從哪裡下載？</h2>
+    <p>目前完全免費，沒有付費方案，也沒有 App 內購買。</p>
+    <p>官方版本只在 <a href="https://github.com/1413jean/stilllink/releases">GitHub Releases</a> 發佈，還沒有上架 App Store。請只從這裡下載，別人轉傳的檔案可能被動過手腳。</p>
   </div>
-</footer>
+
+  <div class="card">
+    <h2>盤上的內容，請當作參考</h2>
+    <p>StillLink 顯示的命盤和各種資訊<strong>只供參考與娛樂</strong>，不是醫療、心理、法律、財務或投資建議。重要的決定，請不要只憑盤面；需要時請找相關的專業人士。</p>
+  </div>
+
+  <div class="card">
+    <h2>需要註冊帳號嗎？</h2>
+    <p>不用。現在沒有帳號，打開就能用。以後如果加入 Apple／Google 登入，會先更新這份條款和<a href="privacy.html">隱私權政策</a>。</p>
+  </div>
+
+  <div class="card">
+    <h2>你輸入的資料屬於你</h2>
+    <ul>
+      <li>命盤、備註、照片和設定都只存在你的 Mac 上，我們拿不到，也不主張任何權利。</li>
+      <li>輸入別人的姓名或生辰之前，請先取得對方同意，並好好保管。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>記得備份</h2>
+    <p class="warn">資料只在你的電腦裡，我們手上沒有副本，所以沒辦法幫你救回來。</p>
+    <p>電腦壞掉、重灌、誤刪或按了「清空所有資料」都可能讓資料消失。建議定期在「設定 → 資料 → 備份」存一份 <code>.stilllink</code> 檔。</p>
+  </div>
+
+  <div class="card">
+    <h2>更新和改版</h2>
+    <p>App 會到 GitHub 檢查新版本。新版可能新增、調整或拿掉某些功能。</p>
+    <p>測試版（StillLink Beta）是給試用新功能用的，可能比較不穩定。StillLink 是個人作品，我們會盡力維護，但沒辦法保證一直有更新。</p>
+  </div>
+
+  <div class="card">
+    <h2>用到的開源元件</h2>
+    <p>排盤使用 <a href="https://github.com/SylarLong/iztro">iztro</a>，App 內更新使用 <a href="https://sparkle-project.org">Sparkle</a>。這些元件依各自的授權條款使用。</p>
+  </div>
+
+  <div class="card">
+    <h2>請不要這樣做</h2>
+    <ul>
+      <li>修改 App 後冒用 StillLink 的名義散布</li>
+      <li>拿來侵害他人權益，例如未經同意蒐集、公開別人的生辰資料</li>
+      <li>用於任何違法的用途</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>責任範圍</h2>
+    <p>StillLink 以「現況」提供，我們會盡力讓它正確、好用，但無法保證完全沒有錯誤，也不保證盤面內容適合你的任何特定用途。在法律允許的範圍內，因使用 StillLink 造成的損失，開發者不負賠償責任。</p>
+  </div>
+
+  <div class="card">
+    <h2>條款會更新</h2>
+    <p>條款有修改時，會更新上方的日期。之後繼續使用，就表示你同意新的內容。</p>
+  </div>
+
+  <div class="card">
+    <h2>聯絡我們</h2>
+    <p>有任何問題，歡迎寫信到 <a href="mailto:jean.ui@cinpos.com">jean.ui@cinpos.com</a>，或到 <a href="https://github.com/1413jean/stilllink/issues">GitHub 回報問題</a>。</p>
+  </div>
+
+  <footer>
+    <p>StillLink · 由 Jean 設計與開發</p>
+    <p><a href="privacy.html">隱私權政策</a>　<a href="terms.html">使用條款</a>　<a href="delete-account.html">刪除資料</a></p>
+  </footer>
+</div>
 </body>
 </html>
