@@ -82,7 +82,7 @@ struct QuickMenu: View {
     private func item(_ icon: String, _ title: String, _ i: Int, chevron: Bool? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Image(systemName: icon).font(Font.zIcon).foregroundStyle(Color.zAccent).frame(width: 18)
+                Image(systemName: icon).font(Font.zIcon).foregroundStyle(Color.zText).frame(width: 18)
                 Text(title).font(Font.zBody).foregroundStyle(Color.zText)
                 Spacer()
                 if let chevron {

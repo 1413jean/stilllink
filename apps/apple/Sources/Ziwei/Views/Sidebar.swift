@@ -76,15 +76,15 @@ struct Sidebar: View {
                         .background(RoundedRectangle(cornerRadius: 8).fill(Color.zSel))
                     }
 
-                    let pinned = store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID }
+                    let pinned = store.sorted(store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID })
                     if !pinned.isEmpty {
                         SectionLabel("釘選").padding(.top, 18)
                         ForEach(pinned) { p in personRow(p, indent: false) }
                     }
 
-                    SectionLabel("命盤", action: onNew).padding(.top, 18)
+                    SectionLabel("命盤", action: onNew, sort: $store.sortMode).padding(.top, 18)
                     ForEach(groupNames, id: \.self) { g in
-                        let list = store.people.filter { !$0.pinned && $0.group == g && matches($0) && $0.id != store.selfID }
+                        let list = store.sorted(store.people.filter { !$0.pinned && $0.group == g && matches($0) && $0.id != store.selfID })
                         if !list.isEmpty {
                             FolderRow(name: g, count: list.count, open: !collapsed.contains(g),
                                       onAdd: { NotificationCenter.default.post(name: .newChart, object: g) }) {
@@ -292,12 +292,37 @@ private struct FolderRow: View {
 private struct SectionLabel: View {
     let text: String
     var action: (() -> Void)? = nil
+    var sort: Binding<Store.SortMode>? = nil
     @State private var hover = false
-    init(_ t: String, action: (() -> Void)? = nil) { text = t; self.action = action }
+    @State private var sortHover = false
+    init(_ t: String, action: (() -> Void)? = nil, sort: Binding<Store.SortMode>? = nil) { text = t; self.action = action; self.sort = sort }
     var body: some View {
-        HStack {
+        HStack(spacing: 2) {
             Text(text).font(Font.zCaption).foregroundStyle(Color.zText3)
             Spacer()
+            if let sort {
+                // 排序：新增時間、名稱、出生日期、自訂
+                Menu {
+                    Picker("排序", selection: sort) {
+                        ForEach(Store.SortMode.allCases, id: \.self) { m in Label(m.label, systemImage: m.icon).tag(m) }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Image(systemName: sort.wrappedValue == .custom ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                        .font(Font.zCaptionStrong)
+                        .foregroundStyle(sortHover || sort.wrappedValue != .custom ? Color.zText : Color.zText3)
+                        .frame(width: 22, height: 22)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(sortHover ? Color.zHover : .clear))
+                        .contentShape(Rectangle())
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
+                .labelStyle(.titleAndIcon)
+                .fixedSize()
+                .onHover { h in withAnimation(Motion.fast) { sortHover = h } }
+                .help("排序：\(sort.wrappedValue.label)")
+            }
             if let action {
                 Button(action: action) {
                     Image(systemName: "plus").font(Font.zCaptionStrong).foregroundStyle(hover ? Color.zText : Color.zText3)
@@ -323,7 +348,7 @@ private struct AccountBar: View {
             Rectangle().fill(Color.zLine).frame(height: 0.5)
             Menu {
                 Picker("外觀", selection: $store.appearance) {
-                    ForEach(Appearance.allCases, id: \.self) { Text($0.label).tag($0) }
+                    ForEach(Appearance.allCases, id: \.self) { Label($0.label, systemImage: $0.icon).tag($0) }
                 }
                 .pickerStyle(.inline)
                 Divider()
@@ -331,9 +356,13 @@ private struct AccountBar: View {
                     Label("帳號與同步…", systemImage: "icloud")
                 }
                 Divider()
-                Button("個人檔案…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
-                Button("設定…") { NotificationCenter.default.post(name: .openSettings, object: nil) }
-                    .keyboardShortcut(",")
+                Button { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) } label: {
+                    Label("個人檔案…", systemImage: "person.crop.circle")
+                }
+                Button { NotificationCenter.default.post(name: .openSettings, object: nil) } label: {
+                    Label("設定…", systemImage: "gearshape")
+                }
+                .keyboardShortcut(",")
             } label: {
                 HStack(spacing: 8) {
                     AvatarView(name: store.userAvatar, size: 20)
@@ -348,6 +377,7 @@ private struct AccountBar: View {
             .menuStyle(.button)
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
+            .labelStyle(.titleAndIcon)
             .padding(.horizontal, 14)
             .frame(height: 44)
         }

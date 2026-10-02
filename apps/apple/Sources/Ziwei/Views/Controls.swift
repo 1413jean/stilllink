@@ -78,7 +78,7 @@ struct ZColumnList<Item: Hashable, ID: Hashable>: View {
                         HStack {
                             Text(label(item)).font(Font.zBody).foregroundStyle(on ? Color.zText : Color.zText2)
                             Spacer()
-                            if on { Image(systemName: "checkmark").font(Font.zCaptionStrong).foregroundStyle(Color.zAccent) }
+                            if on { Image(systemName: "checkmark").font(Font.zCaptionStrong).foregroundStyle(Color.zText) }
                         }
                         .padding(.horizontal, 10)
                         .frame(height: 30)

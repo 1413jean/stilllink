@@ -40,6 +40,7 @@ struct Person: Codable, Identifiable, Hashable {
 enum Appearance: String, Codable, CaseIterable {
     case light, dark, system
     var label: String { ["light": "淺色", "dark": "深色", "system": "跟隨系統"][rawValue]! }
+    var icon: String { ["light": "sun.max", "dark": "moon", "system": "circle.lefthalf.filled"][rawValue]! }
     var scheme: ColorScheme? { self == .light ? .light : self == .dark ? .dark : nil }
 }
 
@@ -168,8 +169,52 @@ final class Store: ObservableObject {
         set { groupOrderRaw = newValue.joined(separator: "\u{1F}"); objectWillChange.send() }
     }
 
+    /// 側欄命盤排序
+    enum SortMode: String, CaseIterable {
+        case custom, newest, oldest, nameAZ, nameZA, elder, younger
+        var label: String {
+            switch self {
+            case .custom: "自訂（拖曳）"
+            case .newest: "新增時間：新到舊"
+            case .oldest: "新增時間：舊到新"
+            case .nameAZ: "名稱：A → Z"
+            case .nameZA: "名稱：Z → A"
+            case .elder: "出生日期：年長在前"
+            case .younger: "出生日期：年輕在前"
+            }
+        }
+        var icon: String {
+            switch self {
+            case .custom: "hand.draw"
+            case .newest, .oldest: "clock"
+            case .nameAZ, .nameZA: "textformat"
+            case .elder, .younger: "calendar"
+            }
+        }
+    }
+    @AppStorage("sortMode") var sortMode: SortMode = .custom
+
+    /// 依目前排序方式排好一組命盤
+    func sorted(_ list: [Person]) -> [Person] {
+        let zh = Locale(identifier: "zh_TW")
+        func birth(_ p: Person) -> String {
+            let n = (p.clock ?? p.solar).split(whereSeparator: { " -:".contains($0) }).compactMap { Int($0) }
+            return n.map { String(format: "%04d", $0) }.joined()
+        }
+        switch sortMode {
+        case .custom: return list
+        case .newest: return list.sorted { $0.createdAt > $1.createdAt }
+        case .oldest: return list.sorted { $0.createdAt < $1.createdAt }
+        case .nameAZ: return list.sorted { $0.name.compare($1.name, locale: zh) == .orderedAscending }
+        case .nameZA: return list.sorted { $0.name.compare($1.name, locale: zh) == .orderedDescending }
+        case .elder: return list.sorted { birth($0) < birth($1) }
+        case .younger: return list.sorted { birth($0) > birth($1) }
+        }
+    }
+
     /// 把命盤拖到另一張命盤前面：順序跟著變，分組／釘選也跟目標一樣
     func movePerson(_ id: UUID, before target: UUID) {
+        sortMode = .custom   // 拖曳就是自訂順序
         guard id != target, let from = people.firstIndex(where: { $0.id == id }),
               let t = people.first(where: { $0.id == target }) else { return }
         var p = people.remove(at: from)

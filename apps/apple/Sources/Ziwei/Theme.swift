@@ -13,14 +13,14 @@ extension Color {
 
     static let zBg = dynamic(0xFAF9F6, 0x262624)
     static let zCard = dynamic(0xFFFFFF, 0x30302E)
-    static let zSide = dynamic(0xF3F2EE, 0x1F1F1D)
+    static let zSide = dynamic(0xF8F8F6, 0x1F1F1D)      // 側欄：Claude 式很淺的暖白
     static let zLine = dynamic(0xE7E5DF, 0x3D3C39)
     static let zGrid = dynamic(0xCFCCC4, 0x4A4946)
     static let zText = dynamic(0x1F1E1C, 0xECEAE4)
     static let zText2 = dynamic(0x6B6963, 0xA6A39C)
     static let zText3 = dynamic(0x9C9A93, 0x7A7872)
-    static let zHover = dynamic(0xF0EEE8, 0x34332F)
-    static let zSel = dynamic(0xEDEAE2, 0x3A3935)
+    static let zHover = dynamic(0xF1F0ED, 0x34332F)
+    static let zSel = dynamic(0xEDEDEA, 0x3A3935)       // 選取列：淺灰
     static let zAccent = dynamic(0xC2603F, 0xE08A68)
 
     // 命盤（照文墨天機）
