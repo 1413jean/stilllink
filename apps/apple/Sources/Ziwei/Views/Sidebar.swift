@@ -114,6 +114,8 @@ struct Sidebar: View {
         }
         .dimmedBlur()
         .background(Color.zSide)
+        // 側欄右緣細線：側欄和主區顏色接近，靠這條線分開
+        .overlay(alignment: .trailing) { Rectangle().fill(Color.zLine).frame(width: 1).ignoresSafeArea() }
         .overlay(alignment: .top) { TopFade(color: .zSide) }
         .alert("重新命名", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("名字", text: $newName)
