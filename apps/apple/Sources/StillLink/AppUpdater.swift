@@ -132,8 +132,9 @@ struct UpdateToolbarButton: View {
                 Label("更新", systemImage: "arrow.down.circle.fill")
                     .labelStyle(.titleAndIcon)
                     .font(Font.zCaptionStrong).foregroundStyle(Color.zOnColor)
-                    .padding(.horizontal, 10).frame(height: 24)
+                    .padding(.horizontal, 9).frame(height: 22)
                     .background(Capsule().fill(Color.zAccent))
+                    .padding(.horizontal, 4)   // 跟工具列玻璃膠囊的邊留一點距離
             }
             .buttonStyle(.plain)
             .help("更新到 \(v)，完成後會自動重新打開")
