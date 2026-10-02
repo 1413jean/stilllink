@@ -85,8 +85,32 @@ final class StarNotes: ObservableObject {
     }
 }
 
-/// 右側面板：點選宮位的星曜筆記
+/// 右側面板：點選宮位的星曜筆記，連三方四正一起整理（本宮、對宮、兩個三合宮）
 struct StarNotesCard: View {
+    let chart: Chart
+    let index: Int
+
+    var body: some View {
+        let sf = ZW.sanFang(index)   // [本宮, 三合, 三合, 對宮]
+        let parts: [(String, Int)] = [("本宮", sf[0]), ("對宮", sf[3]), ("三合", sf[1]), ("三合", sf[2])]
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(parts, id: \.1) { label, i in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Text(label).font(Font.zCaptionStrong).foregroundStyle(Color.zOnColor)
+                            .padding(.horizontal, 6).frame(height: 18)
+                            .background(Capsule().fill(label == "本宮" ? Color.zAccent : Color.zText3))
+                        Text(chart.palaces[i].name).font(Font.zCalloutStrong).foregroundStyle(Color.wmRed)
+                    }
+                    PalaceNotes(palace: chart.palaces[i])
+                }
+            }
+        }
+    }
+}
+
+/// 一個宮位裡每顆星的筆記
+private struct PalaceNotes: View {
     @ObservedObject private var notes = StarNotes.shared
     @Environment(\.zSettings) private var settings
     let palace: Palace
@@ -95,9 +119,9 @@ struct StarNotesCard: View {
     var body: some View {
         let pk = StarNotes.palaceKey(palace.name)
         let list = notes.keys(for: palace)
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             if list.isEmpty {
-                Text("這一宮沒有星曜筆記。可以到「星曜筆記」頁自己寫。").font(Font.zCaption).foregroundStyle(Color.zText3)
+                Text(palace.stars.isEmpty ? "空宮" : "沒有星曜筆記").font(Font.zCaption).foregroundStyle(Color.zText3)
             }
             ForEach(list, id: \.key) { item in
                 let n = notes.note(item.key)
