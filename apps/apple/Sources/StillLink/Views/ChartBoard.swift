@@ -342,6 +342,7 @@ extension PalaceCell {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, fly: flyStars[s.name],
                            hideOuter: level >= 3 && !settings.showOuterBelowMonth,
+                           yearInMain: !settings.showOuterBelowMonth,
 
                            minor: minor && settings.showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                            scopes: (1...max(1, level)).compactMap { lv in
@@ -360,6 +361,7 @@ private struct StarColumn: View {
     let fs: CGFloat
     let fly: Mutagen?   // 點選宮位的宮干四化落在這顆星
     let hideOuter: Bool // 流月以下：不顯示生年與大限四化
+    let yearInMain: Bool // 流年四化也放進主欄（生年＋大限＋流年同一直排）；設定要流月以下也顯示全部時改回並排
     let minor: Mutagen? // 小限四化
     let scopes: [(Int, Mutagen)]
 
@@ -394,13 +396,13 @@ private struct StarColumn: View {
         .frame(minWidth: fs * 1.18)
     }
 
-    /// 四化方塊分兩欄：主欄＝生年、大限（直排在星名下）；側欄＝小限、流年、流月、流日、流時
+    /// 四化方塊分兩欄：主欄＝生年、大限（預設連流年也在這欄，直排在星名下）；側欄＝小限、流月以後（設定全顯示時流年也在側欄）
     private var columns: ([(String, Color)], [(String, Color)]) {
         var main: [(String, Color)] = [], side: [(String, Color)] = []
         if !star.mutagen.isEmpty && !hideOuter { main.append((star.mutagen, .fBirth)) }
         if let minor { side.append((minor.rawValue, .fMinor)) }
         for (lv, m) in scopes where !(hideOuter && lv == 1) {
-            if lv == 1 { main.append((m.rawValue, Color.fScopes[0])) } else { side.append((m.rawValue, Color.fScopes[lv - 1])) }
+            if lv == 1 || (lv == 2 && yearInMain) { main.append((m.rawValue, Color.fScopes[lv - 1])) } else { side.append((m.rawValue, Color.fScopes[lv - 1])) }
         }
         return (main, side)
     }
