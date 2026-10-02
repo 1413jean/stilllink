@@ -183,6 +183,18 @@ private struct PalaceCell: View {
     let taijiLabel: String?
     let flyStars: [String: Mutagen]
 
+    /// 流月：這一宮是流年的哪個農曆月＋月干。流年斗君＝子斗順數到流年地支，從那宮起正月順排；月干用五虎遁由流年天干推
+    private var monthLabel: String? {
+        let b = ZW.branches
+        guard let dou = b.firstIndex(of: model.bazi.ziDou),
+              let yb = b.firstIndex(of: model.horo.yearly.branch),
+              let ys = ZW.stems.firstIndex(of: model.horo.yearly.stem),
+              let pb = b.firstIndex(of: model.chart.palaces[index].branch) else { return nil }
+        let douJun = (dou + yb) % 12
+        let m = (pb - douJun + 12) % 12 + 1
+        return ZW.lunarMonths[m - 1] + ZW.stems[((ys % 5) * 2 + 2 + m - 1) % 10]
+    }
+
     var body: some View {
         let chart = model.chart, horo = model.horo
         let p = chart.palaces[index]
@@ -208,6 +220,7 @@ private struct PalaceCell: View {
                     Text(p.suiqian)
                     }
                 }
+                .fixedSize()   // 這一欄不被右邊的宮名擠扁
                 .font(ChartType.font(ChartType.gods(fs)))
                 .foregroundStyle(Color.zText)
                 Spacer(minLength: 0)
@@ -236,11 +249,20 @@ private struct PalaceCell: View {
                     let first = Array(tags.prefix(2))              // 跟宮名同一欄
                     let rest = Array(tags.dropFirst(2))            // 往左的欄，每欄 3 個
                     let restCols = stride(from: 0, to: rest.count, by: 3).map { Array(rest[$0..<min($0 + 3, rest.count)]) }
-                    HStack(alignment: .bottom, spacing: 4) {
-                        if let taijiLabel {
-                            Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
-                                .lineLimit(1).fixedSize()
+                    // 流月（同文墨天機，例：冬月庚）在上、轉宮名在下，疊在運限宮名上方，不並排、不佔寬度
+                    if monthLabel != nil || taijiLabel != nil {
+                        VStack(alignment: .trailing, spacing: 0) {
+                            if let monthLabel {
+                                Text(monthLabel).font(ChartType.font(ChartType.tag(fs))).foregroundStyle(Color.wmEarth)
+                                    .lineLimit(1).fixedSize()
+                            }
+                            if let taijiLabel {
+                                Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
+                                    .lineLimit(1).fixedSize()
+                            }
                         }
+                    }
+                    HStack(alignment: .bottom, spacing: 4) {
                         // 越後面的欄越靠左
                         ForEach(Array(restCols.enumerated().reversed()), id: \.offset) { _, col in
                             VStack(spacing: 0) {
@@ -319,6 +341,7 @@ extension PalaceCell {
         FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, fly: flyStars[s.name],
+                           hideOuter: level >= 3 && !settings.showOuterBelowMonth,
 
                            minor: minor && settings.showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                            scopes: (1...max(1, level)).compactMap { lv in
@@ -336,6 +359,7 @@ private struct StarColumn: View {
     let star: Star
     let fs: CGFloat
     let fly: Mutagen?   // 點選宮位的宮干四化落在這顆星
+    let hideOuter: Bool // 流月以下：不顯示生年與大限四化
     let minor: Mutagen? // 小限四化
     let scopes: [(Int, Mutagen)]
 
@@ -373,9 +397,9 @@ private struct StarColumn: View {
     /// 四化方塊分兩欄：主欄＝生年、大限（直排在星名下）；側欄＝小限、流年、流月、流日、流時
     private var columns: ([(String, Color)], [(String, Color)]) {
         var main: [(String, Color)] = [], side: [(String, Color)] = []
-        if !star.mutagen.isEmpty { main.append((star.mutagen, .fBirth)) }
+        if !star.mutagen.isEmpty && !hideOuter { main.append((star.mutagen, .fBirth)) }
         if let minor { side.append((minor.rawValue, .fMinor)) }
-        for (lv, m) in scopes {
+        for (lv, m) in scopes where !(hideOuter && lv == 1) {
             if lv == 1 { main.append((m.rawValue, Color.fScopes[0])) } else { side.append((m.rawValue, Color.fScopes[lv - 1])) }
         }
         return (main, side)
