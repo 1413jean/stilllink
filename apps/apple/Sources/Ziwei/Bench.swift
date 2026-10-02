@@ -16,6 +16,23 @@ enum Bench {
             exit(0)
         }
         guard let path = ProcessInfo.processInfo.environment["ZIWEI_BENCH"] else { return }
+        // 亂數起盤年份自測：ZIWEI_YEARS_TEST=1 時，排西元 1～9999 年的極端年份並回報命宮主星與四柱
+        if ProcessInfo.processInfo.environment["ZIWEI_YEARS_TEST"] != nil {
+            Task.detached {
+                var lines: [String] = []
+                for (y, m, d, h) in [(1, 1, 1, 0), (1, 6, 15, 13), (100, 3, 3, 7), (1582, 10, 10, 9), (1899, 12, 31, 23),
+                                     (2026, 10, 2, 10), (5000, 7, 7, 5), (9999, 12, 28, 22)] {
+                    let p = TempChart.make(y, m, d, h, 0, .male, name: "匿名")
+                    let c = await Engine.shared.chart(for: p)
+                    let mdl = await Engine.shared.model(for: p, pick: Pick.today())
+                    let bazi = BaziInfo(person: p, chart: c)
+                    lines.append("\(p.solar) → \(c.solarDate) | \(c.lunarDate) \(c.time) | 四柱 \(bazi.pillars.joined(separator: " ")) | model \(mdl == nil ? "nil" : "ok")")
+                }
+                try? lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+                exit(0)
+            }
+            return
+        }
         Task.detached {
             var lines: [String] = []
             func ms(_ t0: Date) -> String { String(format: "%.1fms", Date().timeIntervalSince(t0) * 1000) }

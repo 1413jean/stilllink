@@ -150,10 +150,9 @@ enum TempChart {
         case .now(let g): p = make(Date(), g, name: "紫占 · 此刻"); level = ZSettings.stored().openLevel
         case .sevenLayer(let g): p = make(Date(), g, name: "七層限流盤"); level = 5
         case .random(let g):
-            var cal = Calendar(identifier: .gregorian); cal.timeZone = .current
-            let d = cal.date(from: DateComponents(year: Int.random(in: 1940...2015), month: Int.random(in: 1...12),
-                                                  day: Int.random(in: 1...28), hour: Int.random(in: 0...23), minute: Int.random(in: 0...59)))!
-            p = make(d, g, name: "匿名"); level = ZSettings.stored().openLevel
+            // 亂序起盤：西元 1～9999 年任一刻
+            p = make(Int.random(in: Self.years), Int.random(in: 1...12), Int.random(in: 1...28),
+                     Int.random(in: 0...23), Int.random(in: 0...59), g, name: "匿名"); level = ZSettings.stored().openLevel
         }
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: level))
     }
@@ -163,24 +162,30 @@ enum TempChart {
     static func openBaoshu(_ n: Int) {
         let minute = UInt64(Date().timeIntervalSince1970 / 60)
         var rng = SeededRandom(seed: UInt64(n) &* 0x9E3779B97F4A7C15 ^ minute)
-        let year = Int.random(in: 1930...2025, using: &rng)
+        // 西元 1～9999 年都可能；直接抽國曆日期，不經農曆換算（Foundation 在極端年份不可靠）
+        let year = Int.random(in: Self.years, using: &rng)
         let month = Int.random(in: 1...12, using: &rng)
-        var day = Int.random(in: 1...30, using: &rng)
-        if day == 30 && Lunar.monthLength(year, month) == 29 { day = 29 }
+        let day = Int.random(in: 1...28, using: &rng)
         let branch = Int.random(in: 0...11, using: &rng)
         let g: Gender = Bool.random(using: &rng) ? .male : .female
-        guard let s = Lunar.toSolar(year, month, day) else { return }
-        var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "Asia/Taipei")!
-        let date = cal.date(from: DateComponents(year: s.0, month: s.1, day: s.2, hour: branch == 0 ? 0 : branch * 2, minute: branch == 0 ? 30 : 0))!
-        let p = make(date, g, name: "匿名")
+        let p = make(year, month, day, branch == 0 ? 0 : branch * 2, branch == 0 ? 30 : 0, g, name: "匿名")
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: ZSettings.stored().openLevel))
-        Toast.show("報數 \(n) → 農曆\(year)年\(ZW.lunarMonths[month - 1])\(ZW.lunarDays[day - 1]) \(ZW.branches[branch])時 · \(g.rawValue)")
+        Toast.show("報數 \(n) → 西元\(year)年\(month)月\(day)日 \(ZW.branches[branch])時 · \(g.rawValue)")
     }
+
+    /// 亂數起盤的年份範圍
+    static let years = 1...9999
 
     static func make(_ d: Date, _ g: Gender, name: String) -> Person {
         let c = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: d)
-        return Person(name: name, gender: g, solar: "\(c.year!)-\(c.month!)-\(c.day!)", hour: SolarTime.shichen(c.hour!),
-                      group: "占卜", clock: String(format: "%d-%d-%d %02d:%02d", c.year!, c.month!, c.day!, c.hour!, c.minute!))
+        return make(c.year!, c.month!, c.day!, c.hour!, c.minute!, g, name: name)
+    }
+
+    static func make(_ y: Int, _ m: Int, _ d: Int, _ h: Int, _ min: Int, _ g: Gender, name: String) -> Person {
+        // 1582-10-5～14 在格里曆改曆時被跳過，不存在（iztro 會報錯）→ 移到 10-15
+        let d = (y == 1582 && m == 10 && (5...14).contains(d)) ? 15 : d
+        return Person(name: name, gender: g, solar: "\(y)-\(m)-\(d)", hour: SolarTime.shichen(h),
+               group: "占卜", clock: String(format: "%d-%d-%d %02d:%02d", y, m, d, h, min))
     }
 }
 

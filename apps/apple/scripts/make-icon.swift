@@ -19,19 +19,19 @@ let shape = CGPath(roundedRect: body, cornerWidth: 185, cornerHeight: 185, trans
 
 ctx.saveGState()
 ctx.setShadow(offset: CGSize(width: 0, height: -12), blur: 28, color: rgb(0x000000, 0.22))
-ctx.addPath(shape); ctx.setFillColor(rgb(0xF5EFE6)); ctx.fillPath()
+ctx.addPath(shape); ctx.setFillColor(rgb(0xF1F4F7)); ctx.fillPath()
 ctx.restoreGState()
 
 ctx.saveGState()
 ctx.addPath(shape); ctx.clip()
-let grad = CGGradient(colorsSpace: cs, colors: [rgb(0xFBF8F3), rgb(0xEBDFD0)] as CFArray, locations: [0, 1])!
+let grad = CGGradient(colorsSpace: cs, colors: [rgb(0xF8FAFC), rgb(0xDCE4EC)] as CFArray, locations: [0, 1])!
 ctx.drawLinearGradient(grad, start: CGPoint(x: 0, y: body.maxY), end: CGPoint(x: 0, y: body.minY), options: [])
 
 // 十二宮格：4×4 外圈，中間 2×2 留白
 let inset: CGFloat = 150
 let grid = body.insetBy(dx: inset, dy: inset)
 let cell = grid.width / 4
-ctx.setStrokeColor(rgb(0xC2603F, 0.28))
+ctx.setStrokeColor(rgb(0x5B7C99, 0.28))
 ctx.setLineWidth(5)
 ctx.stroke(grid)
 for k in 1..<4 {
@@ -68,8 +68,8 @@ func sparkle(center c: CGPoint, r: CGFloat, waist: CGFloat) -> CGPath {
     return p
 }
 let center = CGPoint(x: body.midX, y: body.midY)
-ctx.addPath(sparkle(center: center, r: 210, waist: 34)); ctx.setFillColor(rgb(0xC2603F)); ctx.fillPath()
-ctx.addPath(sparkle(center: CGPoint(x: center.x + 200, y: center.y + 190), r: 52, waist: 9)); ctx.setFillColor(rgb(0xC2603F, 0.85)); ctx.fillPath()
+ctx.addPath(sparkle(center: center, r: 210, waist: 34)); ctx.setFillColor(rgb(0x5B7C99)); ctx.fillPath()
+ctx.addPath(sparkle(center: CGPoint(x: center.x + 200, y: center.y + 190), r: 52, waist: 9)); ctx.setFillColor(rgb(0x5B7C99, 0.85)); ctx.fillPath()
 ctx.restoreGState()
 
 let img = ctx.makeImage()!

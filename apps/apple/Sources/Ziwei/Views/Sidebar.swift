@@ -321,6 +321,7 @@ private struct SectionLabel: View {
                 .buttonStyle(.plain)
                 .menuIndicator(.hidden)
                 .labelStyle(.titleAndIcon)
+                .tint(Color.primary)
                 .fixedSize()
                 .onHover { h in withAnimation(Motion.fast) { sortHover = h } }
                 .help("排序：\(sort.wrappedValue.label)")
@@ -380,6 +381,7 @@ private struct AccountBar: View {
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
             .labelStyle(.titleAndIcon)
+            .tint(Color.primary)   // 選單 icon 跟文字同色，不用主色
             .padding(.horizontal, 14)
             .frame(height: 44)
         }

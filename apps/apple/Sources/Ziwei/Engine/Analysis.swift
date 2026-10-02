@@ -79,11 +79,11 @@ enum ZW {
         return (0..<5).map { first + $0 * 12 }
     }
 
-    static func yearGanzhi(_ y: Int) -> String { stems[(y - 4) % 10] + branches[(y - 4) % 12] }
+    static func yearGanzhi(_ y: Int) -> String { stems[((y - 4) % 10 + 10) % 10] + branches[((y - 4) % 12 + 12) % 12] }   // 西元 1～3 年也要正確
 
     /// 流月干支（五虎遁）：正月建寅，月干由年干起
     static func monthGanzhi(lunarYear y: Int, month m: Int) -> String {
-        let first = (((y - 4) % 10) % 5) * 2 + 2
+        let first = ((((y - 4) % 10 + 10) % 10) % 5) * 2 + 2
         return stems[(first + m - 1) % 10] + branches[(m + 1) % 12]
     }
 
