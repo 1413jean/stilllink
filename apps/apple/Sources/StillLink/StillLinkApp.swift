@@ -134,8 +134,6 @@ struct RootView: View {
                 Button { step(1) } label: { Image(systemName: "arrow.right") }
                     .disabled(cursor >= history.count - 1).help("下一頁 ⌘]").keyboardShortcut("]", modifiers: .command)
             }
-            // 有新版本時才出現：按下去就下載、安裝、重新打開
-            ToolbarItem(placement: .primaryAction) { UpdateToolbarButton() }
         }
         .onChange(of: route) { _, r in
             guard let r else { return }

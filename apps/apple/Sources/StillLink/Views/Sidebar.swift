@@ -132,6 +132,8 @@ struct Sidebar: View {
         }
         .dimmedBlur()
         .background(Color.zSide)
+        // 有新版本時才出現，疊在左上角紅黃綠按鈕右邊：按下去就下載、安裝、重新打開
+        .toolbar { ToolbarItem(placement: .automatic) { UpdateToolbarButton() } }
         // 側欄右緣細線：側欄和主區顏色接近，靠這條線分開
         .overlay(alignment: .trailing) { Rectangle().fill(Color.zLine).frame(width: 1).ignoresSafeArea() }
         .overlay(alignment: .top) { TopFade(color: .zSide) }

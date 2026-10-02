@@ -17,7 +17,14 @@ final class AppUpdater: NSObject, ObservableObject {
         case failed(String)
     }
 
-    @Published private(set) var state: State = .idle
+    @Published private(set) var state: State = .idle {
+        didSet {   // 驗證用：ZIWEI_UPDATE_LOG=/path 記錄每次狀態變化
+            if let p = ProcessInfo.processInfo.environment["ZIWEI_UPDATE_LOG"],
+               let h = FileHandle(forWritingAtPath: p) ?? { FileManager.default.createFile(atPath: p, contents: nil); return FileHandle(forWritingAtPath: p) }() {
+                h.seekToEndOfFile(); h.write("\(Date().timeIntervalSince1970) \(state)\n".data(using: .utf8)!); h.closeFile()
+            }
+        }
+    }
     private var updater: SPUUpdater?
     private var choice: ((SPUUserUpdateChoice) -> Void)?
     private var expected: UInt64 = 0
@@ -122,34 +129,43 @@ extension AppUpdater: SPUUserDriver {
 
 import SwiftUI
 
-/// 工具列上的「更新」：有新版才出現；下載中顯示進度
+/// 左上角紅黃綠旁邊的「更新」：有新版才出現；下載中、安裝中顯示進度
 struct UpdateToolbarButton: View {
     @ObservedObject private var updater = AppUpdater.shared
     var body: some View {
         switch updater.state {
         case .available(let v):
             Button { updater.install() } label: {
-                Label("更新", systemImage: "arrow.down.circle.fill")
-                    .labelStyle(.titleAndIcon)
-                    .font(Font.zCaptionStrong).foregroundStyle(Color.zOnColor)
-                    .padding(.horizontal, 9).frame(height: 22)
-                    .background(Capsule().fill(Color.zAccent))
-                    .padding(.horizontal, 4)   // 跟工具列玻璃膠囊的邊留一點距離
+                HStack(spacing: 3) {   // icon 和文字靠近一點
+                    Image(systemName: "arrow.down.circle.fill")
+                    Text("更新")
+                }
+                .font(Font.zCaptionStrong).foregroundStyle(Color.zOnColor)
+                .padding(.horizontal, 8).frame(height: 22)
+                .background(Capsule().fill(Color.zAccent))
+                .contentShape(Capsule())
+                .padding(.horizontal, 4)   // 跟工具列玻璃膠囊的邊留距離
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressStyle())
             .help("更新到 \(v)，完成後會自動重新打開")
         case .downloading(let p):
-            HStack(spacing: 6) {
-                ProgressView(value: p ?? 0).progressViewStyle(.circular).controlSize(.small)
-                Text(p.map { "更新中 \(Int($0 * 100))%" } ?? "更新中…").font(Font.zCaptionStrong).foregroundStyle(Color.zText2)
-            }
+            chip { Text(p.map { "更新中 \(Int($0 * 100))%" } ?? "更新中…").monospacedDigit() }
         case .installing:
-            HStack(spacing: 6) {
-                ProgressView().controlSize(.small)
-                Text("安裝中…").font(Font.zCaptionStrong).foregroundStyle(Color.zText2)
-            }
+            chip { Text("安裝中…") }
         default:
             EmptyView()
         }
+    }
+
+    /// 進行中的狀態：淡灰小膠囊＋轉圈
+    private func chip<C: View>(@ViewBuilder _ text: () -> C) -> some View {
+        HStack(spacing: 4) {
+            ProgressView().controlSize(.mini)
+            text()
+        }
+        .font(Font.zCaptionStrong).foregroundStyle(Color.zText2)
+        .padding(.horizontal, 8).frame(height: 22)
+        .background(Capsule().fill(Color.zHover))
+        .padding(.horizontal, 4)
     }
 }
