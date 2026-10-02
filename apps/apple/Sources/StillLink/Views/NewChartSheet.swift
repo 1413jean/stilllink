@@ -6,6 +6,7 @@ struct NewChartSheet: View {
     var editing: Person? = nil      // 有值＝編輯既有命盤
     var asSelf = false              // 填自己的命盤（個人檔案）
     var defaultGroup: String? = nil // 從側欄資料夾的 ＋ 進來時預設的分組
+    var temporary = false           // 臨時命盤：不存檔，排好直接用（加第二張盤時）
     var onClose: () -> Void
     var onCreated: (Person) -> Void
 
@@ -40,7 +41,7 @@ struct NewChartSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(asSelf ? "我的命盤" : editing == nil ? "新增命盤" : "編輯命主資料").font(.zTitle).foregroundStyle(Color.zText)
+            Text(temporary ? "臨時命盤" : asSelf ? "我的命盤" : editing == nil ? "新增命盤" : "編輯命主資料").font(.zTitle).foregroundStyle(Color.zText)
                 .padding(.horizontal, 32)
                 .padding(.top, 20)
                 .padding(.bottom, 4)
@@ -343,6 +344,7 @@ struct NewChartSheet: View {
         var p = Person(name: name.trimmingCharacters(in: .whitespaces), gender: gender, solar: r.solar, hour: r.hour,
                        group: asSelf ? "自己" : group, clock: r.clock, trueSolar: r.trueSolar, place: place)
         p.avatar = avatar ?? (asSelf ? store.userAvatar : nil)
+        if temporary { onClose(); onCreated(p); return }   // 不存檔
         store.add(p)
         if asSelf {
             store.selfIDString = p.id.uuidString

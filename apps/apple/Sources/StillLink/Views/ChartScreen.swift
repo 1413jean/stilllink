@@ -25,7 +25,7 @@ struct NowChart: View {
         let p = Person(id: NowChart.id, name: "此刻", gender: gender, solar: "\(c.year!)-\(c.month!)-\(c.day!)",
                        hour: SolarTime.shichen(c.hour!), group: "此刻",
                        clock: String(format: "%d-%d-%d %02d:%02d", c.year!, c.month!, c.day!, c.hour!, c.minute!))
-        ChartScreen(person: p)
+        ChartPager(primary: p)
             .id(p.chartKey)
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
     }
@@ -42,8 +42,12 @@ let boardAspect: CGFloat = 1.06
 struct ChartScreen: View {
     @EnvironmentObject var store: Store
     let person: Person
+    /// false：標題和工具列交給外層（ChartPager 多頁時統一管理）
+    var chrome = true
+    /// 盤面旁邊的「＋」：加第二張盤
+    var onAdd: (() -> Void)? = nil
     @State private var pick: Pick
-    @State private var showInfo = true
+    @AppStorage("showInfoPanel") private var showInfo = true
     @State private var model: ChartModel?
     @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
@@ -52,8 +56,10 @@ struct ChartScreen: View {
     @State private var sharpZoom: CGFloat = 1
 
     /// level 沒指定時照設定「打開命盤時預設顯示大限」（預設關閉＝本命）
-    init(person: Person, level: Int? = nil) {
+    init(person: Person, level: Int? = nil, chrome: Bool = true, onAdd: (() -> Void)? = nil) {
         self.person = person
+        self.chrome = chrome
+        self.onAdd = onAdd
         // 驗證用：ZIWEI_LEVEL=2 直接開到流年
         let lv = ProcessInfo.processInfo.environment["ZIWEI_LEVEL"].flatMap(Int.init) ?? level ?? ZSettings.stored().openLevel
         var p = Pick.today(); p.level = lv
@@ -99,6 +105,10 @@ struct ChartScreen: View {
                         .scaleEffect(zoom / sharpZoom, anchor: .top)
                         .frame(width: boardW * zoom, height: boardW * boardAspect * zoom, alignment: .top)
                         .gesture(magnify)
+                        // 盤面右邊的「＋」：加一張盤，左右滑動切換
+                        .overlay(alignment: .trailing) {
+                            if let onAdd, zoom == 1 { AddBoardButton(action: onAdd).offset(x: 40) }
+                        }
 
                         if let model {
                             PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
@@ -167,13 +177,7 @@ struct ChartScreen: View {
             }
         }
         .background(Color.zBg)
-        .navigationTitle(person.id == NowChart.id ? "此刻 · \(person.clock ?? "")" : person.name)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { withAnimation(Motion.enter) { showInfo.toggle() } } label: { Image(systemName: "sidebar.right") }
-                    .help("客人資料")
-            }
-        }
+        .modifier(ChartChrome(enabled: chrome, title: ChartScreen.title(person), showInfo: $showInfo))
         .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
             let target = pick
             let m = await Engine.shared.model(for: person, pick: target)
@@ -191,6 +195,8 @@ struct ChartScreen: View {
     }
 
     private struct TaskKey: Equatable { let person: String; let pick: Pick }
+
+    static func title(_ p: Person) -> String { p.id == NowChart.id ? "此刻 · \(p.clock ?? "")" : p.name }
 }
 
 /// 下方 AI 解盤輸入框（Codex 式）：先留位置，功能之後接上
@@ -276,5 +282,44 @@ private struct Shimmer: ViewModifier {
             .opacity(on ? 0.55 : 1)
             .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: on)
             .onAppear { on = true }
+    }
+}
+
+/// 命盤頁的標題＋「客人資料」開關；多頁時由 ChartPager 統一放，不在每一頁重複
+struct ChartChrome: ViewModifier {
+    let enabled: Bool
+    let title: String
+    @Binding var showInfo: Bool
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .navigationTitle(title)
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { withAnimation(Motion.enter) { showInfo.toggle() } } label: { Image(systemName: "sidebar.right") }
+                            .help("客人資料")
+                    }
+                }
+        } else {
+            content
+        }
+    }
+}
+
+/// 盤面右邊的圓形「＋」
+struct AddBoardButton: View {
+    let action: () -> Void
+    @State private var hover = false
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus").font(Font.zCalloutStrong).foregroundStyle(hover ? Color.zText : Color.zText2)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(hover ? Color.zHover : Color.zCard))
+                .overlay(Circle().stroke(Color.zLine))
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressStyle())
+        .onHover { hover = $0 }
+        .help("加一張盤（左右滑動切換）")
     }
 }

@@ -92,7 +92,7 @@ struct RootView: View {
                 switch route {
                 case .person(let id):
                     if let p = store.people.first(where: { $0.id == id }) {
-                        ChartScreen(person: p).id(id)
+                        ChartPager(primary: p).id(id)
                     } else {
                         NowChart()
                     }
@@ -110,7 +110,7 @@ struct RootView: View {
                 case .pillars:
                     PillarSearchPage(onClose: { goBack() })
                 case .temp(let p, let lv):
-                    ChartScreen(person: p, level: lv).id(p.id)
+                    ChartPager(primary: p, level: lv).id(p.id)
                 default:
                     NowChart()
                 }
