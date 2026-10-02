@@ -112,7 +112,7 @@ final class Store: ObservableObject {
         if let data = try? Data(contentsOf: url), let list = try? JSONDecoder().decode([Person].self, from: data) {
             people = list
         } else {
-            people = Store.samples
+            people = []   // 第一次開啟：完全空白，不放範例
         }
         refreshSoulStars()
         // 舊資料：還沒設定自己的命盤，但有「自己」分組的命盤，就當成自己的

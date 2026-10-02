@@ -109,6 +109,12 @@ struct Sidebar: View {
                             }
                         }
                     }
+                    // 空狀態：還沒有任何命盤
+                    if groupNames.isEmpty {
+                        Text("還沒有命盤，按 ＋ 新增")
+                            .font(Font.zCaption).foregroundStyle(Color.zText3)
+                            .padding(.horizontal, 10).padding(.top, 4)
+                    }
                 }
                 .padding(.horizontal, 8)
                 .padding(.top, 6)
