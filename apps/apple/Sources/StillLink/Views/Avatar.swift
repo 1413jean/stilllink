@@ -152,16 +152,37 @@ struct AvatarCropSheet: View {
 struct AvatarField: View {
     @Binding var name: String?
     @State private var picked: NSImage?
+    @State private var hover = false
 
+    /// 只放一個頭貼：點了上傳／更換（右下角相機標記提示可以點），右鍵可移除
     var body: some View {
-        HStack(spacing: 12) {
-            AvatarView(name: name, size: 44)
+        HStack {
             Spacer()
-            if name != nil {
-                Button("移除") { AvatarStore.remove(name); name = nil }.buttonStyle(ZSecondaryButton(small: true))
+            Button { picked = AvatarStore.pick() } label: {
+                AvatarView(name: name, size: 44)
+                    .overlay {
+                        if hover {
+                            Circle().fill(Color.black.opacity(0.3))
+                                .overlay(Image(systemName: "camera.fill").font(.system(size: 15)).foregroundStyle(.white))
+                        }
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: name == nil ? "plus" : "camera.fill")
+                            .font(.system(size: 9, weight: .bold)).foregroundStyle(Color.zOnColor)
+                            .frame(width: 18, height: 18)
+                            .background(Circle().fill(Color.zAccent))
+                            .overlay(Circle().stroke(Color.zBg, lineWidth: 2))
+                            .offset(x: 2, y: 2)
+                    }
+                    .contentShape(Circle())
             }
-            Button(name == nil ? "上傳頭貼" : "更換") { picked = AvatarStore.pick() }
-                .buttonStyle(ZPrimaryButton(small: true))
+            .buttonStyle(PressStyle())
+            .onHover { hover = $0 }
+            .help(name == nil ? "上傳頭貼" : "更換頭貼（右鍵可移除）")
+            .contextMenu {
+                Button(name == nil ? "上傳頭貼…" : "更換頭貼…") { picked = AvatarStore.pick() }
+                if name != nil { Button("移除頭貼", role: .destructive) { AvatarStore.remove(name); name = nil } }
+            }
         }
         .sheet(item: Binding(get: { picked.map(PickedImage.init) }, set: { picked = $0?.image })) { p in
             AvatarCropSheet(image: p.image) { saved in
