@@ -214,6 +214,8 @@ private struct PalaceCell: View {
             .layoutPriority(-1)
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
+                    // 流月（同文墨天機，例：冬月庚）：寫在神煞欄最上面
+                    if let monthLabel { Text(monthLabel).foregroundStyle(Color.wmEarth) }
                     if settings.showGods {
                     Text(p.boshi).foregroundStyle(Color.wmGreen)
                     Text(p.jiangqian)
@@ -249,20 +251,11 @@ private struct PalaceCell: View {
                     let first = Array(tags.prefix(2))              // 跟宮名同一欄
                     let rest = Array(tags.dropFirst(2))            // 往左的欄，每欄 3 個
                     let restCols = stride(from: 0, to: rest.count, by: 3).map { Array(rest[$0..<min($0 + 3, rest.count)]) }
-                    // 流月（同文墨天機，例：冬月庚）在上、轉宮名在下，疊在運限宮名上方，不並排、不佔寬度
-                    if monthLabel != nil || taijiLabel != nil {
-                        VStack(alignment: .trailing, spacing: 0) {
-                            if let monthLabel {
-                                Text(monthLabel).font(ChartType.font(ChartType.tag(fs))).foregroundStyle(Color.wmEarth)
-                                    .lineLimit(1).fixedSize()
-                            }
-                            if let taijiLabel {
-                                Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
-                                    .lineLimit(1).fixedSize()
-                            }
-                        }
-                    }
                     HStack(alignment: .bottom, spacing: 4) {
+                        if let taijiLabel {
+                            Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
+                                .lineLimit(1).fixedSize()
+                        }
                         // 越後面的欄越靠左
                         ForEach(Array(restCols.enumerated().reversed()), id: \.offset) { _, col in
                             VStack(spacing: 0) {
