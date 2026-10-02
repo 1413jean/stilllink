@@ -70,7 +70,7 @@ extension Color {
 
 extension ZW.Tone {
     var color: Color {
-        switch self { case .red: .wmRed; case .blue: .wmBlue; case .black: .wmBlack; case .green: .wmGreen; case .earth: .wmEarth }
+        switch self { case .red: .wmRed; case .blue: .wmBlue; case .black: .wmBlack; case .green: .wmGreen; case .earth: .wmEarth; case .purple: .mQuan; case .gray: .zText2 }
     }
 }
 

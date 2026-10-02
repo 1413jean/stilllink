@@ -65,7 +65,6 @@ struct ChartBoard: View, Equatable {
                         }
                         .enterFromBelow(appeared, index: r * 4 + c)
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
-                    if settings.showCompass { compassLabel(i, r: r, c: c, cw: cw, ch: ch, m: m) }
                     if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
                 CenterInfo(person: person, model: model, selected: selected, cleared: cleared, locked: locked, taiji: taiji,
@@ -146,19 +145,6 @@ struct ChartBoard: View, Equatable {
         }
     }
 
-    @ViewBuilder
-    private func compassLabel(_ i: Int, r: Int, c: Int, cw: CGFloat, ch: CGFloat, m: CGFloat) -> some View {
-        let text = Text(ZW.compass[i]).font(Font.zMicro).foregroundStyle(Color.zText3)
-        if r == 0 && (c == 1 || c == 2) {
-            text.frame(width: cw, height: m).offset(x: m + CGFloat(c) * cw, y: 0)
-        } else if r == 3 && (c == 1 || c == 2) {
-            text.frame(width: cw, height: m).offset(x: m + CGFloat(c) * cw, y: m + 4 * ch)
-        } else if c == 0 || c == 3 {
-            VerticalText(ZW.compass[i], size: 10, color: .zText3)
-                .frame(width: m, height: ch)
-                .offset(x: c == 0 ? 0 : m + 4 * cw, y: m + CGFloat(r) * ch)
-        }
-    }
 }
 
 /// 直排文字：一個字一行
@@ -216,9 +202,17 @@ private struct PalaceCell: View {
         // 來因宮：生年天干所在的宮（寅～亥，子丑與寅卯同干不算）
         let laiyin = settings.showLaiyin && index < 10 && p.stem == String(chart.chineseDate.prefix(1))
         VStack(alignment: .leading, spacing: 2) {
-            // 合盤：對方的宮名（合命、合兄…）寫在左上角
-            if let n = hepan?.palaceName(at: p.branch) {
-                Text(n).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmEarth).lineLimit(1)
+            // 第一行：左上合盤宮名（合命、合兄…）、右上地理方位
+            let hn = hepan?.palaceName(at: p.branch)
+            if hn != nil || settings.showCompass {
+                HStack(spacing: 2) {
+                    if let hn { Text(hn).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmEarth) }
+                    Spacer(minLength: 0)
+                    if settings.showCompass {
+                        Text(ZW.compass[index]).font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
+                    }
+                }
+                .lineLimit(1)
             }
             // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
             ViewThatFits(in: .vertical) {
@@ -233,7 +227,7 @@ private struct PalaceCell: View {
                 VStack(alignment: .leading, spacing: 0) {
                     // 流月（同文墨天機，例：冬月庚）：寫在神煞欄最上面
                     if let monthLabel { Text(monthLabel).foregroundStyle(Color.wmEarth) }
-                    if settings.showGods {
+                    if settings.showShensha {
                     Text(p.boshi).foregroundStyle(Color.wmGreen)
                     Text(p.jiangqian)
                     Text(p.suiqian)
@@ -244,7 +238,7 @@ private struct PalaceCell: View {
                 .foregroundStyle(Color.zText)
                 Spacer(minLength: 0)
                 VStack(spacing: 2) {
-                    if settings.showAges {
+                    if settings.showAgeLines {
                     VStack(spacing: 0) {
                         Text("流年: " + model.yearlyAges[index].map(String.init).joined(separator: ","))
                         Text("小限: " + p.ages.prefix(5).map(String.init).joined(separator: ","))
@@ -316,7 +310,7 @@ private struct PalaceCell: View {
                             .padding(.bottom, 2)
                     }
                     // 長生十二神屬於神煞，跟著「顯示神煞」開關
-                    if settings.showGods {
+                    if settings.showShensha {
                         VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
                             .padding(.bottom, 2)
                     }
@@ -384,7 +378,7 @@ extension PalaceCell {
                            })
             }
             ForEach(settings.showAdj ? p.adj : [], id: \.name) { s in
-                VerticalText(s.name, size: adjF, color: .wmBlue)
+                VerticalText(s.name, size: adjF, color: settings.tone(.misc).color)
             }
             // 流曜（大祿、年鸞…）與合盤的合祿／合羊／合陀
             ForEach(extraStars(p, horo), id: \.0) { name, color in
@@ -405,7 +399,7 @@ private struct StarColumn: View {
     let scopes: [(Int, Mutagen)]
 
     var body: some View {
-        let tone = ZW.tone(star.type, luckyGreen: settings.luckyStarsGreen, toughBlack: settings.toughStarsBlack)
+        let tone = settings.starTone(type: star.type)
         let list = boxes
         let size: CGFloat = list.count > 3 ? 0.98 : 1.12
         // 星名下同一直排：生年 → 大限 → 流年 → 小限 → 流月…（最多三層＋小限）

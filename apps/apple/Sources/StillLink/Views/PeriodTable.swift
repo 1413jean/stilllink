@@ -31,7 +31,7 @@ struct PeriodTable: View {
                     }
                 }
             }
-            row("流年\n小限") {
+            row("流年\n小限", enabled: pick.level >= 1) {
                 ForEach(0..<10, id: \.self) { k in
                     let y = start + k
                     cell("\(y)年", hideBirth ? ZW.yearGanzhi(y) : "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲",
@@ -40,7 +40,7 @@ struct PeriodTable: View {
                     }
                 }
             }
-            row("流月") {
+            row("流月", enabled: pick.level >= 2) {
                 ForEach(1...12, id: \.self) { m in
                     cell(ZW.lunarMonths[m - 1], ZW.monthGanzhi(lunarYear: pick.year, month: m), group: "month", on: m == pick.lm && pick.level >= 3) {
                         pick.level = (m == pick.lm && pick.level == 3) ? 2 : 3; pick.lm = m
@@ -58,9 +58,11 @@ struct PeriodTable: View {
                         .opacity(d > monthLen ? 0.25 : 1)
                     }
                 }
+                .disabled(pick.level < 3)
+                .opacity(pick.level < 3 ? 0.35 : 1)
             }
             Divider()
-            row("流時", divider: false) {
+            row("流時", divider: false, enabled: pick.level >= 4) {
                 ForEach(0..<12, id: \.self) { h in
                     cell(ZW.branches[h] + "時", ZW.hourGanzhi(dayStem: dayStem, hour: h), group: "hour", on: h == pick.hour && pick.level >= 5) {
                         pick.level = (h == pick.hour && pick.level == 5) ? 4 : 5; pick.hour = h
@@ -86,12 +88,15 @@ struct PeriodTable: View {
             .background(Color.zHover)
     }
 
-    private func row<C: View>(_ title: String, divider: Bool = true, @ViewBuilder _ content: () -> C) -> some View {
+    /// enabled：要先點上一層（大限→流年→流月→流日→流時）才能點這一層
+    private func row<C: View>(_ title: String, divider: Bool = true, enabled: Bool = true, @ViewBuilder _ content: () -> C) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 head(title)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 0) { content() }
+                        .disabled(!enabled)
+                        .opacity(enabled ? 1 : 0.35)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
