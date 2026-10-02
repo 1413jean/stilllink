@@ -54,7 +54,7 @@ enum Bench {
         Task.detached {
             var lines: [String] = []
             func ms(_ t0: Date) -> String { String(format: "%.1fms", Date().timeIntervalSince(t0) * 1000) }
-            let p = Person(name: "測", gender: .female, solar: "1990-6-15", hour: 6, group: "x")
+            let p = Person(name: "測", gender: .female, solar: "2000-1-1", hour: 0, group: "x")
             var t = Date(); _ = await Engine.shared.chart(for: p); lines.append("首次排盤 \(ms(t))")
             t = Date(); _ = await Engine.shared.model(for: p, pick: Pick.today()); lines.append("首次 model（含運限）\(ms(t))")
             t = Date()

@@ -260,12 +260,4 @@ final class Store: ObservableObject {
         groupOrder = order
     }
 
-    static let samples: [Person] = [
-        Person(name: "範例命盤", gender: .female, solar: "1990-6-15", hour: 6, group: "範例", pinned: true),
-        Person(name: "林小姐", gender: .female, solar: "1988-11-2", hour: 3, group: "客人"),
-        Person(name: "陳先生", gender: .male, solar: "1979-3-21", hour: 9, group: "客人"),
-        Person(name: "王小美", gender: .female, solar: "1996-8-8", hour: 11, group: "客人"),
-        Person(name: "張大哥", gender: .male, solar: "1984-1-30", hour: 1, group: "客人"),
-        Person(name: "媽媽", gender: .female, solar: "1962-9-12", hour: 5, group: "家人"),
-    ]
 }
