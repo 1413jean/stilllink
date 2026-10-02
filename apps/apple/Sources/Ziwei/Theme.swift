@@ -21,7 +21,7 @@ extension Color {
     static let zText3 = dynamic(0x9C9A93, 0x7A7872)
     static let zHover = dynamic(0xF1F0ED, 0x34332F)
     static let zSel = dynamic(0xEDEDEA, 0x3A3935)       // 選取列：淺灰
-    static let zAccent = dynamic(0x5B7C99, 0x8FA9C2)   // 霧藍
+    static let zAccent = dynamic(0xD96B43, 0xEC9473)   // 陶土橘（比原本 C2603F 亮一階）
 
     // 命盤（照文墨天機）
     static let wmRed = dynamic(0xD0102A, 0xFF6B76)
