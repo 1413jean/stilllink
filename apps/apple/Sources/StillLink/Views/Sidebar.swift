@@ -70,6 +70,9 @@ struct Sidebar: View {
                         }
                     }
                     NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", selected: route == .new, action: onNew)
+                    NavRow(icon: "book.closed", title: "星曜筆記", selected: { if case .starNotes = route { true } else { false } }()) {
+                        NotificationCenter.default.post(name: .openStarNotes, object: nil)
+                    }
                     if searching {
                         HStack(spacing: 8) {
                             Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)

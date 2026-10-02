@@ -45,6 +45,11 @@ struct Chart: Codable {
     let palaces: [Palace]
 
     var soulIndex: Int { palaces.firstIndex { $0.name == "命宮" } ?? 0 }
+    /// 農曆日期，年份用天干地支（二〇二六年八月廿二 → 丙午年八月廿二）
+    var lunarGanzhiDate: String {
+        guard let r = lunarDate.range(of: "年") else { return lunarDate }
+        return ZW.yearGanzhi(lunarYear) + lunarDate[r.lowerBound...]
+    }
 }
 
 struct HoroScope: Codable {
@@ -53,6 +58,8 @@ struct HoroScope: Codable {
     let branch: String
     let palaceNames: [String]
     let mutagen: [String]
+    /// 流曜（大祿、年鸞…）：依宮位索引；大限、流年才有
+    var stars: [[String]]? = nil
 }
 
 struct Horoscope: Codable {

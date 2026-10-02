@@ -69,7 +69,9 @@ extension Color {
 }
 
 extension ZW.Tone {
-    var color: Color { self == .red ? .wmRed : self == .blue ? .wmBlue : .wmBlack }
+    var color: Color {
+        switch self { case .red: .wmRed; case .blue: .wmBlue; case .black: .wmBlack; case .green: .wmGreen; case .earth: .wmEarth; case .purple: .mQuan; case .gray: .zText2 }
+    }
 }
 
 extension ZW.Wuxing {

@@ -45,7 +45,9 @@ function zwChart(solar, t, gender) {
 
 function zwHoro(solar, t, gender, date, hour) {
   var h = __astro(solar, t, gender).horoscope(date, hour);
-  function sc(x) { return { index: x.index, stem: x.heavenlyStem, branch: x.earthlyBranch, palaceNames: x.palaceNames.map(__pn), mutagen: x.mutagen }; }
+  // 流曜（運祿、流鸞…）改成文墨天機的叫法：大X、年X
+  function fs(x) { return (x.stars || []).map(function (arr) { return arr.map(function (s) { return s.name.replace(/^運/, '大').replace(/^流/, '年'); }); }); }
+  function sc(x) { return { index: x.index, stem: x.heavenlyStem, branch: x.earthlyBranch, palaceNames: x.palaceNames.map(__pn), mutagen: x.mutagen, stars: fs(x) }; }
   return JSON.stringify({ decadal: sc(h.decadal), age: sc(h.age), yearly: sc(h.yearly), monthly: sc(h.monthly), daily: sc(h.daily), hourly: sc(h.hourly) });
 }
 

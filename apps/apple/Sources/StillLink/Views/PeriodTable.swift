@@ -31,15 +31,16 @@ struct PeriodTable: View {
                     }
                 }
             }
-            row("流年\n小限") {
+            row("流年\n小限", enabled: pick.level >= 1) {
                 ForEach(0..<10, id: \.self) { k in
                     let y = start + k
-                    cell("\(y)年", hideBirth ? ZW.yearGanzhi(y) : "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲", group: "year", on: y == pick.year && pick.level >= 2) {
+                    cell("\(y)年", hideBirth ? ZW.yearGanzhi(y) : "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲",
+                         extra: minorPalace(age: y - birthYear + 1), group: "year", on: y == pick.year && pick.level >= 2) {
                         pick.level = (y == pick.year && pick.level == 2) ? 1 : 2; pick.year = y
                     }
                 }
             }
-            row("流月") {
+            row("流月", enabled: pick.level >= 2) {
                 ForEach(1...12, id: \.self) { m in
                     cell(ZW.lunarMonths[m - 1], ZW.monthGanzhi(lunarYear: pick.year, month: m), group: "month", on: m == pick.lm && pick.level >= 3) {
                         pick.level = (m == pick.lm && pick.level == 3) ? 2 : 3; pick.lm = m
@@ -57,9 +58,11 @@ struct PeriodTable: View {
                         .opacity(d > monthLen ? 0.25 : 1)
                     }
                 }
+                .disabled(pick.level < 3)
+                .opacity(pick.level < 3 ? 0.35 : 1)
             }
             Divider()
-            row("流時", divider: false) {
+            row("流時", divider: false, enabled: pick.level >= 4) {
                 ForEach(0..<12, id: \.self) { h in
                     cell(ZW.branches[h] + "時", ZW.hourGanzhi(dayStem: dayStem, hour: h), group: "hour", on: h == pick.hour && pick.level >= 5) {
                         pick.level = (h == pick.hour && pick.level == 5) ? 4 : 5; pick.hour = h
@@ -85,12 +88,15 @@ struct PeriodTable: View {
             .background(Color.zHover)
     }
 
-    private func row<C: View>(_ title: String, divider: Bool = true, @ViewBuilder _ content: () -> C) -> some View {
+    /// enabled：要先點上一層（大限→流年→流月→流日→流時）才能點這一層
+    private func row<C: View>(_ title: String, divider: Bool = true, enabled: Bool = true, @ViewBuilder _ content: () -> C) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 head(title)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 0) { content() }
+                        .disabled(!enabled)
+                        .opacity(enabled ? 1 : 0.35)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -98,7 +104,12 @@ struct PeriodTable: View {
         }
     }
 
-    private func cell(_ main: String, _ sub: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
+    /// 那一歲的小限在哪一宮（小命、小兄…）
+    private func minorPalace(age: Int) -> String? {
+        chart.palaces.first { $0.ages.contains(age) }.map { "小" + String($0.name.prefix(1)) }
+    }
+
+    private func cell(_ main: String, _ sub: String? = nil, extra: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
         Button {
             Sound.tap(settings, ["dec": .decade, "year": .year, "month": .month, "day": .day, "hour": .hour][group] ?? .palace)
             action()   // 選取底色直接跳過去：盤面同時要重畫，滑動動畫會被卡住，看起來反而頓
@@ -106,6 +117,7 @@ struct PeriodTable: View {
             VStack(spacing: 1) {
                 Text(main).font(Font.zCaption)
                 if let sub { Text(sub).font(Font.zMicro).opacity(0.7) }
+                if let extra { Text(extra).font(Font.zMicro).foregroundStyle(on ? Color.zBg : Color.minorColor) }
             }
             .foregroundStyle(on ? Color.zBg : Color.zText)
             .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)

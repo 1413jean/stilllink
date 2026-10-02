@@ -76,14 +76,22 @@ struct NewChartSheet: View {
                             }
                             .transition(.opacity)
                         } else {
-                            ZMenuField(options: groupOptions + [Self.addGroupLabel], selection: Binding(
-                                get: { group },
-                                set: { v in
-                                    if v == Self.addGroupLabel {
-                                        withAnimation(Motion.base) { addingGroup = true }
-                                        DispatchQueue.main.async { groupFocused = true }
-                                    } else { group = v }
-                                }))
+                            // 刻度尺：左右滑選分組（每過一個震一下）；右邊「＋」新增分組
+                            HStack(spacing: 8) {
+                                GroupDial(options: groupOptions, selection: $group)
+                                Button {
+                                    withAnimation(Motion.base) { addingGroup = true }
+                                    DispatchQueue.main.async { groupFocused = true }
+                                } label: {
+                                    Image(systemName: "plus").font(Font.zCalloutStrong).foregroundStyle(Color.zText2)
+                                        .frame(width: 34, height: 50)
+                                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.zCard))
+                                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.zLine))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PressStyle())
+                                .help("新增分組")
+                            }
                         }
                     }
                     }

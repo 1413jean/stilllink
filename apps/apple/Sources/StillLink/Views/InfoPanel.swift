@@ -24,6 +24,10 @@ struct InfoPanel: View {
     @EnvironmentObject var store: Store
     let person: Person
     let chart: Chart?
+    @Binding var hepanYear: Int?
+    var selectedPalace: Int? = nil
+    var width: CGFloat = infoPanelWidth
+    @State private var hepanDraft = ""
     @State private var preview: String?
     @State private var dropping = false
     @State private var draft = ""
@@ -60,7 +64,7 @@ struct InfoPanel: View {
                         }
                         .padding(.bottom, 4)
                         row("calendar", "國曆", mask(chart?.solarDate ?? current.solar))
-                        row("moon", "農曆", mask(chart.map { "\($0.lunarDate) \($0.time)" } ?? ""))
+                        row("moon", "農曆", mask(chart.map { "\($0.lunarGanzhiDate) \($0.time)" } ?? ""))
                         if let ts = current.trueSolar {
                             row("sun.max", "真太陽時", mask(ts))
                             row("clock", "鐘錶時間", mask(current.clock ?? ""))
@@ -72,6 +76,46 @@ struct InfoPanel: View {
                         } else {
                             row("mappin.slash", "出生地", "未填（無法換算真太陽時）")
                         }
+                    }
+                }
+
+                // 星曜筆記：點選宮位裡每顆星的意思（總論＋落在這一宮），可以自己改寫
+                if let chart, let i = selectedPalace, i < chart.palaces.count {
+                    card("星曜筆記 · \(chart.palaces[i].name)",
+                         action: ("book.closed", { NotificationCenter.default.post(name: .openStarNotes, object: nil) })) {
+                        StarNotesCard(palace: chart.palaces[i]).id(i)
+                    }
+                }
+
+                // 合盤：輸入對方出生年，把對方的宮名、祿羊陀、四化疊到這張盤上
+                card("合盤") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let y = hepanYear {
+                            HStack {
+                                Text("合盤中：\(Hepan(year: y).label)").font(Font.zCallout).foregroundStyle(Color.wmEarth)
+                                Spacer()
+                                Button("清除") { withAnimation(Motion.fast) { hepanYear = nil } }.buttonStyle(ZSecondaryButton(small: true))
+                            }
+                        } else {
+                            HStack(spacing: 8) {
+                                TextField("對方出生年，例如 1995", text: $hepanDraft)
+                                    .textFieldStyle(.plain).inputBox()
+                                    .onSubmit(applyHepan)
+                                Button("合盤", action: applyHepan).buttonStyle(ZPrimaryButton(small: true))
+                                    .disabled(Int(hepanDraft.trimmingCharacters(in: .whitespaces)) == nil)
+                            }
+                        }
+                        Text("依對方年份的天干地支，在盤上標出合宮名、合祿合羊合陀與合四化。")
+                            .font(Font.zCaption).foregroundStyle(Color.zText3).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                // 每張盤都有：看盤操作提示
+                card("看盤小提示") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        tip("hand.tap", "點宮位：看三方四正和宮干飛化；再點一次取消")
+                        tip("lock", "長按或點兩下宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按或點兩下解鎖")
+                        tip("arrow.triangle.2.circlepath", "右鍵宮位：以這一宮為命（轉宮）")
                     }
                 }
 
@@ -154,7 +198,7 @@ struct InfoPanel: View {
                 }
                 }
         }
-        .frame(width: infoPanelWidth)
+        .frame(width: width)
         .enterFromBelow(appeared, index: 4)
         .onAppear { appeared = true }
         .sheet(item: Binding(get: { preview.map { PreviewItem(name: $0) } }, set: { preview = $0?.name })) { item in
@@ -169,6 +213,20 @@ struct InfoPanel: View {
     }
 
     private struct PreviewItem: Identifiable { let name: String; var id: String { name } }
+
+    private func applyHepan() {
+        guard let y = Int(hepanDraft.trimmingCharacters(in: .whitespaces)), (1...9999).contains(y) else { return }
+        withAnimation(Motion.fast) { hepanYear = y }
+        hepanDraft = ""
+    }
+
+    /// 提示列：小圖示＋一句話
+    private func tip(_ icon: String, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: icon).font(Font.zCaption).foregroundStyle(Color.zText3).frame(width: 14)
+            Text(text).font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
     private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, actions: [(String, String, () -> Void)] = [],
                                @ViewBuilder _ content: () -> C) -> some View {

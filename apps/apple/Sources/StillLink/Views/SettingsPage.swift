@@ -20,7 +20,7 @@ struct SettingsPage: View {
     }
 
     enum Section: String, CaseIterable, Identifiable {
-        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", display = "盤面顯示", feel = "音效與動畫", appearance = "外觀", data = "資料", about = "關於"
+        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", stars = "星曜", periods = "運限", display = "盤面標記", feel = "音效與動畫", appearance = "外觀", data = "資料", about = "關於"
         var id: String { rawValue }
         var icon: String {
             switch self {
@@ -28,6 +28,8 @@ struct SettingsPage: View {
             case .account: "icloud"
             case .chart: "square.grid.3x3"
             case .mutagen: "sparkle"
+            case .stars: "sparkles"
+            case .periods: "calendar"
             case .display: "eye"
             case .feel: "speaker.wave.2"
             case .appearance: "circle.lefthalf.filled"
@@ -151,22 +153,40 @@ struct SettingsPage: View {
             row("辛干", "辛：巨門化祿、太陽化權…") { ZMenuField(options: Array(ZSettings.xinOptions.keys).sorted(), selection: s.xin) }
             row("壬干", "壬：天梁化祿、紫微化權…") { ZMenuField(options: Array(ZSettings.renOptions.keys).sorted(), selection: s.ren) }
             row("癸干", "癸：破軍化祿、巨門化權…", last: true) { ZMenuField(options: Array(ZSettings.guiOptions.keys).sorted(), selection: s.gui) }
-        case .display:
-            title("盤面顯示")
+        case .stars:
+            title("星曜")
             toggle("顯示雜曜", "天姚、紅鸞等小星", s.showAdj)
-            toggle("顯示神煞", "博士、將前、歲前十二神", s.showGods)
+            toggle("顯示神煞", "博士、將前、歲前十二神", s.showShensha)
+            toggle("顯示長生十二神", "長生、沐浴、冠帶…養，寫在每宮天干地支上面", s.showChangsheng)
+            toggle("顯示流曜", "選到大限、流年時，宮內加上大祿、大羊、年鸞、年喜…這些流曜", s.showFlowStars, last: true)
+            Text("星曜顏色").font(Font.zBodyStrong).foregroundStyle(Color.zText).padding(.top, 18)
+            note("五類星曜各用一種顏色，一眼分出主星、輔星、吉星、凶星、雜曜。")
+            ForEach(ZW.StarClass.allCases, id: \.self) { c in
+                row(c.label, c.members, last: c == .misc) {
+                    HStack(spacing: 10) {
+                        Spacer()
+                        Text(c == .major ? "紫微" : c == .aux ? "右弼" : c == .lucky ? "祿存" : c == .tough ? "擎羊" : "紅鸞")
+                            .font(ChartType.font(15, .medium)).foregroundStyle(store.settings.tone(c).color)
+                        ZMenuField(options: ZW.Tone.allCases.map(\.label), selection: starColorBinding(c))
+                            .frame(width: 96)
+                    }
+                }
+            }
+        case .periods:
+            title("運限")
+            note("四化最多顯示最近三層：選到流年＝生年、大限、流年；流月＝大限、流年、流月；流時＝流月、流日、流時。有流年時另加小限。")
             toggle("打開命盤時預設顯示大限", "開啟後打開命盤會停在目前大限並選到大命；關閉則顯示本命", s.openWithDecade)
-            toggle("小限疊盤", "選流年時，一起疊上小限宮名與小限四化", s.showMinor)
-            toggle("顯示小限四化", "小限疊盤時，星曜旁的青色四化方塊；關掉只留小限宮名", s.showMinorMutagen)
-            toggle("流月以下仍顯示生年／大限四化", "關閉時，選到流月、流日、流時不顯示生年與大限的四化，盤面比較乾淨", s.showOuterBelowMonth)
-            toggle("流時仍顯示流年四化", "關閉時，選到流時只顯示流月、流日、流時的四化（不含流年、小限）", s.showYearAtHour)
-            toggle("顯示流年／小限歲數", "每宮的流年與小限虛歲", s.showAges)
+            toggle("小限疊盤", "選流年時，盤上一起疊小限宮名與小限四化（預設關閉；運限表的流年那一列一樣會標出小限宮）", s.showMinorOverlay)
+            toggle("顯示小限四化", "小限疊盤時，星曜下的青色四化方塊；關掉只留小限宮名", s.showMinorMutagen)
+            toggle("顯示流年／小限歲數", "每宮的流年與小限虛歲", s.showAgeLines, last: true)
+        case .display:
+            title("盤面標記")
             toggle("顯示身宮", "身宮標記", s.showBody)
             toggle("顯示來因宮", "生年天干所在的宮位", s.showLaiyin)
             toggle("三方四正指示線", "點宮位時在中宮畫連線", s.showSanfang)
             toggle("自化箭頭", "星曜旁的彩色箭頭：↑ 離心自化、↓ 向心自化", s.showSelf)
             toggle("轉宮宮名", "點選宮位時，各宮顯示「X之Y」（例：福之夫）", s.showTransfer)
-            toggle("顯示地理方位", "盤面四周的方位文字", s.showCompass)
+            toggle("顯示地理方位", "每宮右上角的方位（南、東南…）", s.showCompass)
             toggle("顯示 AI 對話框", "命盤下方的提問框；AI 解盤未來推出", s.showComposer, last: true)
         case .feel:
             title("音效與動畫")
@@ -343,6 +363,11 @@ struct SettingsPage: View {
     private func saveName() {
         let t = nameDraft.trimmingCharacters(in: .whitespaces)
         if !t.isEmpty && t != store.userName { store.renameUser(t); Toast.show("已改名為「\(t)」") }
+    }
+
+    private func starColorBinding(_ c: ZW.StarClass) -> Binding<String> {
+        Binding(get: { store.settings.tone(c).label },
+                set: { n in if let t = ZW.Tone.allCases.first(where: { $0.label == n }) { store.settings.starColors[c.rawValue] = t.rawValue } })
     }
 
     private func cueBinding(_ e: Sound.Event) -> Binding<String> {

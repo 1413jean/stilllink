@@ -34,8 +34,10 @@ struct NowChart: View {
 }
 
 /// 盤面寬度上限（約文墨天機的比例）
-let boardMaxWidth: CGFloat = 780
+let boardMaxWidth: CGFloat = 920
 let infoPanelWidth: CGFloat = 300
+/// 右側面板可以拉的寬度範圍
+let infoPanelRange: ClosedRange<CGFloat> = 260...560
 /// 盤面高寬比：略高於正方形，宮位底部（歲數、運限宮名、宮名）才放得下又不擠星曜
 let boardAspect: CGFloat = 1.06
 
@@ -47,7 +49,12 @@ struct ChartScreen: View {
     /// 盤面旁邊的「＋」：加第二張盤
     var onAdd: (() -> Void)? = nil
     @State private var pick: Pick
+    @State private var hepanYear: Int?          // 合盤：對方出生年
+    @State private var selPalace: Int?          // 盤上點選的宮位（右側顯示星曜筆記）
     @AppStorage("showInfoPanel") private var showInfo = true
+    @AppStorage("infoPanelW") private var panelW: Double = Double(infoPanelWidth)   // 右側面板寬度（左緣可拖拉，會記住）
+    @State private var dragStartW: Double?
+    @State private var handleHover = false
     @State private var model: ChartModel?
     @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
@@ -65,6 +72,8 @@ struct ChartScreen: View {
         var p = Pick.today(); p.level = lv
         _pick = State(initialValue: p)
         _shownLevel = State(initialValue: lv)
+        // 驗證用：ZIWEI_HEPAN=1995 直接合盤
+        _hepanYear = State(initialValue: ProcessInfo.processInfo.environment["ZIWEI_HEPAN"].flatMap(Int.init))
         // 驗證用：ZIWEI_ZOOM=2 直接以放大倍率開啟
         if let z = ProcessInfo.processInfo.environment["ZIWEI_ZOOM"].flatMap(Double.init) {
             _zoom = State(initialValue: z); _zoomBase = State(initialValue: z); _sharpZoom = State(initialValue: z)
@@ -85,15 +94,16 @@ struct ChartScreen: View {
     var body: some View {
         // 捲動區佔滿整個寬度（捲軸貼在視窗最右邊）；右側資訊卡固定浮在右上角，不跟著捲
         GeometryReader { geo in
-            let panelSpace: CGFloat = showInfo ? infoPanelWidth + 24 : 0
+            let panelSpace: CGFloat = showInfo ? CGFloat(panelW) + 24 : 0
             let usable = geo.size.width - panelSpace
-            let boardW = min(usable - 48, boardMaxWidth, max(460, geo.size.height - 180))
+            let boardW = min(usable - 48, boardMaxWidth, max(520, geo.size.height - 110))
             ZStack(alignment: .bottom) {
                 ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                     VStack(spacing: 12) {
                         Group {
                             if let model {
-                                ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom) { pick.level = 0 }
+                                ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, hepan: hepanYear.map(Hepan.init),
+                                           onResetLevel: { pick.level = 0 }, onSelect: { selPalace = $0 })
                                     .equatable()
                                     .animation(nil, value: pick)
                                     .transition(.opacity)
@@ -144,13 +154,37 @@ struct ChartScreen: View {
             .overlay(alignment: .topTrailing) {
                 if showInfo {
                     ScrollView(showsIndicators: false) {
-                        InfoPanel(person: person, chart: model?.chart)
+                        InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace, width: CGFloat(panelW))
                             .padding(.top, 12)
                             .padding(.bottom, 96) // 底部留給右下角的快捷鈕
                             .padding(.horizontal, 16) // 留空間給卡片陰影
                     }
                     .scrollClipDisabledCompat()
-                    .frame(width: infoPanelWidth + 32)
+                    .frame(width: CGFloat(panelW) + 32)
+                    // 左緣拖拉把手：左右拉調整面板寬度
+                    .overlay(alignment: .leading) {
+                        Capsule().fill(handleHover || dragStartW != nil ? Color.zGrid : .clear)
+                            .frame(width: 3, height: 44)
+                            .frame(width: 12).frame(maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .onHover { h in
+                                handleHover = h
+                                if h { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+                            }
+                            // 用視窗座標算位移：把手會跟著面板移動，用自己的座標會一直抖
+                            .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                                .onChanged { v in
+                                    let start = dragStartW ?? panelW
+                                    if dragStartW == nil { dragStartW = start }
+                                    let w = min(Double(infoPanelRange.upperBound), max(Double(infoPanelRange.lowerBound), start - Double(v.translation.width)))
+                                    if abs(w - panelW) >= 1 { panelW = w.rounded() }
+                                    // 拉寬超過 400：左側欄自動收起；拉回 360 以下再打開
+                                    let wide = panelW > 400 ? true : panelW < 360 ? false : nil
+                                    if let wide { NotificationCenter.default.post(name: .infoPanelWide, object: wide) }
+                                }
+                                .onEnded { _ in dragStartW = nil })
+                            .help("左右拖拉調整寬度")
+                    }
                     .padding(.trailing, 4)
                     .dimmedBlur()
                     .transition(.move(edge: .trailing).combined(with: .opacity))

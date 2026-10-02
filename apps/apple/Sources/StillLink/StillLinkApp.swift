@@ -2,9 +2,9 @@ import SwiftUI
 import AppKit
 
 enum Route: Hashable {
-    case home, person(UUID), new, newSelf, edit(UUID), settings, pillars, temp(Person, Int)
+    case home, person(UUID), new, newSelf, edit(UUID), settings, pillars, starNotes(String?), temp(Person, Int)
     /// 新增、編輯、設定這類「頁面」（返回時不回到它們）
-    var isPage: Bool { switch self { case .new, .newSelf, .edit, .settings, .pillars: true; default: false } }
+    var isPage: Bool { switch self { case .new, .newSelf, .edit, .settings, .pillars, .starNotes: true; default: false } }
 }
 
 @main
@@ -40,6 +40,8 @@ extension Notification.Name {
     static let editChart = Notification.Name("zw.editChart")
     static let openSettings = Notification.Name("zw.openSettings")
     static let openPillars = Notification.Name("zw.openPillars")
+    /// 右側面板拉得夠寬（true）或縮回來（false）：側欄跟著自動收起／打開
+    static let infoPanelWide = Notification.Name("zw.infoPanelWide")
     static let openTemp = Notification.Name("zw.openTemp")
     static let newSelfChart = Notification.Name("zw.newSelfChart")
     static let openSelf = Notification.Name("zw.openSelf")
@@ -87,9 +89,11 @@ struct RootView: View {
     @State private var stepping = false
     @State private var settingsSection: SettingsPage.Section = .profile
     @State private var newGroup: String?
+    @State private var columns: NavigationSplitViewVisibility = .all
+    @State private var sidebarAutoHidden = false   // 右側面板拉寬時自動收起側欄（拉回來再打開）
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columns) {
             Sidebar(route: $route, onNew: { newGroup = nil; go(.new) })
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
         } detail: {
@@ -114,6 +118,8 @@ struct RootView: View {
                         .id(settingsSection)
                 case .pillars:
                     PillarSearchPage(onClose: { goBack() })
+                case .starNotes(let k):
+                    StarNotesPage(initial: k, onClose: { goBack() }).id(k ?? "")
                 case .temp(let p, let lv):
                     ChartPager(primary: p, level: lv).id(p.id)
                 default:
@@ -156,6 +162,14 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .newSelfChart)) { _ in go(.newSelf) }
         .onReceive(NotificationCenter.default.publisher(for: .openSelf)) { _ in if let me = store.me { route = .person(me.id) } }
         .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
+        .onReceive(NotificationCenter.default.publisher(for: .infoPanelWide)) { n in
+            let wide = (n.object as? Bool) ?? false
+            withAnimation(Motion.base) {
+                if wide, columns != .detailOnly { columns = .detailOnly; sidebarAutoHidden = true }
+                else if !wide, sidebarAutoHidden { columns = .all; sidebarAutoHidden = false }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openStarNotes)) { n in go(.starNotes(n.object as? String)) }
         .onReceive(NotificationCenter.default.publisher(for: .openTemp)) { n in
             if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
         }
@@ -183,6 +197,7 @@ struct RootView: View {
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
         if env["ZIWEI_NEW"] != nil { go(.new) }
         if env["ZIWEI_NEWSELF"] != nil { go(.newSelf) }
+        if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
             if let s = SettingsPage.Section.allCases.first(where: { "\($0)" == v }) {
                 NotificationCenter.default.post(name: .openSettings, object: s)
