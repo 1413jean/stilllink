@@ -22,6 +22,7 @@ struct ZSettings: Codable, Equatable {
     var showGods = true         // 博士／將前／歲前
     var showAges = true         // 流年／小限歲數
     var showMinor = true        // 小限疊盤（選流年時一起顯示）
+    var openWithDecade = false  // 打開命盤時預設停在大限（關閉＝本命）
     var showBody = true         // 身宮
     var showLaiyin = true       // 來因宮
     var showSanfang = true      // 三方四正連線
@@ -78,6 +79,17 @@ struct ZSettings: Codable, Equatable {
         return ["mutagens": m, "algorithm": algorithm.rawValue, "yearDivide": yearDivide.rawValue,
                 "dayDivide": dayDivide.rawValue]
     }
+}
+
+extension ZSettings {
+    /// 從偏好設定讀出目前的設定（給還拿不到 environment 的地方用，例如 View 的 init）
+    static func stored() -> ZSettings {
+        guard let d = UserDefaults.standard.data(forKey: "settings"), let s = try? JSONDecoder().decode(ZSettings.self, from: d) else { return ZSettings() }
+        return s
+    }
+
+    /// 打開命盤時的預設運限層級
+    var openLevel: Int { openWithDecade ? 1 : 0 }
 }
 
 private struct SettingsKey: EnvironmentKey { static let defaultValue = ZSettings() }

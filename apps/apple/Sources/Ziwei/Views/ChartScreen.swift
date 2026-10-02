@@ -49,10 +49,13 @@ struct ChartScreen: View {
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
     @State private var zoomBase: CGFloat = 1
 
-    init(person: Person, level: Int = 1) {
+    /// level 沒指定時照設定「打開命盤時預設顯示大限」（預設關閉＝本命）
+    init(person: Person, level: Int? = nil) {
         self.person = person
-        var p = Pick.today(); p.level = level
+        let lv = level ?? ZSettings.stored().openLevel
+        var p = Pick.today(); p.level = lv
         _pick = State(initialValue: p)
+        _shownLevel = State(initialValue: lv)
     }
 
     private var magnify: some Gesture {

@@ -83,10 +83,7 @@ final class Store: ObservableObject {
         }
     }
 
-    private static func loadSettings() -> ZSettings {
-        guard let d = UserDefaults.standard.data(forKey: "settings"), let s = try? JSONDecoder().decode(ZSettings.self, from: d) else { return ZSettings() }
-        return s
-    }
+    private static func loadSettings() -> ZSettings { ZSettings.stored() }
 
     private let url: URL = {
         // ZIWEI_DATA_DIR：驗證／測試用的另一份資料夾，不會動到正式資料
