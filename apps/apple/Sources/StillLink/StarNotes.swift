@@ -25,7 +25,18 @@ final class StarNotes: ObservableObject {
         ("凶星", ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫"]),
         ("雜曜", ["紅鸞", "天喜", "天姚", "天刑", "咸池"]),
         ("四化", ["化祿", "化權", "化科", "化忌"]),
+        ("十年天干四化", ["十干四化表"] + ZW.stems.map { $0 + "干四化" } + ["化忌解方"]),
+        ("實戰小應用", ["紫占"]),
+        ("長生十二宮", ["長生十二宮", "長生", "沐浴", "冠帶", "臨官", "帝旺", "衰", "病", "死", "墓", "絕", "胎", "養"]),
+        ("附錄", ["附錄一 命宮主星職業", "附錄二 官祿宮工作模式", "附錄三 財帛宮現金處理", "附錄四 田宅宮居家風格",
+                "附錄五 遷移宮打扮風格", "附錄六 疾厄宮疾病參考", "附錄七 化忌可拜神明", "附錄八 天生沒長好", "其他備註"]),
     ]
+    /// 目錄上的短名稱
+    static let groupShort = ["十四主星": "主星", "雙星組合": "雙星", "十年天干四化": "十干四化", "實戰小應用": "紫占", "長生十二宮": "長生"]
+    /// 參考文件（十干四化、紫占、長生、附錄）：只有內文，沒有十二宮
+    static func isDoc(_ key: String) -> Bool {
+        groups.contains { ["十年天干四化", "實戰小應用", "長生十二宮", "附錄"].contains($0.0) && $0.1.contains(key) }
+    }
 
     private(set) var defaults: [String: StarNote] = [:]
     @Published private(set) var custom: [String: StarNote] = [:]
@@ -149,7 +160,18 @@ struct StarNotesPage: View {
     ]
     static func icons(_ key: String) -> [String] {
         if let i = starIcon[key] { return [i] }
+        if key.hasSuffix("干四化") { return ["calendar"] }
+        switch key {
+        case "十干四化表": return ["tablecells"]
+        case "化忌解方": return ["cross.case"]
+        case "紫占": return ["dice"]
+        case "長生十二宮": return ["sunrise"]
+        case "其他備註": return ["note.text"]
+        default: break
+        }
+        if key.hasPrefix("附錄") { return ["doc.text"] }
         if key.count == 4 { return ["sparkles"] }   // 雙星組合：一個圖示就好
+        if StarNotes.isDoc(key) { return ["circle.dotted"] }  // 長生十二神
         return []
     }
 
@@ -173,7 +195,23 @@ struct StarNotesPage: View {
             .padding(.horizontal, 12).frame(height: 40)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.zLine))
-            .padding(12)
+            .padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 8)
+            ScrollViewReader { proxy in
+            // 目錄：點了跳到那一類
+            FlowLayout(spacing: 4, lineSpacing: 4) {
+                ForEach(StarNotes.groups, id: \.0) { g in
+                    Button { withAnimation(Motion.base) { proxy.scrollTo(g.0, anchor: .top) } } label: {
+                        Text(StarNotes.groupShort[g.0] ?? g.0).font(Font.zCaption).foregroundStyle(Color.zText2)
+                            .padding(.horizontal, 8).frame(height: 24)
+                            .background(Capsule().fill(Color.zHover))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(PressStyle())
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12).padding(.bottom, 8)
+            Rectangle().fill(Color.zLine).frame(height: 0.5)
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
                     ForEach(StarNotes.groups, id: \.0) { g in
@@ -181,6 +219,7 @@ struct StarNotesPage: View {
                         if !items.isEmpty {
                             Text(g.0).font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
                                 .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 4)
+                                .id(g.0)
                             ForEach(items, id: \.self) { k in
                                 Button { pick(k) } label: {
                                     HStack {
@@ -201,6 +240,7 @@ struct StarNotesPage: View {
                 }
                 .padding(.horizontal, 8).padding(.bottom, 16)
             }
+            }
         }
     }
 
@@ -217,20 +257,23 @@ struct StarNotesPage: View {
                     }
                 }
                 .padding(.bottom, 4)
-                Text("點宮位時，右側會顯示這顆星的總論和「落在這一宮」的意思。改了會自動存。")
+                let doc = StarNotes.isDoc(key)
+                Text(doc ? "參考內容，可以自己改寫。改了會自動存。" : "點宮位時，右側會顯示這顆星的總論和「落在這一宮」的意思。改了會自動存。")
                     .font(Font.zCallout).foregroundStyle(Color.zText3).padding(.bottom, 16)
 
-                label("總論")
-                field(Binding(get: { draft.summary }, set: { draft.summary = $0; commit() }), minH: 110)
+                label(doc ? "內容" : "總論")
+                field(Binding(get: { draft.summary }, set: { draft.summary = $0; commit() }), minH: doc ? 320 : 110)
                     .padding(.bottom, 18)
 
-                label("落在各宮")
-                ForEach(StarNotes.palaceKeys, id: \.self) { pk in
-                    HStack(alignment: .top, spacing: 10) {
-                        Text(pk).font(Font.zBodyStrong).foregroundStyle(Color.wmRed).frame(width: 22).padding(.top, 8)
-                        field(Binding(get: { draft.palaces[pk] ?? "" }, set: { draft.palaces[pk] = $0; commit() }), minH: 36)
+                if !doc {
+                    label("落在各宮")
+                    ForEach(StarNotes.palaceKeys, id: \.self) { pk in
+                        HStack(alignment: .top, spacing: 10) {
+                            Text(pk).font(Font.zBodyStrong).foregroundStyle(Color.wmRed).frame(width: 22).padding(.top, 8)
+                            field(Binding(get: { draft.palaces[pk] ?? "" }, set: { draft.palaces[pk] = $0; commit() }), minH: 36)
+                        }
+                        .padding(.bottom, 8)
                     }
-                    .padding(.bottom, 8)
                 }
             }
             .frame(maxWidth: 760, alignment: .leading)
