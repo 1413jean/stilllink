@@ -280,7 +280,7 @@ private struct PalaceCell: View {
         .padding(.horizontal, 5)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(selected ? Color.wmSel : inSF ? Color.wmSF : inLockedSF ? Color.zAccent.opacity(0.13) : Color.clear)
+        .background(selected ? Color.wmSel : inSF || inLockedSF ? Color.wmSF : Color.clear)   // 鎖定那組只靠框線區分，底色一樣用三方灰
         .overlay(Rectangle().stroke(Color.zGrid, lineWidth: 0.5))
         // 鎖定的宮位：粗實線；它的三方四正：細一點的強調色邊框
         .overlay(isLocked ? Rectangle().strokeBorder(Color.zAccent, lineWidth: 3) : nil)
