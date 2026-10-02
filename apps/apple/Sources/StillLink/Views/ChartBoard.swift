@@ -338,14 +338,15 @@ extension PalaceCell {
     }
 
     func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> some View {
-        FlowLayout(spacing: 1, lineSpacing: 4) {
+        // 流月以下最多顯示三層、不含生年與大限：流月＝流年～流月、流日＝流年～流日、流時＝流月～流時（設定可改回全部顯示）
+        let lowest = (level >= 3 && !settings.showOuterBelowMonth) ? max(2, level - 2) : 0
+        return FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, fly: flyStars[s.name],
-                           hideOuter: level >= 3 && !settings.showOuterBelowMonth,
+                           hideOuter: lowest > 0,
                            yearInMain: !settings.showOuterBelowMonth,
-
-                           minor: minor && settings.showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
-                           scopes: (1...max(1, level)).compactMap { lv in
+                           minor: minor && settings.showMinorMutagen && lowest <= 2 ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
+                           scopes: (max(1, lowest)...max(1, level)).compactMap { lv in
                                level >= lv ? ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) } : nil
                            })
             }
