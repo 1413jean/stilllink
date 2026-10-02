@@ -11,23 +11,23 @@ extension Color {
         })
     }
 
-    static let zBg = dynamic(0xFAF9F6, 0x262624)
-    static let zCard = dynamic(0xFFFFFF, 0x30302E)
-    static let zSide = dynamic(0xF8F8F6, 0x1F1F1D)      // 側欄：Claude 式很淺的暖白
-    static let zLine = dynamic(0xE7E5DF, 0x3D3C39)
-    static let zGrid = dynamic(0xCFCCC4, 0x4A4946)
-    static let zText = dynamic(0x1F1E1C, 0xECEAE4)
-    static let zText2 = dynamic(0x6B6963, 0xA6A39C)
+    static let zBg = dynamic(0xFAF9F6, 0x1C1B19)        // 暗色底：Stillink DS bg-inverse
+    static let zCard = dynamic(0xFFFFFF, 0x262522)
+    static let zSide = dynamic(0xF8F8F6, 0x161513)      // 側欄：Claude 式很淺的暖白
+    static let zLine = dynamic(0xE7E5DF, 0x34332F)
+    static let zGrid = dynamic(0xCFCCC4, 0x46443F)
+    static let zText = dynamic(0x1C1B19, 0xECEAE4)      // 主文字：同 DS 黑
+    static let zText2 = dynamic(0x5C5A54, 0xA6A39C)     // DS ui-primary
     static let zText3 = dynamic(0x9C9A93, 0x7A7872)
-    static let zHover = dynamic(0xF1F0ED, 0x34332F)
-    static let zSel = dynamic(0xEDEDEA, 0x3A3935)       // 選取列：淺灰
+    static let zHover = dynamic(0xF1F0ED, 0x2C2B28)
+    static let zSel = dynamic(0xEDEDEA, 0x33322E)       // 選取列：淺灰
     static let zAccent = dynamic(0xD96B43, 0xEC9473)   // 陶土橘（比原本 C2603F 亮一階）
 
     // 命盤（照文墨天機）
     static let wmRed = dynamic(0xD0102A, 0xFF6B76)
     static let wmBlue = dynamic(0x1F5FBF, 0x7AABF5)
     static let wmGreen = dynamic(0x1F8A3A, 0x5BCB8A)
-    static let wmBlack = dynamic(0x1F1E1C, 0xECEAE4)
+    static let wmBlack = dynamic(0x1C1B19, 0xECEAE4)
     static let wmEarth = dynamic(0xB5701A, 0xE0A84A)
     static let wmSF = dynamic(0xF4F0E6, 0x3E3C37)
     static let wmSel = dynamic(0xFBEDEA, 0x3A2E2C)
