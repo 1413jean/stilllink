@@ -7,6 +7,8 @@ struct SettingsPage: View {
     @State private var section: Section
     @State private var nameDraft = ""
     @State private var confirmErase = false
+    @State private var update: UpdateState = .idle
+    enum UpdateState { case idle, checking, upToDate, available(Updater.Release), failed(String) }
 
     init(initial: Section = .profile, onClose: @escaping () -> Void) {
         self.onClose = onClose
@@ -236,11 +238,48 @@ struct SettingsPage: View {
                 }
             }
             .padding(.bottom, 14)
+            row("檢查更新", updateNote) {
+                HStack(spacing: 8) {
+                    Spacer()
+                    if case .available(let r) = update {
+                        Button { Updater.download(r) } label: { Label("下載更新", systemImage: "arrow.down.circle") }
+                            .buttonStyle(ZPrimaryButton(small: true))
+                    }
+                    Button { checkUpdate() } label: {
+                        if case .checking = update { ProgressView().controlSize(.small).frame(width: 60) } else { Text("檢查更新") }
+                    }
+                    .buttonStyle(ZSecondaryButton(small: true))
+                    .disabled({ if case .checking = update { return true } else { return false } }())
+                }
+            }
             row("製作", "設計與開發") {
                 HStack { Spacer(); Text("Jean").font(Font.zBody).foregroundStyle(Color.zText) }
             }
             row("排盤計算", "開源紫微斗數引擎", last: true) {
                 HStack { Spacer(); Text("iztro（MIT License）").font(Font.zCallout).foregroundStyle(Color.zText2) }
+            }
+        }
+    }
+
+    /// 檢查更新那一列的說明文字
+    private var updateNote: String {
+        switch update {
+        case .idle: AppInfo.isBeta ? "看看有沒有新的測試版" : "看看有沒有新的正式版"
+        case .checking: "檢查中…"
+        case .upToDate: "已經是最新版本"
+        case .available(let r): "有新版本：\(r.display)"
+        case .failed(let why): "無法檢查：\(why)"
+        }
+    }
+
+    private func checkUpdate() {
+        update = .checking
+        Task {
+            let r = await Updater.check()
+            switch r {
+            case .upToDate: update = .upToDate
+            case .available(let rel): update = .available(rel)
+            case .failed(let why): update = .failed(why)
             }
         }
     }

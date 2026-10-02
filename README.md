@@ -42,12 +42,28 @@
 
 ```sh
 cd apps/apple
-./build.sh            # 編譯成 build/StillLink.app
-./build.sh install    # 編譯並裝到「應用程式」
-./build.sh dmg        # Apple 晶片＋Intel 通用版，輸出 build/StillLink-<版本>.dmg
+./build.sh                    # 測試版 → build/StillLink Beta.app
+./build.sh install            # 測試版，裝到「應用程式」
+./build.sh dmg                # 測試版 DMG（Apple 晶片＋Intel 通用版）
+./build.sh release install    # 正式版 → /Applications/StillLink.app
+./build.sh release dmg        # 正式版 DMG → build/StillLink-<版本>.dmg
 ```
 
-改 App 圖示：`swift scripts/make-icon.swift Resources/icon-1024.png`
+改 App 圖示：`swift scripts/make-icon.swift Resources/icon-1024.png`（測試版：`… Resources/icon-1024-beta.png beta`）
+
+## 測試版與正式版
+
+| | 正式版 | 測試版 |
+|---|---|---|
+| 分支 | `release`（預設） | `beta` |
+| App | StillLink | StillLink Beta（圖示有 BETA 標籤） |
+| 資料 | `~/Library/Application Support/StillLink` | `~/Library/Application Support/StillLink Beta` |
+| GitHub Release | 一般發佈 | Pre-release |
+
+兩個是獨立的 App，可以同時安裝，資料互不影響。想用真實命盤測試：在正式版「設定 → 資料 → 備份」，再到測試版「還原」。
+
+- 平常的修改都在 `beta`，用測試版驗證。
+- 確認沒問題後把 `beta` 合併進 `release`，改 `apps/apple/VERSION`，用 `./build.sh release dmg` 出正式版並發佈。
 
 ## 架構
 
