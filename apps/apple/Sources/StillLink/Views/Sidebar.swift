@@ -436,7 +436,7 @@ private struct SectionLabel: View {
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease")
                         .font(Font.zCaptionStrong)
-                        .foregroundStyle(sortHover || sort.wrappedValue != .custom ? Color.zText : Color.zText3)
+                        .foregroundStyle(sortHover ? Color.zText : Color.zText3)   // 跟旁邊的＋同色
                         .frame(width: 22, height: 22)
                         .background(RoundedRectangle(cornerRadius: 6).fill(sortHover ? Color.zHover : .clear))
                         .contentShape(Rectangle())
