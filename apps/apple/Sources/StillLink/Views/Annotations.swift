@@ -302,7 +302,7 @@ struct AnnotationToolbar: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(tool == t ? Color.zOnColor : Color.zText)
                         .frame(width: 38, height: 38)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(tool == t ? Color.zAccent : .clear))
+                        .background(RoundedRectangle(cornerRadius: 10).fill(tool == t ? Color.zAccent : hoverTool == t ? Color.zHover : .clear))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressStyle())
