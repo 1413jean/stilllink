@@ -71,12 +71,54 @@ struct PressStyle: ButtonStyle {
 
 /// 視窗頂端（工具列）漸層：底色 100% → 0%，整條寬度
 struct TopFade: View {
-    let color: Color
+    let color: Color   // 保留參數相容，現在不疊底色
+    var edge: VerticalEdge = .top
+    var height: CGFloat = 64
     var body: some View {
-        LinearGradient(colors: [color, color.opacity(0.85), color.opacity(0)], startPoint: .top, endPoint: .bottom)
-            .frame(height: 64)
-            .ignoresSafeArea(edges: .top)
+        // 背景模糊做漸層（不疊底色）：頂部由上往下 100%→0%，底部由上往下 0%→100%
+        // 漸層要用模糊元件自己的 maskImage；用 SwiftUI 的 .mask 會讓背景模糊失效
+        BackdropBlur(fadeFromTop: edge == .top)
+            .frame(height: height)
+            .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
             .allowsHitTesting(false)
+    }
+}
+
+/// 背景模糊：把視窗裡在它後面的內容模糊化（NSVisualEffectView，within window）
+/// fadeFromTop：true＝上面 100% 往下淡到 0；false＝上面 0 往下到 100%；nil＝整片
+/// 漸層用圖層遮罩（CAGradientLayer）；maskImage 和 SwiftUI .mask 都會讓模糊整片消失
+struct BackdropBlur: NSViewRepresentable {
+    var fadeFromTop: Bool? = nil
+    var material: NSVisualEffectView.Material = .headerView
+
+    final class View: NSVisualEffectView {
+        var fadeFromTop: Bool?
+        private let gradient = CAGradientLayer()
+        override func layout() {
+            super.layout()
+            guard let top = fadeFromTop else { layer?.mask = nil; return }
+            wantsLayer = true
+            gradient.frame = bounds
+            // 圖層座標原點在左下：startPoint y=1 是上面
+            gradient.colors = [NSColor.black.cgColor, NSColor.clear.cgColor]
+            gradient.startPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
+            gradient.endPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
+            layer?.mask = gradient
+        }
+    }
+
+    func makeNSView(context: Context) -> View {
+        let v = View()
+        v.blendingMode = .withinWindow
+        v.state = .active
+        v.material = material
+        v.fadeFromTop = fadeFromTop
+        return v
+    }
+    func updateNSView(_ v: View, context: Context) {
+        v.material = material
+        v.fadeFromTop = fadeFromTop
+        v.needsLayout = true
     }
 }
 

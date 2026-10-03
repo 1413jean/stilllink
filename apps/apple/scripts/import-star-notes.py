@@ -43,6 +43,10 @@ def header(line):
 MAJORS = "紫微 天機 太陽 武曲 天同 廉貞 天府 太陰 貪狼 巨門 天相 天梁 七殺 破軍".split()
 STEMS = "甲 乙 丙 丁 戊 己 庚 辛 壬 癸".split()
 CHANGSHENG = "長生 沐浴 冠帶 臨官 帝旺 衰 病 死 墓 絕 胎 養".split()
+# 十四主星分三組（附錄照這個順序分組排）
+STAR_GROUPS = [("北斗星系", "紫微 貪狼 巨門 廉貞 武曲 破軍".split()),
+               ("南斗星系", "天府 天梁 天機 天同 天相 七殺".split()),
+               ("中天主星", "太陽 太陰".split())]
 APPENDIX = {"附錄1": "附錄一 命宮主星職業", "附錄2": "附錄二 官祿宮工作模式", "附錄3": "附錄三 財帛宮現金處理",
             "附錄4": "附錄四 田宅宮居家風格", "附錄5": "附錄五 遷移宮打扮風格", "附錄6": "附錄六 疾厄宮疾病參考",
             "附錄7": "附錄七 化忌可拜神明", "附錄8": "附錄八 天生沒長好"}
@@ -146,15 +150,21 @@ def docs(lines):
         b = next((i for i in range(a + 1, len(L)) if any(L[i].strip().startswith(t) for t in tags[n + 1:]) or L[i].strip().startswith("其他備註")), len(L))
         raw = L[a + 1:b]
         cells = [c for c in (clean(l) for l in raw) if c]
-        if tag == "附錄6":       # 疾厄：每顆主星一個小標題，下面條列
-            parts = []
+        if tag == "附錄6":       # 疾厄：每顆主星一張卡片（條列），照北斗／南斗／中天分區
+            per, cur = {}, None
             for l in raw:
                 c = clean(l)
                 name = c[:-1] if c.endswith("星") else c
                 if name in MAJORS:
-                    parts.append(("\n" if parts else "") + "## " + name)
-                elif c:
-                    parts += bullets([l])
+                    cur = name; per[cur] = []
+                elif c and cur:
+                    per[cur] += bullets([l])
+            parts = []
+            for g, stars in STAR_GROUPS:
+                parts.append(("\n" if parts else "") + "# " + g)
+                for st in stars:
+                    if st in per:
+                        parts += ["", "## " + st] + per[st]
             out[APPENDIX[tag]] = "\n".join(parts)
             continue
         if tag == "附錄8":       # 地支 → 部位，照子丑寅卯排成表
@@ -167,20 +177,34 @@ def docs(lines):
         if first is None:
             continue
         heads, j = cells[:first], first
-        if tag == "附錄7":       # 神明：一欄，排成表
-            rows = ["星曜｜代表神明"]
+        if tag == "附錄7":       # 神明：照北斗／南斗／中天／輔星分組，各一張表
+            gods = {}
             while j < len(cells):
-                rows.append(f"{cells[j]}｜{cells[j + 1] if j + 1 < len(cells) else ''}")
+                nm = cells[j][:-1] if cells[j].endswith("星") else cells[j]
+                gods[nm] = cells[j + 1] if j + 1 < len(cells) else ""
                 j += 2
-            out[APPENDIX[tag]] = "\n".join(rows)
+            groups = STAR_GROUPS + [("輔星", [k for k in gods if k not in MAJORS])]
+            parts = []
+            for g, stars in groups:
+                rows = [f"{st}｜{gods[st]}" for st in stars if st in gods]
+                if rows:
+                    parts.append(f"## {g}\n星曜｜代表神明\n" + "\n".join(rows))
+            out[APPENDIX[tag]] = "\n\n".join(parts)
             continue
-        parts = []
+        # 附錄一～五：照北斗／南斗／中天分組，每組一張表（星曜｜各欄位）
+        per = {}
         while j < len(cells):
             vals = cells[j + 1:j + 1 + len(heads)]
-            parts.append(("\n" if parts else "") + "## " + cells[j])
-            parts += [f"・{h}：{v}" for h, v in zip(heads, vals)]
+            nm = cells[j]
+            short = nm.split("（")[0].rstrip("星")
+            per[short] = (nm.replace("星（", "（"), vals)
             j += 1 + len(heads)
-        out[APPENDIX[tag]] = "\n".join(parts)
+        parts = []
+        for g, stars in STAR_GROUPS:
+            rows = [per[st][0] + "｜" + "｜".join(v.replace("｜", "／") for v in per[st][1]) for st in stars if st in per]
+            if rows:
+                parts.append(f"## {g}\n星曜｜" + "｜".join(heads) + "\n" + "\n".join(rows))
+        out[APPENDIX[tag]] = "\n\n".join(parts)
 
     # 其他備註：分成小技巧、靈力值、猜餐點
     oc = [clean(l) for l in L[i_other + 1:] if clean(l)]

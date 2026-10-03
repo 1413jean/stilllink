@@ -90,21 +90,74 @@ extension Color {
 }
 
 // MARK: - 字級（全部 SF Pro；中文由系統自動以蘋方補字）
+// 設計系統：跟 Figma「Stillink Design System」的文字樣式同名（Typography 變數集合的 macOS 模式就是這裡的數值）。
+// 改字級請先改 Figma，再同步這張表；畫面上一律用這些樣式，不要直接寫 .system(size:)。
 
+/// 文字樣式：大小／行高／粗細／字距
+enum ZType: String, CaseIterable {
+    case titleLarge = "title/title.large", title1 = "title/title.1", title2 = "title/title.2", title3 = "title/title.3"
+    case headline = "body/body.headline"
+    case body = "body/body.large", bodyStrong = "body/body.large.strong"
+    case callout = "body/body.callout", calloutStrong = "body/body.callout.strong"
+    case subheadline = "body/body.subheadline", subheadlineStrong = "body/body.subheadline.strong"
+    case footnote = "body/body.footnote", footnoteStrong = "body/body.footnote.strong"
+    case caption1 = "body/body.caption.1", caption1Strong = "body/body.caption.1.strong"
+    case caption2 = "body/body.caption.2"
+    case eyebrow = "label/label.eyebrow"
+
+    /// （字級, 行高, 粗體, 字距）— macOS 模式
+    var spec: (size: CGFloat, lineHeight: CGFloat, strong: Bool, tracking: CGFloat) {
+        switch self {
+        case .titleLarge: (32, 38, true, 0)
+        case .title1: (22, 28, true, 0)
+        case .title2: (20, 26, true, 0)
+        case .title3: (16, 22, true, 0)
+        case .headline: (14, 20, true, 0)
+        case .body: (15, 24, false, 0)
+        case .bodyStrong: (15, 24, true, 0)
+        case .callout: (13, 20, false, 0)
+        case .calloutStrong: (13, 20, true, 0)
+        case .subheadline: (12, 18, false, 0)
+        case .subheadlineStrong: (12, 18, true, 0)
+        case .footnote: (11, 16, false, 0)
+        case .footnoteStrong: (11, 16, true, 0)
+        case .caption1: (10, 14, false, 0)
+        case .caption1Strong: (10, 14, true, 0)
+        case .caption2: (9, 12, false, 0)
+        case .eyebrow: (10, 12, true, 1.4)
+        }
+    }
+    var font: Font { .system(size: spec.size, weight: spec.strong ? .medium : .regular) }
+}
+
+extension View {
+    /// 套用文字樣式（字體＋行高＋字距）：多行文字一律用這個，行高才會照設計系統
+    func zText(_ t: ZType) -> some View {
+        font(t.font)
+            .lineSpacing(max(0, t.spec.lineHeight - t.spec.size * 1.2))
+            .tracking(t.spec.tracking)
+    }
+}
+
+/// 舊名稱 → 設計系統樣式（之後新程式直接用 ZType）
 extension Font {
-    static let zDisplay = Font.system(size: 32, weight: .medium)        // 首頁大標
-    static let zBrand = Font.system(size: 15, weight: .semibold)        // 側欄頂端產品名
-    static let zTitle = Font.system(size: 20, weight: .semibold)        // 彈窗標題
-    static let zHeadline = Font.system(size: 14, weight: .medium)       // 卡片內人名
-    static let zInput = Font.system(size: 14)                           // 表單輸入框
-    static let zBody = Font.system(size: 13)                            // 內文、側欄列
-    static let zBodyStrong = Font.system(size: 13, weight: .medium)
-    static let zCallout = Font.system(size: 12)                         // 次要內文、資料列
-    static let zCalloutStrong = Font.system(size: 12, weight: .medium)  // 卡片標題、表頭
-    static let zCaption = Font.system(size: 11)                         // 說明、標籤
-    static let zCaptionStrong = Font.system(size: 11, weight: .medium)
-    static let zMicro = Font.system(size: 10)                           // 時間戳、方位、計數
-    static let zMicroStrong = Font.system(size: 10, weight: .semibold)
+    static let zDisplay = ZType.titleLarge.font          // 首頁大標
+    static let zTitle = ZType.title2.font                // 頁面、彈窗標題
+    static let zReadTitle = ZType.title3.font            // 閱讀內容的小標題（星曜筆記、參考文件）
+    static let zHeadline = ZType.headline.font           // 卡片內人名
+    static let zBrand = ZType.headline.font              // 側欄頂端產品名
+    static let zRead = ZType.body.font                   // 閱讀內容（星曜筆記、參考文件）
+    static let zReadStrong = ZType.bodyStrong.font
+    static let zInput = ZType.body.font                  // 表單輸入框
+    static let zBody = ZType.callout.font                // 介面內文、側欄列
+    static let zBodyStrong = ZType.calloutStrong.font
+    static let zCallout = ZType.subheadline.font         // 次要內文、資料列
+    static let zCalloutStrong = ZType.subheadlineStrong.font   // 卡片標題、表頭
+    static let zCaption = ZType.footnote.font            // 說明、標籤
+    static let zCaptionStrong = ZType.footnoteStrong.font
+    static let zMicro = ZType.caption1.font              // 時間戳、方位、計數
+    static let zMicroStrong = ZType.caption1Strong.font
+    static let zTiny = ZType.caption2.font               // 最小字
 
     static let zIcon = Font.system(size: 12)                            // 列表圖示
     static let zIconBold = Font.system(size: 12, weight: .bold)         // 送出箭頭

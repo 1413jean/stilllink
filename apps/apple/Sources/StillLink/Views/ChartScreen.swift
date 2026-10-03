@@ -55,6 +55,10 @@ struct ChartScreen: View {
     @AppStorage("infoPanelW") private var panelW: Double = Double(infoPanelWidth)   // 右側面板寬度（左緣可拖拉，會記住）
     @State private var dragStartW: Double?
     @State private var handleHover = false
+    @State private var annoTool: AnnoTool = .select      // 底部工具列：目前的標註工具（選取＝一般看盤）
+    @State private var annoColor: AnnoColor = .red
+    @State private var annoSize: AnnoSize = .medium
+    @State private var keyMonitor: Any?     // 標註工具快捷鍵（V P H R T E、Esc 回到選取）
     @State private var model: ChartModel?
     @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
@@ -91,6 +95,13 @@ struct ChartScreen: View {
             }
     }
 
+    /// 盤面上目前顯示的運限四化（跟盤面一樣最多三層）：給星曜筆記挑三方四正有四化的星
+    private var activeScopes: [(String, [String])] {
+        guard let model, shownLevel >= 1 else { return [] }
+        let names = ["大限", "流年", "流月", "流日", "流時"]
+        return (max(1, shownLevel - 2)...shownLevel).map { (names[$0 - 1], model.horo.scope($0).mutagen) }
+    }
+
     var body: some View {
         // 捲動區佔滿整個寬度（捲軸貼在視窗最右邊）；右側資訊卡固定浮在右上角，不跟著捲
         GeometryReader { geo in
@@ -112,6 +123,8 @@ struct ChartScreen: View {
                             }
                         }
                         .frame(width: boardW * sharpZoom, height: boardW * boardAspect * sharpZoom)
+                        // 標註層：畫筆、螢光筆、框線、文字（座標跟著盤面大小）
+                        .overlay { AnnotationLayer(chartID: person.id, tool: annoTool, color: annoColor, size: annoSize) }
                         .scaleEffect(zoom / sharpZoom, anchor: .top)
                         .frame(width: boardW * zoom, height: boardW * boardAspect * zoom, alignment: .top)
                         .gesture(magnify)
@@ -130,11 +143,25 @@ struct ChartScreen: View {
                     }
                     .frame(width: boardW * zoom)
                     .padding(.top, 14)
-                    .padding(.bottom, store.settings.showComposer ? 150 : 40)
+                    .padding(.bottom, store.settings.showComposer ? 210 : 100)   // 底部留給工具列
                     .frame(width: max(usable, boardW * zoom + 48))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .defaultScrollAnchorTop()
+                // 命盤也能捲到頂部工具列底下（跟右側面板一樣被漸層＋模糊蓋住），左右下照常裁切
+                .scrollClipDisabledCompat()
+                .mask(Rectangle().padding(.top, -80))
+
+                // 命盤區底部：跟頂部一樣的漸層＋背景模糊
+                TopFade(color: .zBg, edge: .bottom, height: 90)
+                    .frame(width: usable)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // 底部浮動工具列（標註）：在命盤區正中間
+                AnnotationToolbar(chartID: person.id, tool: $annoTool, color: $annoColor, size: $annoSize)
+                    .frame(width: usable)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, store.settings.showComposer ? 150 : 22)
 
                 if store.settings.showComposer {
                 AIComposer()
@@ -154,7 +181,8 @@ struct ChartScreen: View {
             .overlay(alignment: .topTrailing) {
                 if showInfo {
                     ScrollView(showsIndicators: false) {
-                        InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace, width: CGFloat(panelW))
+                        InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace, width: CGFloat(panelW),
+                                  notesBirth: max(0, shownLevel - 2) == 0, notesScopes: activeScopes)
                             .padding(.top, 12)
                             .padding(.bottom, 96) // 底部留給右下角的快捷鈕
                             .padding(.horizontal, 16) // 留空間給卡片陰影
@@ -211,6 +239,22 @@ struct ChartScreen: View {
             }
         }
         .background(Color.zBg)
+        .onAppear {
+            // 標註工具快捷鍵：打字中（焦點在文字框）不攔；Esc 回到選取
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
+                if e.window?.firstResponder is NSText { return e }
+                if !e.modifierFlags.intersection([.command, .control, .option]).isEmpty { return e }
+                if e.keyCode == 53 {   // Esc
+                    if annoTool != .select { withAnimation(Motion.fast) { annoTool = .select }; return nil }
+                    return e
+                }
+                guard let ch = e.charactersIgnoringModifiers?.uppercased(),
+                      let t = AnnoTool.allCases.first(where: { $0.key == ch }) else { return e }
+                withAnimation(Motion.fast) { annoTool = t }
+                return nil
+            }
+        }
+        .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
         .modifier(ChartChrome(enabled: chrome, title: ChartScreen.title(person), showInfo: $showInfo))
         .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
             let target = pick

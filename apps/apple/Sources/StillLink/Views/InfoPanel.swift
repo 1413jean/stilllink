@@ -26,7 +26,10 @@ struct InfoPanel: View {
     let chart: Chart?
     @Binding var hepanYear: Int?
     var selectedPalace: Int? = nil
+    @State private var starDetail: (String, String)?   // 打開單獨介紹的星（筆記 key、宮名）
     var width: CGFloat = infoPanelWidth
+    var notesBirth = true                         // 星曜筆記：生年四化在顯示範圍內
+    var notesScopes: [(String, [String])] = []    // 星曜筆記：目前顯示的運限四化
     @State private var hepanDraft = ""
     @State private var preview: String?
     @State private var dropping = false
@@ -43,6 +46,23 @@ struct InfoPanel: View {
     private var isTemp: Bool { !isNow && !store.people.contains { $0.id == person.id } }
 
     var body: some View {
+        // 點了星曜筆記裡的一顆星：整個右側換成那顆星的單獨介紹
+        if let d = starDetail {
+            StarDetailView(key: d.0, palaceName: d.1) { withAnimation(Motion.base) { starDetail = nil } }
+                .padding(14)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard).shadow(color: Color.zShadow.opacity(0.6), radius: 10, y: 3))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
+                .frame(width: width)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+                .onChange(of: selectedPalace) { _ in withAnimation(Motion.base) { starDetail = nil } }
+        } else {
+            cards
+                // 驗證用：ZIWEI_STAR_DETAIL=紫微 直接打開那顆星的單獨介紹
+                .onAppear { if let k = ProcessInfo.processInfo.environment["ZIWEI_STAR_DETAIL"] { starDetail = (k, "命宮") } }
+        }
+    }
+
+    private var cards: some View {
         VStack(spacing: 12) {
                 card("命主資料",
                      action: isNow ? nil : ("square.and.pencil", { NotificationCenter.default.post(name: .editChart, object: person.id) }),
@@ -62,28 +82,16 @@ struct InfoPanel: View {
                                     .font(Font.zCaption).foregroundStyle(Color.zText3)
                             }
                         }
-                        .padding(.bottom, 4)
-                        row("calendar", "國曆", mask(chart?.solarDate ?? current.solar))
-                        row("moon", "農曆", mask(chart.map { "\($0.lunarGanzhiDate) \($0.time)" } ?? ""))
-                        if let ts = current.trueSolar {
-                            row("sun.max", "真太陽時", mask(ts))
-                            row("clock", "鐘錶時間", mask(current.clock ?? ""))
-                        } else {
-                            row("clock", "時辰", mask(ZW.hours[current.hour] + "時"))
-                        }
-                        if let pl = current.place {
-                            row("mappin.and.ellipse", "出生地", pl.name)
-                        } else {
-                            row("mappin.slash", "出生地", "未填（無法換算真太陽時）")
-                        }
+                        // 國曆、農曆、時辰、出生地不再列出（中宮已經有）
                     }
                 }
 
                 // 星曜筆記：點選宮位裡每顆星的意思（總論＋落在這一宮），可以自己改寫
-                if let chart, let i = selectedPalace, i < chart.palaces.count {
-                    card("星曜筆記 · \(chart.palaces[i].name)",
+                if StarNotes.enabled, let chart, let i = selectedPalace, i < chart.palaces.count {
+                    card("星曜筆記 · \(chart.palaces[i].name)三方四正",
                          action: ("book.closed", { NotificationCenter.default.post(name: .openStarNotes, object: nil) })) {
-                        StarNotesCard(palace: chart.palaces[i]).id(i)
+                        StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes,
+                                      onOpen: { k, p in withAnimation(Motion.base) { starDetail = (k, p) } }).id(i)
                     }
                 }
 
@@ -228,8 +236,11 @@ struct InfoPanel: View {
         }
     }
 
+    @ViewBuilder
     private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, actions: [(String, String, () -> Void)] = [],
                                @ViewBuilder _ content: () -> C) -> some View {
+        // 設定 → 右側面板 可以關掉的卡片
+        if ZSettings.PanelCard(cardTitle: title).map({ store.settings.showsPanel($0) }) ?? true {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Text(title).font(Font.zCalloutStrong).foregroundStyle(Color.zText2)
@@ -253,6 +264,7 @@ struct InfoPanel: View {
                 .shadow(color: Color.zShadow.opacity(0.6), radius: 10, y: 3)
         )
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
+        }
     }
 
     private func row(_ icon: String, _ label: String, _ value: String) -> some View {

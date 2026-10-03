@@ -128,7 +128,7 @@ struct RootView: View {
             }
             // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
             .animation(nil, value: route)
-            .overlay(alignment: .top) { TopFade(color: .zBg) }
+            .overlay(alignment: .top) { TopFade(color: .zBg, height: 96) }
         }
         .toolbarBackground(.hidden, for: .windowToolbar)
         .overlay(alignment: .bottom) { ToastHost() }
@@ -169,7 +169,7 @@ struct RootView: View {
                 else if !wide, sidebarAutoHidden { columns = .all; sidebarAutoHidden = false }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openStarNotes)) { n in go(.starNotes(n.object as? String)) }
+        .onReceive(NotificationCenter.default.publisher(for: .openStarNotes)) { n in if StarNotes.enabled { go(.starNotes(n.object as? String)) } }
         .onReceive(NotificationCenter.default.publisher(for: .openTemp)) { n in
             if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
         }
@@ -199,7 +199,7 @@ struct RootView: View {
         if env["ZIWEI_NEWSELF"] != nil { go(.newSelf) }
         if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
-            if let s = SettingsPage.Section.allCases.first(where: { "\($0)" == v }) {
+            if let s = SettingsPage.Section.find(v) {
                 NotificationCenter.default.post(name: .openSettings, object: s)
             } else { go(.settings) }
         }
