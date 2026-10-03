@@ -121,14 +121,6 @@ struct InfoPanel: View {
                 }
 
                 // 每張盤都有：看盤操作提示
-                card("看盤小提示") {
-                    VStack(alignment: .leading, spacing: 6) {
-                        tip("hand.tap", "點宮位：看三方四正和宮干飛化；再點一次取消")
-                        tip("lock", "長按或點兩下宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按或點兩下解鎖")
-                        tip("arrow.triangle.2.circlepath", "右鍵宮位：以這一宮為命（轉宮）")
-                    }
-                }
-
                 if isTemp {
                     card("暫時命盤") {
                         VStack(alignment: .leading, spacing: 10) {
@@ -231,13 +223,6 @@ struct InfoPanel: View {
     }
 
     /// 提示列：小圖示＋一句話
-    private func tip(_ icon: String, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: icon).font(Font.zCaption).foregroundStyle(Color.zText3).frame(width: 14)
-            Text(text).font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
     @ViewBuilder
     private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, actions: [(String, String, () -> Void)] = [],
                                @ViewBuilder _ content: () -> C) -> some View {

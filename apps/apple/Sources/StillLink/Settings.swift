@@ -104,14 +104,13 @@ extension ZSettings {
 
     /// 右側面板可以開關的卡片（此刻盤、暫時命盤那兩張有操作功能，固定顯示）
     enum PanelCard: String, CaseIterable {
-        case profile, notes, hepan, tips, memo, photos
-        var title: String { ["profile": "命主資料", "notes": "星曜筆記", "hepan": "合盤", "tips": "看盤小提示", "memo": "備註", "photos": "照片與附件"][rawValue] ?? "" }
+        case profile, notes, hepan, memo, photos
+        var title: String { ["profile": "命主資料", "notes": "星曜筆記", "hepan": "合盤", "memo": "備註", "photos": "照片與附件"][rawValue] ?? "" }
         var detail: String {
             switch self {
             case .profile: "國曆、農曆、時辰、出生地，以及頭貼"
             case .notes: "點宮位時，三方四正的星曜意思"
             case .hepan: "輸入對方出生年，疊合盤"
-            case .tips: "點宮位、長按、右鍵的操作說明"
             case .memo: "這張命盤的備註"
             case .photos: "這張命盤的照片與附件"
             }

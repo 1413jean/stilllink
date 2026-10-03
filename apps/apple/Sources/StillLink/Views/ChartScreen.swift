@@ -227,6 +227,8 @@ struct ChartScreen: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
+            // 左下角「?」：看盤小提示（點開展開，點旁邊收起）
+            .overlay(alignment: .bottomLeading) { TipsButton().padding(.leading, 20).padding(.bottom, 24) }
             .overlay(alignment: .bottomTrailing) {
                 VStack(alignment: .trailing, spacing: 10) {
                     if zoom > 1 {
@@ -422,5 +424,43 @@ struct AddBoardButton: View {
         .buttonStyle(PressStyle())
         .onHover { hover = $0 }
         .help("加一張盤（左右滑動切換）")
+    }
+}
+
+/// 命盤區左下角的「?」：點開是看盤小提示，點旁邊就收起來
+struct TipsButton: View {
+    @State private var open = false
+    @State private var hover = false
+
+    var body: some View {
+        Button { open.toggle() } label: {
+            Image(systemName: "questionmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.zText2)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(hover || open ? Color.zHover : Color.zCard))
+                .overlay(Circle().stroke(Color.zLine))
+                .shadow(color: Color.zShadow, radius: 6, y: 2)
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressStyle())
+        .onHover { hover = $0 }
+        .help("看盤小提示")
+        .popover(isPresented: $open, arrowEdge: .top) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("看盤小提示").zText(.calloutStrong).foregroundStyle(Color.zText)
+                tip("hand.tap", "點宮位：看三方四正和宮干飛化；再點一次取消")
+                tip("lock", "長按或點兩下宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按或點兩下解鎖")
+                tip("arrow.triangle.2.circlepath", "右鍵宮位：以這一宮為命（轉宮）")
+                tip("pencil.tip", "底部工具列可以畫線、框、箭頭、寫字和放備註；快捷鍵 V P H A R T E C，Esc 回到選取")
+            }
+            .padding(16)
+            .frame(width: 300)
+        }
+    }
+
+    private func tip(_ icon: String, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: icon).font(Font.zCaption).foregroundStyle(Color.zText3).frame(width: 14)
+            Text(text).zText(.subheadline).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

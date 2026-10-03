@@ -51,6 +51,7 @@ struct CommentLayer: View {
     @State private var editText = ""
     @State private var hoverMsg: UUID?
     @State private var hoverPin: UUID?         // 滑鼠停著的圖釘（顯示預覽）
+    @State private var dragging: (id: UUID, offset: CGSize)?   // 正在拖的圖釘
     @State private var undo: (thread: CommentThread, label: String)?
     @FocusState private var focused: Bool
 
@@ -70,8 +71,8 @@ struct CommentLayer: View {
                 Color.clear.contentShape(Rectangle())
                     .onTapGesture(coordinateSpace: .local) { p in
                         if open != nil { withAnimation(Motion.fast) { open = nil } ; return }
-                        // 正在寫的備註：點旁邊不取消（只能按 Esc 或送出），焦點拉回輸入框
-                        if draft != nil { focused = true; return }
+                        // 正在寫的備註：點旁邊就取消這次的備註
+                        if draft != nil { withAnimation(Motion.exit) { draft = nil; draftText = "" }; return }
                         guard active else { return }
                         draftText = ""
                         withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) { draft = CGPoint(x: p.x / size.width, y: p.y / size.height) }
@@ -80,8 +81,18 @@ struct CommentLayer: View {
                     .allowsHitTesting(active || open != nil || draft != nil)
 
                 ForEach(store.list(chartID).filter { !$0.resolved }) { t in
+                    let d = dragging?.id == t.id ? dragging!.offset : .zero
                     pinView(selected: open == t.id)
-                        .position(x: t.point.x * size.width + pin / 2, y: t.point.y * size.height - pin / 2)
+                        .position(x: t.point.x * size.width + pin / 2 + d.width, y: t.point.y * size.height - pin / 2 + d.height)
+                        // 拖曳圖釘可以換位置（放開才存）
+                        .gesture(DragGesture(minimumDistance: 3)
+                            .onChanged { v in dragging = (t.id, v.translation); open = nil; hoverPin = nil }
+                            .onEnded { v in
+                                let nx = min(1, max(0, t.point.x + v.translation.width / size.width))
+                                let ny = min(1, max(0, t.point.y + v.translation.height / size.height))
+                                store.update(chartID) { list in if let i = list.firstIndex(where: { $0.id == t.id }) { list[i].point = CGPoint(x: nx, y: ny) } }
+                                dragging = nil
+                            })
                         .onTapGesture { withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) { open = open == t.id ? nil : t.id; draft = nil; reply = "" } }
                         .onHover { h in withAnimation(Motion.fast) { hoverPin = h ? t.id : (hoverPin == t.id ? nil : hoverPin) } }
                 }
@@ -126,8 +137,8 @@ struct CommentLayer: View {
         let x = d.x * size.width, y = d.y * size.height
         let empty = draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let fieldW: CGFloat = 300
-        // 太靠右時整組往左移，輸入框還是從圖釘往右展開
-        let left = min(x, size.width - fieldW - pin - 10)
+        // 圖釘的左邊就是滑鼠點的位置，輸入框從這裡往右展開
+        let left = x
         return HStack(alignment: .top, spacing: 8) {
             // 新增中的圖釘：藍色實心＋白框，像 Figma
             bubble.fill(figmaBlue).frame(width: pin, height: pin)
@@ -159,8 +170,8 @@ struct CommentLayer: View {
             .frame(width: fieldW, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: empty ? 21 : 14).fill(Color.zCard))
             // 被選取的感覺：藍色外框＋外圈淡藍光暈；空白時是一條膠囊
-            .overlay(RoundedRectangle(cornerRadius: empty ? 21 : 14).stroke(figmaBlue, lineWidth: 1.5))
-            .background(RoundedRectangle(cornerRadius: empty ? 24 : 17).stroke(figmaBlue.opacity(focused ? 0.22 : 0), lineWidth: 4).padding(-3))
+            .overlay(RoundedRectangle(cornerRadius: empty ? 21 : 14).stroke(figmaBlue.opacity(0.85), lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: empty ? 24 : 17).stroke(figmaBlue.opacity(focused ? 0.1 : 0), lineWidth: 3).padding(-2.5))
             .shadow(color: .black.opacity(0.14), radius: 14, y: 6)
             .animation(.spring(response: 0.3, dampingFraction: 0.85), value: empty)
             .transition(.asymmetric(insertion: .scale(scale: 0.2, anchor: .leading).combined(with: .opacity),
@@ -323,7 +334,7 @@ struct CommentLayer: View {
             }
             .padding(12)
             .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(figmaBlue, lineWidth: 1.5))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(figmaBlue.opacity(0.85), lineWidth: 1))
         }
     }
 
