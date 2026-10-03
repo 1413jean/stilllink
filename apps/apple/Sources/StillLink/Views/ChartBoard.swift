@@ -245,6 +245,14 @@ private struct PalaceCell: View {
     let taijiLabel: String?
     let flyStars: [String: Mutagen]
 
+    /// 目前大限裡，流年走到這一宮的那一年與虛歲
+    private var decadeYearAge: (year: Int, age: Int)? {
+        let r = model.chart.palaces[model.horo.decadal.index].range
+        guard r.count == 2, let first = model.yearlyAges[index].first else { return nil }
+        guard let age = (r[0]...r[1]).first(where: { ($0 - first) % 12 == 0 && $0 >= first }) else { return nil }
+        return (model.bazi.birthYear + age - 1, age)
+    }
+
     /// 流月：這一宮是流年的哪個農曆月＋月干。流年斗君＝子斗順數到流年地支，從那宮起正月順排；月干用五虎遁由流年天干推
     private var monthLabel: String? {
         guard level >= 2 else { return nil }   // 選到流年以後才顯示
@@ -357,11 +365,20 @@ private struct PalaceCell: View {
                     .minimumScaleFactor(0.8)
                     .padding(.bottom, 1)
                     }
-                    Text("\(p.range[0])~\(p.range[1])")
-                        .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
-                        .underline(curDecade)
-                        .foregroundStyle(curDecade ? Color.wmRed : Color.zText)
-                        .lineLimit(1).fixedSize()
+                    // 選到大限以後：改寫「這個大限裡、流年走到這一宮的那一年」（例：2034年38歲），像文墨天機
+                    if level >= 1, let ya = decadeYearAge {
+                        Text("\(String(ya.year))年\(ya.age)歲")
+                            .font(ChartType.font(ChartType.range(fs)))
+                            .foregroundStyle(Color.zText2)
+                            .lineLimit(1).fixedSize()
+                    } else {
+                        Text("\(p.range[0])~\(p.range[1])")
+                            .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
+                            .underline(curDecade)
+                            // 選到大限時輪不到的宮（一個大限只有 10 年）：大限歲數變淡
+                            .foregroundStyle(curDecade ? Color.wmRed : level >= 1 ? Color.zText3 : Color.zText)
+                            .lineLimit(1).fixedSize()
+                    }
                     // 運限宮名垂直往上疊在宮名上面（由下而上：宮名、大X、年X），一欄三行；
                     // 疊滿往左開新欄（月X、日X、時X），由右至左。小限緊貼在宮名右邊。
                     let tags: [(String, Color)] = (1..<(level + 1)).map { lv in
