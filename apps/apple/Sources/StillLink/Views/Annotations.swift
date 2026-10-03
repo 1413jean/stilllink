@@ -139,7 +139,8 @@ struct AnnotationLayer: View {
             let marks = store.list(chartID) + (drawing.map { [$0] } ?? [])
             ZStack(alignment: .topLeading) {
                 Canvas { ctx, _ in
-                    for m in marks where m.kind != .text { draw(m, in: &ctx, size: size) }
+                    // 以前存下來的「點一下」小點也不畫（使用者回報此刻盤上有綠色小點，就是它）
+                    for m in marks where m.kind != .text && !Self.isTap(m, size: size) { draw(m, in: &ctx, size: size) }
                 }
                 .allowsHitTesting(false)
                 ForEach(marks.filter { $0.kind == .text }) { m in
@@ -153,6 +154,13 @@ struct AnnotationLayer: View {
             .allowsHitTesting(tool != .select && tool != .comment)
         }
         .onChange(of: tool) { _ in finishText() }
+    }
+
+    /// 這一筆是不是只是點一下：所有點都擠在 4pt（箭頭 6pt）以內
+    static func isTap(_ m: Mark, size: CGSize) -> Bool {
+        guard m.kind != .text, let f = m.points.first else { return false }
+        let limit: CGFloat = m.kind == .arrow ? 6 : 4
+        return m.points.allSatisfy { hypot(($0.x - f.x) * size.width, ($0.y - f.y) * size.height) < limit }
     }
 
     // MARK: 畫
@@ -246,8 +254,8 @@ struct AnnotationLayer: View {
     private func ended(_ v: DragGesture.Value, size: CGSize) {
         switch tool {
         case .pen, .highlight, .rect, .arrow:
-            // 箭頭太短（只是點一下）就不留
-            if let m = drawing, m.kind != .arrow || hypot((m.points[1].x - m.points[0].x) * size.width, (m.points[1].y - m.points[0].y) * size.height) > 6 {
+            // 只是點一下（筆畫、框、箭頭幾乎沒移動）就不留：不小心切到畫筆再點宮位，會在盤上留下小點
+            if let m = drawing, !Self.isTap(m, size: size) {
                 store.edit(chartID) { $0.append(m) }
             }
             drawing = nil
