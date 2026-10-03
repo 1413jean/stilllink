@@ -714,7 +714,7 @@ private struct CenterInfo: View {
         }
         // 層級開關：本・限・年・月・日・時（最多同時顯示三層），旁邊小限另外開關
         .overlay(alignment: .bottom) {
-            if level >= 1 { layerBar.padding(.bottom, fs * 0.5) }
+            if level >= 1 { layerBar.padding(.bottom, fs * 1.6) }   // 離底線遠一點，不要貼著
         }
         .overlay(Rectangle().stroke(Color.zGrid, lineWidth: max(0.5, 1 / displayScale)))   // 固定 1 個實際像素：一般螢幕（1x）上 0.5pt 會淡到看不見
     }
