@@ -18,7 +18,9 @@ final class StarNotes: ObservableObject {
 
     /// 筆記頁的分組（依序）
     static let groups: [(String, [String])] = [
-        ("十四主星", ["紫微", "天機", "太陽", "武曲", "天同", "廉貞", "天府", "太陰", "貪狼", "巨門", "天相", "天梁", "七殺", "破軍"]),
+        ("北斗星系", ["紫微", "貪狼", "巨門", "廉貞", "武曲", "破軍"]),
+        ("南斗星系", ["天府", "天梁", "天機", "天同", "天相", "七殺"]),
+        ("中天主星", ["太陽", "太陰"]),
         ("雙星組合", ["紫微天府", "紫微貪狼", "紫微天相", "紫微七殺", "紫微破軍", "天機太陰", "天機巨門", "天機天梁",
                     "太陽太陰", "太陽巨門", "太陽天梁", "武曲天府", "武曲貪狼", "武曲天相", "武曲七殺", "武曲破軍",
                     "天同太陰", "天同巨門", "天同天梁", "廉貞天府", "廉貞貪狼", "廉貞天相", "廉貞七殺", "廉貞破軍"]),
@@ -33,7 +35,7 @@ final class StarNotes: ObservableObject {
                 "附錄五 遷移宮打扮風格", "附錄六 疾厄宮疾病參考", "附錄七 化忌可拜神明", "附錄八 天生沒長好", "其他備註"]),
     ]
     /// 目錄上的短名稱
-    static let groupShort = ["十四主星": "主星", "雙星組合": "雙星", "十年天干四化": "十干四化", "實戰小應用": "紫占", "長生十二宮": "長生"]
+    static let groupShort = ["北斗星系": "北斗", "南斗星系": "南斗", "中天主星": "中天", "雙星組合": "雙星", "十年天干四化": "十干四化", "實戰小應用": "紫占", "長生十二宮": "長生"]
     /// 參考文件（十干四化、紫占、長生、附錄）：只有內文，沒有十二宮
     static func isDoc(_ key: String) -> Bool {
         groups.contains { ["十年天干四化", "實戰小應用", "長生十二宮", "附錄"].contains($0.0) && $0.1.contains(key) }
@@ -459,7 +461,7 @@ struct DocView: View {
     private var rawSections: [String] {
         var out = [""]
         for line in text.components(separatedBy: "\n") {
-            if line.trimmingCharacters(in: .whitespaces).hasPrefix("## ") { out.append(line) }
+            if line.trimmingCharacters(in: .whitespaces).hasPrefix("#") { out.append(line) }   // 「# 」分組標題、「## 」小標題都切一段
             else { out[out.count - 1] += (out[out.count - 1].isEmpty ? "" : "\n") + line }
         }
         return out.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -473,7 +475,7 @@ struct DocView: View {
     }
 
     private enum Block { case bullet(String), step(String), table([[String]]), para(String) }
-    private struct Section: Identifiable { let id: Int; let title: String?; var blocks: [Block] }
+    private struct Section: Identifiable { let id: Int; let title: String?; var blocks: [Block]; var group = false }
 
     /// 一段原文 → 排版用的段落
     private static func parse(_ text: String) -> Section {
@@ -486,6 +488,7 @@ struct DocView: View {
             flush()
             if l.isEmpty { continue }
             if l.hasPrefix("## ") { cur = Section(id: 0, title: String(l.dropFirst(3)), blocks: cur.blocks) }
+            else if l.hasPrefix("# ") { cur = Section(id: 0, title: String(l.dropFirst(2)), blocks: cur.blocks, group: true) }
             else if l.hasPrefix("・") { cur.blocks.append(.bullet(String(l.dropFirst()))) }
             else if l.first?.isNumber == true, l.contains(".") { cur.blocks.append(.step(l)) }
             else { cur.blocks.append(.para(l)) }
@@ -494,18 +497,36 @@ struct DocView: View {
         return cur
     }
 
+    /// 照原文順序排：分組標題、表格各佔一整行；中間連續的小卡排成多欄
+    private enum Chunk { case full(Int), grid([Int]) }
+
     var body: some View {
         let raws = rawSections
-        // 每段各自排版；有表格的段落獨佔一整行，其他小卡寬的時候自動排多欄
-        let parsed = raws.enumerated().map { i, r in (i, DocView.parse(r)) }
-        let intro = parsed.first.flatMap { $0.1.title == nil && !$0.1.blocks.isEmpty ? $0 : nil }
-        let rest = parsed.filter { $0.1.title != nil }
-        let isWide: (Section) -> Bool = { $0.blocks.contains { if case .table = $0 { true } else { false } } }
-        VStack(alignment: .leading, spacing: 16) {
-            if let intro { editable(intro.0, raws[intro.0]) { blocks(intro.1.blocks) } }
-            ForEach(rest.filter { isWide($0.1) }, id: \.0) { i, sec in editable(i, raws[i]) { card(sec) } }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
-                ForEach(rest.filter { !isWide($0.1) }, id: \.0) { i, sec in editable(i, raws[i]) { card(sec) } }
+        let parsed = raws.map { DocView.parse($0) }
+        let isWide: (Section) -> Bool = { $0.group || $0.title == nil || $0.blocks.contains { if case .table = $0 { true } else { false } } }
+        var chunks: [Chunk] = []
+        for (i, sec) in parsed.enumerated() where sec.title != nil || !sec.blocks.isEmpty {
+            if isWide(sec) { chunks.append(.full(i)) }
+            else if case .grid(let ids)? = chunks.last { chunks[chunks.count - 1] = .grid(ids + [i]) }
+            else { chunks.append(.grid([i])) }
+        }
+        return VStack(alignment: .leading, spacing: 16) {
+            ForEach(Array(chunks.enumerated()), id: \.offset) { _, ch in
+                switch ch {
+                case .full(let i):
+                    let sec = parsed[i]
+                    editable(i, raws[i]) {
+                        if sec.group {
+                            // 分組標題（例：北斗星系）
+                            Text(sec.title ?? "").font(ZType.title2.font).foregroundStyle(Color.zText)
+                                .frame(maxWidth: .infinity, alignment: .leading).padding(.top, i <= 1 ? 0 : 12)
+                        } else if sec.title == nil { blocks(sec.blocks) } else { card(sec) }
+                    }
+                case .grid(let ids):
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
+                        ForEach(ids, id: \.self) { i in editable(i, raws[i]) { card(parsed[i]) } }
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
