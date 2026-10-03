@@ -71,13 +71,20 @@ struct PressStyle: ButtonStyle {
 
 /// 視窗頂端（工具列）漸層：底色 100% → 0%，整條寬度
 struct TopFade: View {
-    let color: Color   // 保留參數相容，現在不疊底色
+    let color: Color   // 背景色：疊在模糊上面做漸層
     var edge: VerticalEdge = .top
     var height: CGFloat = 64
     var body: some View {
-        // 背景模糊做漸層（不疊底色）：頂部由上往下 100%→0%，底部由上往下 0%→100%
+        // 背景模糊＋底色漸層：頂部由上往下 100%→0%，底部由上往下 0%→100%
         // 漸層要用模糊元件自己的 maskImage；用 SwiftUI 的 .mask 會讓背景模糊失效
-        BackdropBlur(fadeFromTop: edge == .top)
+        let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
+        ZStack {
+            BackdropBlur(fadeFromTop: edge == .top)
+            // 照 Figma Navbar - Morning：上面 30% 實心底色，往下 70% 線性淡到 0
+            LinearGradient(stops: [.init(color: color, location: 0), .init(color: color, location: 0.3),
+                                   .init(color: color.opacity(0), location: 1)],
+                           startPoint: start, endPoint: end)
+        }
             .frame(height: height)
             .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
             .allowsHitTesting(false)
