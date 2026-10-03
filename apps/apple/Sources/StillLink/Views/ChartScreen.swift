@@ -126,6 +126,8 @@ struct ChartScreen: View {
                         .frame(width: boardW * sharpZoom, height: boardW * boardAspect * sharpZoom)
                         // 標註層：畫筆、螢光筆、框線、文字（座標跟著盤面大小）
                         .overlay { AnnotationLayer(chartID: person.id, tool: annoTool, color: annoColor, size: annoSize) }
+                        // 備註圖釘（像 Figma 留言）：圖釘隨時可點；選到備註工具時點盤面新增
+                        .overlay { CommentLayer(chartID: person.id, active: annoTool == .comment) }
                         .scaleEffect(zoom / sharpZoom, anchor: .top)
                         .frame(width: boardW * zoom, height: boardW * boardAspect * zoom, alignment: .top)
                         .gesture(magnify)
@@ -183,7 +185,9 @@ struct ChartScreen: View {
                 if showInfo {
                     ScrollView(showsIndicators: false) {
                         InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace, width: CGFloat(panelW),
-                                  notesBirth: max(0, shownLevel - 2) == 0, notesScopes: activeScopes)
+                                  notesBirth: max(0, shownLevel - 2) == 0, notesScopes: activeScopes,
+                                  notesNames: shownLevel >= 1 ? model?.horo.scope(shownLevel).palaceNames : nil,
+                                  notesPrefix: shownLevel >= 1 ? ZW.scopeTags[shownLevel - 1] : "")
                             .padding(.top, 12)
                             .padding(.bottom, 96) // 底部留給右下角的快捷鈕
                             .padding(.horizontal, 16) // 留空間給卡片陰影

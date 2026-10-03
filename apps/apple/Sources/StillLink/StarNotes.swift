@@ -114,7 +114,10 @@ struct StarNotesCard: View {
         return out
     }
 
+    var names: [String]? = nil    // 目前層級的宮名（選了大限、流年＝那一層的宮名），nil＝本命
+    var prefix = ""               // 層級前綴：大、年…（顯示「年疾厄」）
     var onOpen: (String, String) -> Void = { _, _ in }   // 點一顆星：（筆記 key、宮名）打開單獨介紹
+    private func palaceTitle(_ i: Int) -> String { names.map { prefix + $0[i] } ?? chart.palaces[i].name }
 
     var body: some View {
         let sf = ZW.sanFang(index)   // [本宮, 三合, 三合, 對宮]
@@ -125,8 +128,9 @@ struct StarNotesCard: View {
         VStack(alignment: .leading, spacing: 26) {
             ForEach(shown, id: \.1) { label, i in
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(label)・\(chart.palaces[i].name)").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
-                    PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]), onOpen: onOpen)
+                    Text("\(label)・\(palaceTitle(i))").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
+                    PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]),
+                                title: palaceTitle(i), key: StarNotes.palaceKey(names?[i] ?? chart.palaces[i].name), onOpen: onOpen)
                 }
             }
         }
@@ -138,10 +142,12 @@ private struct PalaceNotes: View {
     @ObservedObject private var notes = StarNotes.shared
     let palace: Palace
     var only: [String: String]? = nil   // 只列這些星（對宮、三合：輔星＋有四化的星 → 四化標籤）
+    var title: String = ""   // 顯示的宮名（年疾厄…）
+    var key: String = ""     // 筆記用的宮位字（疾）
     var onOpen: (String, String) -> Void
 
     var body: some View {
-        let pk = StarNotes.palaceKey(palace.name)
+        let pk = key.isEmpty ? StarNotes.palaceKey(palace.name) : key
         let list = notes.keys(for: palace).filter { only == nil || only![$0.key] != nil }
         VStack(alignment: .leading, spacing: 0) {
             if list.isEmpty {
@@ -150,7 +156,7 @@ private struct PalaceNotes: View {
             }
             ForEach(list, id: \.key) { item in
                 let n = notes.note(item.key)
-                Button { onOpen(item.key, palace.name) } label: {
+                Button { onOpen(item.key, title.isEmpty ? palace.name : title) } label: {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) {
@@ -185,7 +191,7 @@ struct StarDetailView: View {
 
     var body: some View {
         let n = notes.note(key)
-        let pk = StarNotes.palaceKey(palaceName)
+        let pk = StarNotes.palaceKey(palaceName.count > 2 ? String(palaceName.dropFirst()) : palaceName)   // 「年疾厄」→ 疾
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 8) {
                 Button(action: onBack) {

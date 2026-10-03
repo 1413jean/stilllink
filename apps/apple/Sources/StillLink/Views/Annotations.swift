@@ -21,7 +21,7 @@ enum AnnoSize: String, CaseIterable {
 }
 
 enum AnnoTool: String, CaseIterable {
-    case select, pen, highlight, rect, text, eraser
+    case select, pen, highlight, rect, text, eraser, comment
     var icon: String {
         switch self {
         case .select: "cursorarrow"
@@ -30,11 +30,12 @@ enum AnnoTool: String, CaseIterable {
         case .rect: "rectangle"
         case .text: "t.square"
         case .eraser: "eraser"
+        case .comment: "bubble.left"
         }
     }
     /// 快捷鍵（單一字母；打字中不會觸發）
     var key: String {
-        switch self { case .select: "V"; case .pen: "P"; case .highlight: "H"; case .rect: "R"; case .text: "T"; case .eraser: "E" }
+        switch self { case .select: "V"; case .pen: "P"; case .highlight: "H"; case .rect: "R"; case .text: "T"; case .eraser: "E"; case .comment: "C" }
     }
     var help: String {
         switch self {
@@ -44,6 +45,7 @@ enum AnnoTool: String, CaseIterable {
         case .rect: "框線"
         case .text: "文字註解"
         case .eraser: "橡皮擦"
+        case .comment: "備註"
         }
     }
 }
@@ -142,7 +144,7 @@ struct AnnotationLayer: View {
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { v in changed(v, size: size) }
                 .onEnded { v in ended(v, size: size) })
-            .allowsHitTesting(tool != .select)
+            .allowsHitTesting(tool != .select && tool != .comment)
         }
         .onChange(of: tool) { _ in finishText() }
     }
@@ -239,7 +241,7 @@ struct AnnotationLayer: View {
             DispatchQueue.main.async { textFocused = true }
         case .eraser:
             erase(at: v.location, size: size)
-        case .select:
+        case .select, .comment:
             break
         }
     }

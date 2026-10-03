@@ -34,7 +34,7 @@ struct ChartBoard: View, Equatable {
         let selected = sel ?? chart.soulIndex
         let sf = cleared ? [] : ZW.sanFang(selected)
         GeometryReader { geo in
-            let m: CGFloat = 18 * zoom
+            let m: CGFloat = 14 * zoom   // 外圈留給自化箭頭；縮小一點讓宮格大一點
             let cw = (geo.size.width - m * 2) / 4
             let ch = (geo.size.height - m * 2) / 4
             let fs = ChartType.base(cellWidth: cw / zoom) * zoom
@@ -45,7 +45,7 @@ struct ChartBoard: View, Equatable {
                     PalaceCell(model: model, index: i, level: level, fs: fs, hepan: hepan,
                                selected: !cleared && selected == i, inSF: sf.contains(i) && selected != i,
                                isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
-                               taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart) },
+                               taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart, names: scopeNames) },
                                flyStars: cleared ? [:] : Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipped()
@@ -98,7 +98,13 @@ struct ChartBoard: View, Equatable {
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
-        .onAppear { appeared = true; sel = focusIndex; onSelect(focusIndex) }
+        .onAppear {
+            appeared = true; sel = focusIndex; onSelect(focusIndex)
+            // 驗證用：ZIWEI_PICK=宮位編號 直接當成使用者點了那一宮
+            if let v = ProcessInfo.processInfo.environment["ZIWEI_PICK"].flatMap(Int.init) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { userPicked = true; sel = v; onSelect(v) }
+            }
+        }
         .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { _, v in onSelect(v < 0 ? nil : v) }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
         // 新命宮的位置直接放進偵測的值裡：macOS 13 的 onChange 拿到的是上一次的 model，不能在裡面再算
@@ -119,8 +125,11 @@ struct ChartBoard: View, Equatable {
     private func effectiveTaiji(_ selected: Int, _ chart: Chart) -> Int? {
         guard settings.showTransfer else { return nil }
         if let taiji { return taiji }
-        return userPicked && selected != chart.soulIndex ? selected : nil
+        return userPicked && selected != focusIndex ? selected : nil   // 目前層級的命宮（大命、流命）本身不用轉
     }
+
+    /// 目前層級的宮名：本命用本命宮名；選了大限、流年…用那一層的宮名
+    private var scopeNames: [String]? { level == 0 ? nil : model.horo.scope(level).palaceNames }
 
     /// 停 0.35 秒才出現，滑過去不會一直閃
     private func setHover(_ info: StarHoverInfo?) {
@@ -237,10 +246,22 @@ private struct PalaceCell: View {
         let laiyin = settings.showLaiyin && index < 10 && p.stem == String(chart.chineseDate.prefix(1))
         VStack(alignment: .leading, spacing: 2) {
             // 第一行：左上合盤宮名（合命、合兄…）、右上地理方位
+            // 小限框、來因也放這一行（放底部會跟運限宮名、干支擠在一起）
             let hn = hepan?.palaceName(at: p.branch)
-            if hn != nil || settings.showCompass {
-                HStack(spacing: 2) {
+            let minorBadge = level >= 2 && !settings.showMinorOverlay && horo.age.index == index
+            if hn != nil || settings.showCompass || minorBadge || laiyin {
+                HStack(spacing: 3) {
                     if let hn { Text(hn).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmEarth) }
+                    if laiyin {
+                        Text("來因").font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zOnColor)
+                            .padding(.horizontal, 2).padding(.vertical, 1)
+                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
+                    }
+                    if minorBadge {
+                        Text("小限").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText2)
+                            .padding(.horizontal, 2).padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
+                    }
                     Spacer(minLength: 0)
                     if settings.showCompass {
                         Text(ZW.compass[index]).font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
@@ -251,7 +272,7 @@ private struct PalaceCell: View {
             HStack(alignment: .top, spacing: 3) {
                 // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
                 ViewThatFits(in: .vertical) {
-                    ForEach(Array([(1.0, 1.0), (1.0, 0.78), (0.86, 0.68), (0.74, 0.62)].enumerated()), id: \.offset) { _, k in
+                    ForEach(Array([(1.0, 1.0), (1.0, 0.9), (0.92, 0.84), (0.84, 0.78)].enumerated()), id: \.offset) { _, k in
                         starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1)
                     }
                 }
@@ -314,14 +335,6 @@ private struct PalaceCell: View {
                     let rest = Array(tags.dropFirst(2))            // 往左的欄，每欄 3 個
                     let restCols = stride(from: 0, to: rest.count, by: 3).map { Array(rest[$0..<min($0 + 3, rest.count)]) }
                     HStack(alignment: .bottom, spacing: 4) {
-                        // 小限疊盤關著時：小限命宮這一格標一個小框「小限」
-                        if level >= 2 && !settings.showMinorOverlay && horo.age.index == index {
-                            Text("小限").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText2)
-                                .padding(.horizontal, 2).padding(.vertical, 1)
-                                .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
-                                .fixedSize()
-                                .padding(.bottom, 2)
-                        }
                         // 小限宮名在上、轉宮名在下（同一欄）
                         if minor || taijiLabel != nil {
                             VStack(alignment: .leading, spacing: 0) {
@@ -355,20 +368,11 @@ private struct PalaceCell: View {
                 Spacer(minLength: 0)
                 // 身宮、來因放在天干地支左邊並排（往上疊會太高，把星曜區擠沒）
                 HStack(alignment: .bottom, spacing: 2) {
-                    if (p.isBody && settings.showBody) || laiyin {
-                        VStack(spacing: 3) {
-                            if p.isBody && settings.showBody {
-                                VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
-                                    .padding(.vertical, 3).padding(.horizontal, 1)
-                                    .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
-                            }
-                            if laiyin {
-                                VerticalText("來因", size: ChartType.meta(fs), color: .zOnColor, weight: .semibold)
-                                    .padding(.vertical, 2).padding(.horizontal, 1)
-                                    .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
-                            }
-                        }
-                        .padding(.bottom, 2)
+                    if p.isBody && settings.showBody {
+                        VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
+                            .padding(.vertical, 3).padding(.horizontal, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
+                            .padding(.bottom, 2)
                     }
                     VStack(spacing: 0) {
                         // 長生十二神：自己一個開關（預設關）
