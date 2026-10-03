@@ -23,6 +23,8 @@ struct ChartBoard: View, Equatable {
     @State private var locked: Int?    // 長按鎖定的宮位（比較兩組三方四正）
     @State private var taiji: Int?     // 轉宮：以這一宮為命
     @State private var userPicked = false   // 使用者自己點的宮位（自動跳到運限命宮時不算）
+    @State private var pickedLayers: [Int]?   // 中宮層級開關：使用者點過的層（0 本命、1 大限…5 流時），nil＝預設最近三層
+    @EnvironmentObject private var store: Store
     @State private var hoverStar: StarHoverInfo?
     @State private var hoverTask: Task<Void, Never>?
     @State private var lastTap: (Int, Date)?   // 上一次點的宮位與時間（判斷點兩下）
@@ -42,7 +44,7 @@ struct ChartBoard: View, Equatable {
             ZStack(alignment: .topLeading) {
                 ForEach(0..<12, id: \.self) { i in
                     let (r, c) = ZW.grid[i]
-                    PalaceCell(model: model, index: i, level: level, fs: fs, hepan: hepan,
+                    PalaceCell(model: model, index: i, level: level, layers: layers, fs: fs, hepan: hepan,
                                selected: !cleared && selected == i, inSF: sf.contains(i) && selected != i,
                                isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
                                taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart, names: scopeNames) },
@@ -82,7 +84,9 @@ struct ChartBoard: View, Equatable {
                     if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
                 CenterInfo(person: person, model: model, selected: selected, cleared: cleared, locked: locked, taiji: taiji,
-                           fs: fs, level: level, onResetLevel: onResetLevel, onClearTaiji: { setTaiji(nil, chart) })
+                           fs: fs, level: level, layers: layers, onToggleLayer: toggleLayer,
+                           onToggleMinor: { withAnimation(Motion.fast) { store.settings.showMinorOverlay.toggle() } },
+                           onResetLevel: onResetLevel, onClearTaiji: { setTaiji(nil, chart) })
                     .enterFromBelow(appeared, index: 8)
                     .frame(width: cw * 2, height: ch * 2)
                     .offset(x: m + cw, y: m + ch)
@@ -108,6 +112,7 @@ struct ChartBoard: View, Equatable {
         .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { _, v in onSelect(v < 0 ? nil : v) }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
         // 新命宮的位置直接放進偵測的值裡：macOS 13 的 onChange 拿到的是上一次的 model，不能在裡面再算
+        .onChange(of: level) { _, _ in pickedLayers = nil }   // 換層級就回到預設的最近三層
         .onChange(of: FocusKey(model: model.id, focus: focusIndex)) { _, k in
             userPicked = false
             withAnimation(Motion.snap) { cleared = false; sel = k.focus }
@@ -126,6 +131,20 @@ struct ChartBoard: View, Equatable {
         guard settings.showTransfer else { return nil }
         if let taiji { return taiji }
         return userPicked && selected != focusIndex ? selected : nil   // 目前層級的命宮（大命、流命）本身不用轉
+    }
+
+    /// 目前要顯示四化的層（最多三層，由小到大）
+    private var layers: [Int] {
+        let base = pickedLayers ?? Array(max(0, level - 2)...level)
+        return base.filter { $0 <= level }.sorted()
+    }
+
+    /// 點層級開關：開過的關掉；沒開的打開，超過三層就把最早開的那層關掉
+    private func toggleLayer(_ lv: Int) {
+        var cur = pickedLayers ?? Array(max(0, level - 2)...level)
+        cur = cur.filter { $0 <= level }
+        if let i = cur.firstIndex(of: lv) { cur.remove(at: i) } else { cur.append(lv); if cur.count > 3 { cur.removeFirst() } }
+        withAnimation(Motion.fast) { pickedLayers = cur }
     }
 
     /// 目前層級的宮名：本命用本命宮名；選了大限、流年…用那一層的宮名
@@ -216,6 +235,7 @@ private struct PalaceCell: View {
     let model: ChartModel
     let index: Int
     let level: Int
+    var layers: [Int] = []
     let fs: CGFloat
     let hepan: Hepan?
     let selected: Bool
@@ -450,15 +470,15 @@ extension PalaceCell {
     func starItems(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> some View {
         // 四化只顯示最近三層（0 生年、1 大限、2 流年、3 流月、4 流日、5 流時）＋小限（有流年時）
         // 例：選到流月＝大限、流年、流月；選到流時＝流月、流日、流時
-        let lowest = max(0, level - 2)
-        let showMinorMutagen = minor && settings.showMinorMutagen && lowest <= 2
+        let showMinorMutagen = minor && settings.showMinorMutagen
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, palaceName: p.name, fly: flyStars[s.name],
-                           showBirth: lowest == 0,
                            minor: showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                            hepanMut: hepan?.mutagen(star: s.name),
-                           scopes: level < 1 ? [] : (max(1, lowest)...level).compactMap { lv in
-                               ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name).map { (lv, $0) }
+                           // 每一層一個固定位置（沒有四化就空著），一眼看出是疊在第幾層
+                           slots: layers.map { lv in
+                               let m: Mutagen? = lv == 0 ? Mutagen(rawValue: s.mutagen) : ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name)
+                               return (m, lv == 0 ? Color.fBirth : Color.fScopes[lv - 1])
                            })
             }
             ForEach(settings.showAdj ? p.adj : [], id: \.name) { s in
@@ -474,10 +494,9 @@ private struct StarColumn: View {
     let fs: CGFloat
     var palaceName = ""
     let fly: Mutagen?    // 點選宮位的宮干四化落在這顆星
-    let showBirth: Bool  // 生年四化是否在顯示範圍（最近三層）內
     let minor: Mutagen?  // 小限四化
     var hepanMut: Mutagen? = nil   // 合盤：對方年干的四化
-    let scopes: [(Int, Mutagen)]
+    let slots: [(Mutagen?, Color)]  // 目前顯示的每一層（由小到大）：這顆星在那一層的四化，沒有就 nil
 
     var body: some View {
         let tone = settings.starTone(type: star.type)
@@ -505,20 +524,19 @@ private struct StarColumn: View {
                 .font(ChartType.font(ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
             VStack(spacing: 1) {
-                ForEach(Array(list.enumerated()), id: \.offset) { _, b in box(b.0, fill: b.1, size: size) }
+                ForEach(Array(list.enumerated()), id: \.offset) { _, b in
+                    if let b { box(b.0, fill: b.1, size: size) } else { Color.clear.frame(width: fs * size, height: fs * size) }
+                }
             }
         }
         .frame(minWidth: fs * 1.18)
     }
 
-    private var boxes: [(String, Color)] {
-        var b: [(String, Color)] = []
-        if showBirth, !star.mutagen.isEmpty { b.append((star.mutagen, .fBirth)) }
-        for (lv, m) in scopes {
-            b.append((m.rawValue, Color.fScopes[lv - 1]))
-            if lv == 2, let minor { b.append((minor.rawValue, .fMinor)) }   // 小限跟在流年後面
-        }
-        if let minor, !scopes.contains(where: { $0.0 == 2 }) { b.append((minor.rawValue, .fMinor)) }
+    /// 方塊清單：每一層固定一格（沒有四化的層留空白，最後面的空白不用留），再接小限、合盤
+    private var boxes: [(String, Color)?] {
+        var b: [(String, Color)?] = slots.map { m, c in m.map { ($0.rawValue, c) } }
+        while let last = b.last, last == nil { b.removeLast() }
+        if let minor { b.append((minor.rawValue, .fMinor)) }
         if let hepanMut { b.append((hepanMut.rawValue, .wmEarth)) }   // 合四化放最後
         return b
     }
@@ -534,6 +552,41 @@ private struct StarColumn: View {
 
 private struct CenterInfo: View {
     @Environment(\.displayScale) private var displayScale
+
+    private var layerBar: some View {
+        let names = ["本", "限", "年", "月", "日", "時"]
+        return HStack(spacing: 6) {
+            HStack(spacing: 0) {
+                ForEach(0..<6, id: \.self) { lv in
+                    let on = layers.contains(lv), able = lv <= level
+                    Button { onToggleLayer(lv) } label: {
+                        Text(names[lv]).font(ChartType.font(ChartType.tag(fs), .semibold))
+                            .foregroundStyle(on ? Color.zOnColor : able ? Color.zText2 : Color.zText3.opacity(0.5))
+                            .frame(width: fs * 1.8, height: fs * 1.6)
+                            .background(Rectangle().fill(on ? (lv == 0 ? Color.fBirth : Color.fScopes[lv - 1]) : Color.zHover))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressStyle())
+                    .disabled(!able)
+                    .help(able ? "\(["本命", "大限", "流年", "流月", "流日", "流時"][lv])四化：\(on ? "隱藏" : "顯示")（最多三層）" : "")
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 5))
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.zLine))
+            let minorOn = settings.showMinorOverlay
+            Button(action: onToggleMinor) {
+                Text("小限").font(ChartType.font(ChartType.tag(fs), .semibold))
+                    .foregroundStyle(minorOn ? Color.zOnColor : level >= 2 ? Color.zText2 : Color.zText3.opacity(0.5))
+                    .padding(.horizontal, fs * 0.5).frame(height: fs * 1.6)
+                    .background(RoundedRectangle(cornerRadius: 5).fill(minorOn ? Color.fMinor : Color.zHover))
+                    .overlay(RoundedRectangle(cornerRadius: 5).stroke(Color.zLine))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressStyle())
+            .disabled(level < 2)
+            .help("小限疊盤：小限宮名與小限四化")
+        }
+    }
     @Environment(\.zSettings) private var settings
     @AppStorage("hideBirth") private var hideBirth = false
     private func mask(_ s: String) -> String { hideBirth ? "••••••" : s }
@@ -545,6 +598,9 @@ private struct CenterInfo: View {
     let taiji: Int?
     let fs: CGFloat
     let level: Int
+    var layers: [Int] = []
+    var onToggleLayer: (Int) -> Void = { _ in }
+    var onToggleMinor: () -> Void = {}
     let onResetLevel: () -> Void
     let onClearTaiji: () -> Void
 
@@ -655,6 +711,10 @@ private struct CenterInfo: View {
             .padding(.horizontal, fs * 0.6)
             .padding(.vertical, fs * 0.4)
             .minimumScaleFactor(0.8)
+        }
+        // 層級開關：本・限・年・月・日・時（最多同時顯示三層），旁邊小限另外開關
+        .overlay(alignment: .bottom) {
+            if level >= 1 { layerBar.padding(.bottom, fs * 0.5) }
         }
         .overlay(Rectangle().stroke(Color.zGrid, lineWidth: max(0.5, 1 / displayScale)))   // 固定 1 個實際像素：一般螢幕（1x）上 0.5pt 會淡到看不見
     }
