@@ -39,7 +39,7 @@ let infoPanelWidth: CGFloat = 300
 /// 右側面板可以拉的寬度範圍
 let infoPanelRange: ClosedRange<CGFloat> = 260...560
 /// 盤面高寬比：略高於正方形，宮位底部（歲數、運限宮名、宮名）才放得下又不擠星曜
-let boardAspect: CGFloat = 1.06
+let boardAspect: CGFloat = 1.12   // 高比寬多一點：四化方塊疊三層時宮格比較放得下
 
 struct ChartScreen: View {
     @EnvironmentObject var store: Store

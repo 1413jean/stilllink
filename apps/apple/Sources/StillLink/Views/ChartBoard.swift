@@ -267,7 +267,7 @@ private struct PalaceCell: View {
             HStack(alignment: .top, spacing: 3) {
                 // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
                 ViewThatFits(in: .vertical) {
-                    ForEach(Array([(1.0, 1.0), (1.0, 0.9), (0.92, 0.84), (0.84, 0.78)].enumerated()), id: \.offset) { _, k in
+                    ForEach(Array([(1.0, 1.0), (1.0, 0.9), (0.92, 0.84), (0.84, 0.78), (0.76, 0.72), (0.68, 0.66)].enumerated()), id: \.offset) { _, k in
                         starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1)
                     }
                 }
