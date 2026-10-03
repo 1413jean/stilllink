@@ -32,6 +32,7 @@ struct StillLinkApp: App {
                     .keyboardShortcut("n")
             }
             CommandGroup(replacing: .help) {
+                Button("新功能…") { NotificationCenter.default.post(name: .openWhatsNew, object: nil) }
                 Button("回報問題…") { BugReport.run(store: store) }
             }
         }
@@ -42,6 +43,7 @@ extension Notification.Name {
     static let newChart = Notification.Name("zw.newChart")
     static let editChart = Notification.Name("zw.editChart")
     static let openSettings = Notification.Name("zw.openSettings")
+    static let openWhatsNew = Notification.Name("zw.openWhatsNew")
     static let openPillars = Notification.Name("zw.openPillars")
     /// 右側面板拉得夠寬（true）或縮回來（false）：側欄跟著自動收起／打開
     static let infoPanelWide = Notification.Name("zw.infoPanelWide")
@@ -93,6 +95,8 @@ struct RootView: View {
     @State private var settingsSection: SettingsPage.Section = .general
     @State private var showSettings = false        // 設定窗（浮在畫面上，不換頁）
     @State private var settingsToken = 0           // 每次打開都重建，才會停在指定的分類
+    @State private var showWhatsNew = false        // 「新功能」視窗
+    @State private var remindWhatsNew = Changelog.shouldRemind   // 右上角「新功能」提醒（看過就消失）
     @State private var newGroup: String?
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var sidebarAutoHidden = false   // 右側面板拉寬時自動收起側欄（拉回來再打開）
@@ -157,9 +161,41 @@ struct RootView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
+        // 「新功能」視窗：跟設定窗同一種浮窗
+        .overlay {
+            if showWhatsNew {
+                ZStack {
+                    Color.black.opacity(0.32).ignoresSafeArea()
+                        .onTapGesture { closeWhatsNew() }
+                    GeometryReader { g in
+                        WhatsNewView(onClose: closeWhatsNew)
+                            .frame(width: min(680, g.size.width - 48), height: min(780, g.size.height - 48))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
+                            .raisedShadow()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
         .overlay(alignment: .bottom) { ToastHost() }
         .environment(\.zSettings, store.settings)
         .toolbar {
+            // 重大更新：右上角出現「新功能」，點開看過就消失
+            ToolbarItem(placement: .primaryAction) {
+                if remindWhatsNew {
+                    Button { openWhatsNew() } label: {
+                        Label("新功能", systemImage: "sparkles").labelStyle(.titleAndIcon)
+                            .zText(.subheadlineStrong).foregroundStyle(Color.zAccent)
+                            .padding(.horizontal, 10).frame(height: 26)
+                            .background(Capsule().fill(Color.zAccent.opacity(0.12)))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .help("看這次更新了什麼")
+                }
+            }
             ToolbarItemGroup(placement: .navigation) {
                 Button { step(-1) } label: { Image(systemName: "arrow.left") }
                     .disabled(cursor == 0).help("上一頁 ⌘[").keyboardShortcut("[", modifiers: .command)
@@ -189,6 +225,7 @@ struct RootView: View {
             SettingsPage.isOpen = true
             withAnimation(Motion.fast) { showSettings = true }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openWhatsNew)) { _ in openWhatsNew() }
         .onReceive(NotificationCenter.default.publisher(for: .newSelfChart)) { _ in closeSettings(); go(.newSelf) }
         .onReceive(NotificationCenter.default.publisher(for: .openSelf)) { _ in closeSettings(); if let me = store.me { route = .person(me.id) } }
         .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
@@ -204,6 +241,16 @@ struct RootView: View {
             if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
         }
         .onAppear(perform: applyDebugEnv)
+    }
+
+    private func openWhatsNew() {
+        closeSettings()
+        Changelog.markSeen()
+        withAnimation(Motion.fast) { remindWhatsNew = false; showWhatsNew = true }
+    }
+
+    private func closeWhatsNew() {
+        withAnimation(Motion.fast) { showWhatsNew = false }
     }
 
     private func closeSettings() {
@@ -236,6 +283,7 @@ struct RootView: View {
         if let p = env["ZIWEI_REPORT"] {   // 驗證用：把問題回報內容寫到檔案
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { try? BugReport.report(store: store).write(toFile: p, atomically: true, encoding: .utf8) }
         }
+        if env["ZIWEI_WHATSNEW"] != nil { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { openWhatsNew() } }   // 驗證用：打開「新功能」
         if let t = env["ZIWEI_TOAST"] { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { Toast.show(t) } }   // 驗證用：跳一個提示條
         if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
