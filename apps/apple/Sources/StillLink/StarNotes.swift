@@ -120,7 +120,7 @@ struct StarNotesCard: View {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(parts, id: \.1) { label, i in
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(label)・\(chart.palaces[i].name)").font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
+                    Text("\(label)・\(chart.palaces[i].name)").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
                     PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]), onOpen: onOpen)
                 }
             }
@@ -141,7 +141,7 @@ private struct PalaceNotes: View {
         VStack(alignment: .leading, spacing: 0) {
             if list.isEmpty {
                 Text(only != nil ? "沒有輔星或四化星" : palace.stars.isEmpty ? "空宮" : "沒有星曜筆記")
-                    .font(Font.zCaption).foregroundStyle(Color.zText3).padding(.vertical, 4)
+                    .font(Font.zCallout).foregroundStyle(Color.zText3).padding(.vertical, 4)
             }
             ForEach(list, id: \.key) { item in
                 let n = notes.note(item.key)
@@ -149,12 +149,12 @@ private struct PalaceNotes: View {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) {
-                                Text(item.key).font(Font.zCalloutStrong).foregroundStyle(Color.zText)
+                                Text(item.key).font(Font.zBodyStrong).foregroundStyle(Color.zText)
                                 Text(only?[item.key].flatMap { $0.isEmpty ? nil : $0 } ?? StarNotes.tagline(n))
-                                    .font(Font.zCaption).foregroundStyle(Color.zText3).lineLimit(1)
+                                    .font(Font.zCallout).foregroundStyle(Color.zText3).lineLimit(1)
                             }
                             if let t = n.palaces[pk], !t.isEmpty {
-                                Text(t).font(Font.zCaption).foregroundStyle(Color.zText2).lineLimit(2)
+                                Text(t).font(Font.zCallout).foregroundStyle(Color.zText2).lineLimit(2)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
@@ -192,18 +192,18 @@ struct StarDetailView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(key).font(Font.zHeadline).foregroundStyle(Color.zText)
                     let tl = StarNotes.tagline(n)
-                    if !tl.isEmpty { Text(tl).font(Font.zCaption).foregroundStyle(Color.zText3) }
+                    if !tl.isEmpty { Text(tl).font(Font.zCallout).foregroundStyle(Color.zText3) }
                 }
                 Spacer()
                 Button { NotificationCenter.default.post(name: .openStarNotes, object: key) } label: {
-                    Image(systemName: "square.and.pencil").font(Font.zCallout).foregroundStyle(Color.zText2)
+                    Image(systemName: "square.and.pencil").font(Font.zBody).foregroundStyle(Color.zText2)
                 }
                 .buttonStyle(.plain).help("編輯筆記")
             }
             if let t = n.palaces[pk], !t.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("落\(palaceName)").font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
-                    Text(t).font(Font.zCallout).foregroundStyle(Color.zText).fixedSize(horizontal: false, vertical: true)
+                    Text("落\(palaceName)").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
+                    Text(t).font(Font.zBody).foregroundStyle(Color.zText).fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.leading, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -213,17 +213,17 @@ struct StarDetailView: View {
             let body = StarNotes.tagline(n).isEmpty ? n.summary : n.summary.split(separator: "\n").dropFirst().joined(separator: "\n")
             if !body.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("總論").font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
-                    Text(body).font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+                    Text("總論").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
+                    Text(body).font(Font.zBody).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
                 }
             }
             if !n.palaces.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("落在各宮").font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
+                    Text("落在各宮").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
                     ForEach(StarNotes.palaceKeys.filter { n.palaces[$0] != nil && $0 != pk }, id: \.self) { k in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(k).font(Font.zCalloutStrong).foregroundStyle(Color.zText).frame(width: 16)
-                            Text(n.palaces[k] ?? "").font(Font.zCaption).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+                            Text(k).font(Font.zBodyStrong).foregroundStyle(Color.zText).frame(width: 16)
+                            Text(n.palaces[k] ?? "").font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -243,12 +243,12 @@ struct StarHoverCard: View {
         let t = n.palaces[StarNotes.palaceKey(palaceName)] ?? ""
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text(key).font(Font.zCalloutStrong).foregroundStyle(Color.white)
+                Text(key).font(Font.zBodyStrong).foregroundStyle(Color.white)
                 let tl = StarNotes.tagline(n)
-                if !tl.isEmpty { Text(tl).font(Font.zCaption).foregroundStyle(Color.white.opacity(0.6)) }
+                if !tl.isEmpty { Text(tl).font(Font.zCallout).foregroundStyle(Color.white.opacity(0.6)) }
             }
             if !t.isEmpty {
-                Text("落\(palaceName)：\(t)").font(Font.zCaption).foregroundStyle(Color.white.opacity(0.85))
+                Text("落\(palaceName)：\(t)").font(Font.zCallout).foregroundStyle(Color.white.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

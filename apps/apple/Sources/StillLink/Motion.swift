@@ -73,7 +73,12 @@ struct PressStyle: ButtonStyle {
 struct TopFade: View {
     let color: Color
     var body: some View {
-        LinearGradient(colors: [color, color.opacity(0.85), color.opacity(0)], startPoint: .top, endPoint: .bottom)
+        // 背景模糊＋底色，都由上（100%）往下漸變到 0；整排頂部一樣
+        ZStack {
+            Rectangle().fill(.regularMaterial)
+                .mask(LinearGradient(colors: [.black, .black.opacity(0)], startPoint: .top, endPoint: .bottom))
+            LinearGradient(colors: [color, color.opacity(0)], startPoint: .top, endPoint: .bottom)
+        }
             .frame(height: 64)
             .ignoresSafeArea(edges: .top)
             .allowsHitTesting(false)

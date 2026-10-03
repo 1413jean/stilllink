@@ -35,7 +35,7 @@ struct PeriodTable: View {
                 ForEach(0..<10, id: \.self) { k in
                     let y = start + k
                     cell("\(y)年", hideBirth ? ZW.yearGanzhi(y) : "\(ZW.yearGanzhi(y))\(y - birthYear + 1)歲",
-                         extra: minorPalace(age: y - birthYear + 1), group: "year", on: y == pick.year && pick.level >= 2) {
+                         group: "year", on: y == pick.year && pick.level >= 2) {
                         pick.level = (y == pick.year && pick.level == 2) ? 1 : 2; pick.year = y
                     }
                 }
@@ -102,11 +102,6 @@ struct PeriodTable: View {
             .fixedSize(horizontal: false, vertical: true)
             if divider { Divider() }
         }
-    }
-
-    /// 那一歲的小限在哪一宮（小命、小兄…）
-    private func minorPalace(age: Int) -> String? {
-        chart.palaces.first { $0.ages.contains(age) }.map { "小" + String($0.name.prefix(1)) }
     }
 
     private func cell(_ main: String, _ sub: String? = nil, extra: String? = nil, group: String, on: Bool, minW: CGFloat = 64, action: @escaping () -> Void) -> some View {
