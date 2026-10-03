@@ -230,8 +230,11 @@ struct InfoPanel: View {
         }
     }
 
+    @ViewBuilder
     private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, actions: [(String, String, () -> Void)] = [],
                                @ViewBuilder _ content: () -> C) -> some View {
+        // 設定 → 右側面板 可以關掉的卡片
+        if ZSettings.PanelCard(cardTitle: title).map({ store.settings.showsPanel($0) }) ?? true {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Text(title).font(Font.zCalloutStrong).foregroundStyle(Color.zText2)
@@ -255,6 +258,7 @@ struct InfoPanel: View {
                 .shadow(color: Color.zShadow.opacity(0.6), radius: 10, y: 3)
         )
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
+        }
     }
 
     private func row(_ icon: String, _ label: String, _ value: String) -> some View {

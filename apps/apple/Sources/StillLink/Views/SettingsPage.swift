@@ -20,7 +20,7 @@ struct SettingsPage: View {
     }
 
     enum Section: String, CaseIterable, Identifiable {
-        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", stars = "星曜", periods = "運限", display = "盤面標記", feel = "音效與動畫", appearance = "外觀", data = "資料", about = "關於"
+        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", stars = "星曜", periods = "運限", display = "盤面標記", panel = "右側面板", feel = "音效與動畫", appearance = "外觀", data = "資料", about = "關於"
         var id: String { rawValue }
         var icon: String {
             switch self {
@@ -31,6 +31,7 @@ struct SettingsPage: View {
             case .stars: "sparkles"
             case .periods: "calendar"
             case .display: "eye"
+            case .panel: "sidebar.right"
             case .feel: "speaker.wave.2"
             case .appearance: "circle.lefthalf.filled"
             case .data: "externaldrive"
@@ -187,6 +188,18 @@ struct SettingsPage: View {
             toggle("轉宮宮名", "點選宮位時，各宮顯示「X之Y」（例：福之夫）", s.showTransfer)
             toggle("顯示地理方位", "每宮右上角的方位（南、東南…）", s.showCompass)
             toggle("顯示 AI 對話框", "命盤下方的提問框；AI 解盤未來推出", s.showComposer, last: true)
+        case .panel:
+            title("右側面板")
+            note("看盤時右邊要顯示哪些卡片。")
+            let cards = ZSettings.PanelCard.allCases.filter { $0 != .notes || StarNotes.enabled }
+            ForEach(cards, id: \.self) { c in
+                toggle(c.title, c.detail, Binding(
+                    get: { store.settings.showsPanel(c) },
+                    set: { on in
+                        store.settings.hiddenPanels.removeAll { $0 == c.rawValue }
+                        if !on { store.settings.hiddenPanels.append(c.rawValue) }
+                    }), last: c == cards.last)
+            }
         case .feel:
             title("音效與動畫")
             toggle("介面動畫", "電腦較慢或覺得卡時可關閉，所有轉場改為瞬間切換", s.motion)

@@ -32,6 +32,7 @@ struct ZSettings: Codable, Equatable {
     var showSelf = true         // 自化箭頭
     var showTransfer = true     // 轉宮宮名（點選宮位當太極，顯示 X之Y）
     var showCompass = true      // 方位
+    var hiddenPanels: [String] = []   // 右側面板隱藏的卡片（PanelCard 的 rawValue）
     var showComposer = false    // 命盤下方的 AI 對話框（AI 還沒推出，預設隱藏）
 
     // 音效與動畫
@@ -100,6 +101,28 @@ extension ZSettings {
               let s = try? JSONDecoder().decode(ZSettings.self, from: md) else { return ZSettings() }
         return s
     }
+
+    /// 右側面板可以開關的卡片（此刻盤、暫時命盤那兩張有操作功能，固定顯示）
+    enum PanelCard: String, CaseIterable {
+        case profile, notes, hepan, tips, memo, photos
+        var title: String { ["profile": "命主資料", "notes": "星曜筆記", "hepan": "合盤", "tips": "看盤小提示", "memo": "備註", "photos": "照片與附件"][rawValue] ?? "" }
+        var detail: String {
+            switch self {
+            case .profile: "國曆、農曆、時辰、出生地，以及頭貼"
+            case .notes: "點宮位時，三方四正的星曜意思"
+            case .hepan: "輸入對方出生年，疊合盤"
+            case .tips: "點宮位、長按、右鍵的操作說明"
+            case .memo: "這張命盤的備註"
+            case .photos: "這張命盤的照片與附件"
+            }
+        }
+        /// 卡片標題 → 哪一張（星曜筆記的標題後面會接宮名）
+        init?(cardTitle: String) {
+            guard let c = Self.allCases.first(where: { cardTitle.hasPrefix($0.title) }) else { return nil }
+            self = c
+        }
+    }
+    func showsPanel(_ c: PanelCard) -> Bool { !hiddenPanels.contains(c.rawValue) }
 
     /// 這一類星曜目前的顏色
     func tone(_ c: ZW.StarClass) -> ZW.Tone { c.defaultTone }   // 顏色固定，不開放設定
