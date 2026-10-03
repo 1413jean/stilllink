@@ -245,6 +245,14 @@ private struct PalaceCell: View {
     let taijiLabel: String?
     let flyStars: [String: Mutagen]
 
+    /// 目前大限裡，流年走到這一宮的那一年與虛歲
+    private var decadeYearAge: (year: Int, age: Int)? {
+        let r = model.chart.palaces[model.horo.decadal.index].range
+        guard r.count == 2, let first = model.yearlyAges[index].first else { return nil }
+        guard let age = (r[0]...r[1]).first(where: { ($0 - first) % 12 == 0 && $0 >= first }) else { return nil }
+        return (model.bazi.birthYear + age - 1, age)
+    }
+
     /// 流月：這一宮是流年的哪個農曆月＋月干。流年斗君＝子斗順數到流年地支，從那宮起正月順排；月干用五虎遁由流年天干推
     private var monthLabel: String? {
         guard level >= 2 else { return nil }   // 選到流年以後才顯示
@@ -325,6 +333,14 @@ private struct PalaceCell: View {
                         Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
                             .lineLimit(1).fixedSize()
                     }
+                    // 小限疊盤關著時：小限命宮在流月上面標一個橫的小框「小限」
+                    if level >= 2 && !settings.showMinorOverlay && horo.age.index == index {
+                        Text("小限").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText2)
+                            .padding(.horizontal, 3).padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
+                            .fixedSize()
+                            .padding(.bottom, 2)
+                    }
                     // 流月（同文墨天機，例：冬月庚）：寫在神煞欄最上面
                     if let monthLabel { Text(monthLabel).foregroundStyle(Color.wmEarth) }
                     if settings.showShensha {
@@ -349,11 +365,20 @@ private struct PalaceCell: View {
                     .minimumScaleFactor(0.8)
                     .padding(.bottom, 1)
                     }
-                    Text("\(p.range[0])~\(p.range[1])")
-                        .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
-                        .underline(curDecade)
-                        .foregroundStyle(curDecade ? Color.wmRed : Color.zText)
-                        .lineLimit(1).fixedSize()
+                    // 選到大限以後：改寫「這個大限裡、流年走到這一宮的那一年」（例：2034年38歲），像文墨天機
+                    if level >= 1, let ya = decadeYearAge {
+                        Text("\(String(ya.year))年\(ya.age)歲")
+                            .font(ChartType.font(ChartType.range(fs)))
+                            .foregroundStyle(Color.zText2)
+                            .lineLimit(1).fixedSize()
+                    } else {
+                        Text("\(p.range[0])~\(p.range[1])")
+                            .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
+                            .underline(curDecade)
+                            // 選到大限時輪不到的宮（一個大限只有 10 年）：大限歲數變淡
+                            .foregroundStyle(curDecade ? Color.wmRed : level >= 1 ? Color.zText3 : Color.zText)
+                            .lineLimit(1).fixedSize()
+                    }
                     // 運限宮名垂直往上疊在宮名上面（由下而上：宮名、大X、年X），一欄三行；
                     // 疊滿往左開新欄（月X、日X、時X），由右至左。小限緊貼在宮名右邊。
                     let tags: [(String, Color)] = (1..<(level + 1)).map { lv in
@@ -395,13 +420,6 @@ private struct PalaceCell: View {
                             .padding(.bottom, 2)
                     }
                     VStack(spacing: 0) {
-                        // 小限疊盤關著時：小限命宮在長生上面標一個直排小框「小限」（同一欄，不會把版面擠歪）
-                        if level >= 2 && !settings.showMinorOverlay && horo.age.index == index {
-                            VerticalText("小限", size: ChartType.meta(fs), color: .zText2)
-                                .padding(.vertical, 2).padding(.horizontal, 1)
-                                .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
-                                .padding(.bottom, 3)
-                        }
                         // 長生十二神：自己一個開關（預設關）
                         if settings.showChangsheng {
                             VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
@@ -481,7 +499,12 @@ extension PalaceCell {
                                return (m, lv == 0 ? Color.fBirth : Color.fScopes[lv - 1])
                            })
             }
-            ForEach(settings.showAdj ? p.adj : [], id: \.name) { s in
+            // 重要雜曜（紅鸞、天喜、咸池、天姚、天刑）用主星字級排在前面，其他雜曜小字
+            let adj = settings.showAdj ? p.adj : []
+            ForEach(adj.filter { ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
+                VerticalText(s.name, size: ChartType.star(f), color: settings.tone(.misc).color)
+            }
+            ForEach(adj.filter { !ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
                 VerticalText(s.name, size: adjF, color: settings.tone(.misc).color)
             }
     }
@@ -501,7 +524,7 @@ private struct StarColumn: View {
     var body: some View {
         let tone = settings.starTone(type: star.type)
         let list = boxes
-        let size: CGFloat = list.count > 3 ? 0.98 : 1.12
+        let size: CGFloat = list.count > 3 ? 1.06 : 1.22   // 四化方塊放大一點，比星名更醒目
         // 星名下同一直排：生年 → 大限 → 流年 → 小限 → 流月…（最多三層＋小限）
         VStack(spacing: 0.5) {
             VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,
@@ -662,7 +685,9 @@ private struct CenterInfo: View {
                                     }
                                 Text(String(gz.suffix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.suffix(1))).color)
                                 Text("\(age)歲").font(ChartType.font(ChartType.godLabel(fs))).foregroundStyle(Color.zText2)
+                                    .lineLimit(1).minimumScaleFactor(0.6)
                                 Text(verbatim: "\(birthYear + age - 1)").font(ChartType.font(ChartType.godLabel(fs)).monospacedDigit()).foregroundStyle(Color.zText3)
+                                    .lineLimit(1).minimumScaleFactor(0.6)
                             }
                             .frame(width: fs * 1.75)
                         }
@@ -707,15 +732,14 @@ private struct CenterInfo: View {
                         .padding(.leading, 4)
                     }
                 }
+                // 層級開關：本・限・年・月・日・時（最多同時顯示三層），旁邊小限另外開關；跟中宮資訊一起置中
+                if level >= 1 { layerBar.padding(.top, fs * 0.5) }
             }
             .padding(.horizontal, fs * 0.6)
             .padding(.vertical, fs * 0.4)
             .minimumScaleFactor(0.8)
         }
-        // 層級開關：本・限・年・月・日・時（最多同時顯示三層），旁邊小限另外開關
-        .overlay(alignment: .bottom) {
-            if level >= 1 { layerBar.padding(.bottom, fs * 1.6) }   // 離底線遠一點，不要貼著
-        }
+
         .overlay(Rectangle().stroke(Color.zGrid, lineWidth: max(0.5, 1 / displayScale)))   // 固定 1 個實際像素：一般螢幕（1x）上 0.5pt 會淡到看不見
     }
 
