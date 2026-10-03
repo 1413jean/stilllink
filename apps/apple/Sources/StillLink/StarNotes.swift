@@ -391,7 +391,7 @@ struct StarNotesPage: View {
                 }
                 .padding(.bottom, 4)
                 let doc = StarNotes.isDoc(key)
-                Text(doc ? "參考內容。每張卡片右上角的筆可以單獨改寫，改了會自動存。" : "點宮位時，右側會顯示這顆星的總論和「落在這一宮」的意思。改了會自動存。")
+                Text(doc ? "參考內容。每一段右上角的筆可以單獨改寫，改了會自動存。" : "點宮位時，右側會顯示這顆星的總論和「落在這一宮」的意思。改了會自動存。")
                     .font(Font.zCallout).foregroundStyle(Color.zText3).padding(.bottom, 16)
 
                 if doc {
@@ -527,7 +527,7 @@ struct DocView: View {
                         } else if sec.title == nil { blocks(sec.blocks) } else { card(sec) }
                     }
                 case .grid(let ids):
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 32, alignment: .top)], alignment: .leading, spacing: 24) {
                         ForEach(ids, id: \.self) { i in editable(i, raws[i]) { card(parsed[i]) } }
                     }
                 }
@@ -589,10 +589,10 @@ struct DocView: View {
             }
             blocks(s.blocks)
         }
-        .padding(18)
+        // 不用白底卡片：直接排在頁面上（像附錄八），上方一條細線分段
+        .padding(.top, 14)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
+        .overlay(alignment: .top) { Rectangle().fill(Color.zLine).frame(height: 0.5) }
     }
 
     @ViewBuilder
