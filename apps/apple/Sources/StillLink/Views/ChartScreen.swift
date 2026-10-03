@@ -177,7 +177,7 @@ struct ChartScreen: View {
                     .background(GeometryReader { tg in
                         Color.clear
                             .onAppear { ToastAnchor.shared.centerX = tg.frame(in: .global).midX }
-                            .onChange(of: tg.frame(in: .global).midX) { _, v in ToastAnchor.shared.centerX = v }
+                            .onChange(of: tg.frame(in: .global).midX) { v in ToastAnchor.shared.centerX = v }
                     })
                     .frame(width: usable)
                     .frame(maxWidth: .infinity, alignment: .leading)
