@@ -30,6 +30,8 @@ struct InfoPanel: View {
     var width: CGFloat = infoPanelWidth
     var notesBirth = true                         // 星曜筆記：生年四化在顯示範圍內
     var notesScopes: [(String, [String])] = []    // 星曜筆記：目前顯示的運限四化
+    var notesNames: [String]? = nil                // 星曜筆記：目前層級的宮名（nil＝本命）
+    var notesPrefix = ""                           // 星曜筆記：層級前綴（大、年…）
     @State private var hepanDraft = ""
     @State private var preview: String?
     @State private var dropping = false
@@ -88,9 +90,9 @@ struct InfoPanel: View {
 
                 // 星曜筆記：點選宮位裡每顆星的意思（總論＋落在這一宮），可以自己改寫
                 if StarNotes.enabled, let chart, let i = selectedPalace, i < chart.palaces.count {
-                    card("星曜筆記 · \(chart.palaces[i].name)三方四正",
+                    card("星曜筆記 · \(notesNames.map { notesPrefix + $0[i] } ?? chart.palaces[i].name)三方四正",
                          action: ("book.closed", { NotificationCenter.default.post(name: .openStarNotes, object: nil) })) {
-                        StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes,
+                        StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes, names: notesNames, prefix: notesPrefix,
                                       onOpen: { k, p in withAnimation(Motion.base) { starDetail = (k, p) } }).id(i)
                     }
                 }
@@ -119,14 +121,6 @@ struct InfoPanel: View {
                 }
 
                 // 每張盤都有：看盤操作提示
-                card("看盤小提示") {
-                    VStack(alignment: .leading, spacing: 6) {
-                        tip("hand.tap", "點宮位：看三方四正和宮干飛化；再點一次取消")
-                        tip("lock", "長按或點兩下宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按或點兩下解鎖")
-                        tip("arrow.triangle.2.circlepath", "右鍵宮位：以這一宮為命（轉宮）")
-                    }
-                }
-
                 if isTemp {
                     card("暫時命盤") {
                         VStack(alignment: .leading, spacing: 10) {
@@ -229,13 +223,6 @@ struct InfoPanel: View {
     }
 
     /// 提示列：小圖示＋一句話
-    private func tip(_ icon: String, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: icon).font(Font.zCaption).foregroundStyle(Color.zText3).frame(width: 14)
-            Text(text).font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
     @ViewBuilder
     private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, actions: [(String, String, () -> Void)] = [],
                                @ViewBuilder _ content: () -> C) -> some View {

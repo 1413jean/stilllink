@@ -44,8 +44,10 @@ enum ZW {
     ]
 
     /// 轉宮：以 taiji 宮為命，index 宮叫「X之Y」（例：夫之兄）
-    static func transferredName(taiji t: Int, index i: Int, chart: Chart) -> String {
-        let head = palaceShortOf[chart.palaces[t].name] ?? String(chart.palaces[t].name.prefix(1))
+    /// names：目前層級的宮名（本命＝本命宮名；選了大限／流年＝大限、流年的宮名），轉宮以那一層的命宮為基準
+    static func transferredName(taiji t: Int, index i: Int, chart: Chart, names: [String]? = nil) -> String {
+        let n = names.map { $0[t] } ?? chart.palaces[t].name
+        let head = palaceShortOf[n] ?? palaceShortOf[n + "宮"] ?? String(n.prefix(1))
         return head + "之" + palaceShort[(t - i + 12) % 12]
     }
 

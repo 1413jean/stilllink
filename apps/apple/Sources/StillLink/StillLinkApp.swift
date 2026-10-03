@@ -126,6 +126,8 @@ struct RootView: View {
                     NowChart()
                 }
             }
+            // 視窗最小寬度：側欄收起後，命盤區最少保留這麼寬（再窄右側面板會暫時藏起來）
+            .frame(minWidth: 640)
             // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
             .animation(nil, value: route)
             .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }

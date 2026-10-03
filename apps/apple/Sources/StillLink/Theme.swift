@@ -170,7 +170,7 @@ enum ChartType {
     static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
 
     static func star(_ fs: CGFloat) -> CGFloat { fs }                       // 主星、輔星
-    static func adj(_ fs: CGFloat) -> CGFloat { max(9, fs - 2) }            // 雜曜
+    static func adj(_ fs: CGFloat) -> CGFloat { max(10.5, fs * 0.94) }      // 雜曜：跟主星差一點點就好
     static func meta(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.68) }        // 亮度、長生
     static func tag(_ fs: CGFloat) -> CGFloat { max(9, fs * 0.8) }         // 四化方塊、運限宮名、自化
     static func gods(_ fs: CGFloat) -> CGFloat { fs * 0.74 }                // 博士／將前／歲前

@@ -1,8 +1,9 @@
 import SwiftUI
+import AppKit
 
 /// 命盤上的標註：畫筆、螢光筆、框線、文字。座標存成 0～1（相對盤面大小），縮放、換視窗大小都對得上
 struct Mark: Codable, Identifiable, Equatable {
-    enum Kind: String, Codable { case pen, highlight, rect, text }
+    enum Kind: String, Codable { case pen, highlight, rect, text, arrow }
     var id = UUID()
     var kind: Kind
     var points: [CGPoint]          // 畫筆、螢光筆：路徑；框線：起點＋終點；文字：左上角
@@ -21,7 +22,7 @@ enum AnnoSize: String, CaseIterable {
 }
 
 enum AnnoTool: String, CaseIterable {
-    case select, pen, highlight, rect, text, eraser
+    case select, pen, highlight, arrow, rect, text, eraser, comment
     var icon: String {
         switch self {
         case .select: "cursorarrow"
@@ -30,11 +31,16 @@ enum AnnoTool: String, CaseIterable {
         case .rect: "rectangle"
         case .text: "t.square"
         case .eraser: "eraser"
+        case .comment: "bubble.left"
+        case .arrow: "arrow.up.right"
         }
     }
+    /// 工具列上顯示的工具（文字註解拿掉了）
+    static var visible: [AnnoTool] { allCases.filter { $0 != .text } }
+
     /// 快捷鍵（單一字母；打字中不會觸發）
     var key: String {
-        switch self { case .select: "V"; case .pen: "P"; case .highlight: "H"; case .rect: "R"; case .text: "T"; case .eraser: "E" }
+        switch self { case .select: "V"; case .pen: "P"; case .highlight: "H"; case .rect: "R"; case .text: "T"; case .eraser: "E"; case .comment: "C"; case .arrow: "A" }
     }
     var help: String {
         switch self {
@@ -44,6 +50,8 @@ enum AnnoTool: String, CaseIterable {
         case .rect: "框線"
         case .text: "文字註解"
         case .eraser: "橡皮擦"
+        case .comment: "備註"
+        case .arrow: "箭頭直線"
         }
     }
 }
@@ -142,7 +150,7 @@ struct AnnotationLayer: View {
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { v in changed(v, size: size) }
                 .onEnded { v in ended(v, size: size) })
-            .allowsHitTesting(tool != .select)
+            .allowsHitTesting(tool != .select && tool != .comment)
         }
         .onChange(of: tool) { _ in finishText() }
     }
@@ -168,6 +176,20 @@ struct AnnotationLayer: View {
             let r = CGRect(x: min(pts[0].x, pts[1].x), y: min(pts[0].y, pts[1].y),
                            width: abs(pts[1].x - pts[0].x), height: abs(pts[1].y - pts[0].y))
             ctx.stroke(Path(roundedRect: r, cornerRadius: 4), with: .color(c), lineWidth: (AnnoSize(rawValue: m.size ?? "") ?? .medium).pen)
+        case .arrow:
+            // 直線＋箭頭（箭頭大小跟著粗細）
+            guard pts.count == 2 else { return }
+            let w = (AnnoSize(rawValue: m.size ?? "") ?? .medium).pen
+            let a = pts[0], b = pts[1]
+            let ang = atan2(b.y - a.y, b.x - a.x), head = max(9, w * 4)
+            var line = Path(); line.move(to: a); line.addLine(to: CGPoint(x: b.x - cos(ang) * head * 0.6, y: b.y - sin(ang) * head * 0.6))
+            ctx.stroke(line, with: .color(c), style: StrokeStyle(lineWidth: w, lineCap: .round))
+            var tip = Path()
+            tip.move(to: b)
+            tip.addLine(to: CGPoint(x: b.x - cos(ang - .pi / 7) * head, y: b.y - sin(ang - .pi / 7) * head))
+            tip.addLine(to: CGPoint(x: b.x - cos(ang + .pi / 7) * head, y: b.y - sin(ang + .pi / 7) * head))
+            tip.closeSubpath()
+            ctx.fill(tip, with: .color(c))
         case .text:
             break
         }
@@ -212,8 +234,8 @@ struct AnnotationLayer: View {
         case .pen, .highlight:
             if drawing == nil { drawing = Mark(kind: tool == .pen ? .pen : .highlight, points: [norm(v.startLocation, size)], color: color.rawValue, size: self.size.rawValue) }
             drawing?.points.append(p)
-        case .rect:
-            drawing = Mark(kind: .rect, points: [norm(v.startLocation, size), p], color: color.rawValue, size: self.size.rawValue)
+        case .rect, .arrow:
+            drawing = Mark(kind: tool == .rect ? .rect : .arrow, points: [norm(v.startLocation, size), p], color: color.rawValue, size: self.size.rawValue)
         case .eraser:
             erase(at: v.location, size: size)
         default:
@@ -223,8 +245,11 @@ struct AnnotationLayer: View {
 
     private func ended(_ v: DragGesture.Value, size: CGSize) {
         switch tool {
-        case .pen, .highlight, .rect:
-            if let m = drawing { store.edit(chartID) { $0.append(m) } }
+        case .pen, .highlight, .rect, .arrow:
+            // 箭頭太短（只是點一下）就不留
+            if let m = drawing, m.kind != .arrow || hypot((m.points[1].x - m.points[0].x) * size.width, (m.points[1].y - m.points[0].y) * size.height) > 6 {
+                store.edit(chartID) { $0.append(m) }
+            }
             drawing = nil
         case .text:
             finishText()
@@ -239,7 +264,7 @@ struct AnnotationLayer: View {
             DispatchQueue.main.async { textFocused = true }
         case .eraser:
             erase(at: v.location, size: size)
-        case .select:
+        case .select, .comment:
             break
         }
     }
@@ -273,6 +298,12 @@ struct AnnotationLayer: View {
                 let r = CGRect(x: min(pts[0].x, pts[1].x), y: min(pts[0].y, pts[1].y),
                                width: abs(pts[1].x - pts[0].x), height: abs(pts[1].y - pts[0].y))
                 return r.insetBy(dx: -8, dy: -8).contains(p) && !r.insetBy(dx: 8, dy: 8).contains(p)
+            case .arrow:
+                guard pts.count == 2 else { return false }
+                // 點到線段的距離
+                let a = pts[0], b = pts[1], dx = b.x - a.x, dy = b.y - a.y
+                let t = max(0, min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / max(1, dx * dx + dy * dy)))
+                return hypot(a.x + t * dx - p.x, a.y + t * dy - p.y) < 10
             case .text:
                 guard let o = pts.first else { return false }
                 return CGRect(x: o.x - 4, y: o.y - 4, width: 200, height: 30).contains(p)
@@ -296,7 +327,7 @@ struct AnnotationToolbar: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(AnnoTool.allCases, id: \.self) { t in
+            ForEach(AnnoTool.visible, id: \.self) { t in
                 Button { withAnimation(Motion.fast) { tool = t } } label: {
                     Image(systemName: t.icon)
                         .font(.system(size: 15, weight: .medium))
@@ -338,7 +369,7 @@ struct AnnotationToolbar: View {
                 if t == .select { divider }
             }
             // 顏色、粗細：選到畫筆、螢光筆、框線、文字時才展開
-            if [.pen, .highlight, .rect, .text].contains(tool) {
+            if [.pen, .highlight, .arrow, .rect].contains(tool) {
             divider
             ForEach(AnnoColor.allCases, id: \.self) { c in
                 Button { color = c; if tool == .select || tool == .eraser { tool = .pen } } label: {
@@ -351,7 +382,7 @@ struct AnnotationToolbar: View {
                 .buttonStyle(PressStyle())
                 .help(["red": "紅", "blue": "藍", "green": "綠", "orange": "橘", "black": "黑"][c.rawValue] ?? "")
             }
-            if tool != .text {
+            if true {
             divider
             // 粗細：細、中、粗（畫筆、螢光筆、框線）
             ForEach(AnnoSize.allCases, id: \.self) { z in
@@ -397,5 +428,60 @@ struct AnnotationToolbar: View {
 
     private var divider: some View {
         Rectangle().fill(Color.zLine).frame(width: 1, height: 26).padding(.horizontal, 4)
+    }
+}
+
+/// 每個標註工具的游標：SF Symbol 圖示＋白色描邊＋陰影（游標在命盤上時才換）
+enum ToolCursor {
+    private static var cache: [AnnoTool: NSCursor] = [:]
+
+    static func cursor(for tool: AnnoTool) -> NSCursor {
+        if tool == .select { return .arrow }
+        if let c = cache[tool] { return c }
+        let (symbol, hot): (String, CGPoint) = {
+            switch tool {
+            case .pen: return ("pencil.tip", CGPoint(x: 0.5, y: 0.92))
+            case .highlight: return ("highlighter", CGPoint(x: 0.2, y: 0.85))
+            case .arrow, .rect: return ("plus", CGPoint(x: 0.5, y: 0.5))
+            case .text: return ("character.cursor.ibeam", CGPoint(x: 0.5, y: 0.5))
+            case .eraser: return ("eraser", CGPoint(x: 0.3, y: 0.8))
+            case .comment: return ("bubble.left.fill", CGPoint(x: 0.12, y: 0.88))
+            case .select: return ("cursorarrow", .zero)
+            }
+        }()
+        let size = NSSize(width: 30, height: 30)
+        let img = NSImage(size: size, flipped: false) { r in
+            let conf = NSImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
+            guard let base = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(conf) else { return false }
+            let s = base.size
+            let rect = NSRect(x: (r.width - s.width) / 2, y: (r.height - s.height) / 2, width: s.width, height: s.height)
+            // 陰影
+            let shadow = NSShadow()
+            shadow.shadowColor = NSColor.black.withAlphaComponent(0.35)
+            shadow.shadowBlurRadius = 3
+            shadow.shadowOffset = NSSize(width: 0, height: -1.5)
+            NSGraphicsContext.saveGraphicsState()
+            shadow.set()
+            // 白色描邊：往四周各畫一次白色版本
+            let white = base.withSymbolConfiguration(conf.applying(.init(paletteColors: [.white])))!
+            for (dx, dy) in [(-1.2, 0), (1.2, 0), (0, -1.2), (0, 1.2), (-0.9, -0.9), (0.9, 0.9), (-0.9, 0.9), (0.9, -0.9)] {
+                white.draw(in: rect.offsetBy(dx: CGFloat(dx), dy: CGFloat(dy)))
+            }
+            NSGraphicsContext.restoreGraphicsState()
+            if tool == .comment {
+                // 備註：白底泡泡＋主色外框
+                let outline = NSImage(systemSymbolName: "bubble.left", accessibilityDescription: nil)?
+                    .withSymbolConfiguration(conf.applying(.init(paletteColors: [NSColor(Color.zAccent)])))
+                white.draw(in: rect)
+                outline?.draw(in: rect)
+            } else {
+                let ink = base.withSymbolConfiguration(conf.applying(.init(paletteColors: [.black])))!
+                ink.draw(in: rect)
+            }
+            return true
+        }
+        let c = NSCursor(image: img, hotSpot: NSPoint(x: hot.x * size.width, y: hot.y * size.height))
+        cache[tool] = c
+        return c
     }
 }

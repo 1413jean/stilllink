@@ -39,7 +39,7 @@ let infoPanelWidth: CGFloat = 300
 /// 右側面板可以拉的寬度範圍
 let infoPanelRange: ClosedRange<CGFloat> = 260...560
 /// 盤面高寬比：略高於正方形，宮位底部（歲數、運限宮名、宮名）才放得下又不擠星曜
-let boardAspect: CGFloat = 1.06
+let boardAspect: CGFloat = 1.12   // 高比寬多一點：四化方塊疊三層時宮格比較放得下
 
 struct ChartScreen: View {
     @EnvironmentObject var store: Store
@@ -54,6 +54,7 @@ struct ChartScreen: View {
     @AppStorage("showInfoPanel") private var showInfo = true
     @AppStorage("infoPanelW") private var panelW: Double = Double(infoPanelWidth)   // 右側面板寬度（左緣可拖拉，會記住）
     @State private var dragStartW: Double?
+    @State private var lastNarrow: Bool?        // 上一次因為視窗窄收起側欄的狀態
     @State private var handleHover = false
     @State private var annoTool: AnnoTool = .select      // 底部工具列：目前的標註工具（選取＝一般看盤）
     @State private var annoColor: AnnoColor = .red
@@ -105,10 +106,13 @@ struct ChartScreen: View {
     var body: some View {
         // 捲動區佔滿整個寬度（捲軸貼在視窗最右邊）；右側資訊卡固定浮在右上角，不跟著捲
         GeometryReader { geo in
+            // 視窗太窄：先收左側欄（見下方 onChange），還是太窄才暫時藏右側面板，命盤不被犧牲
+            let showInfo = self.showInfo && geo.size.width - CGFloat(panelW) - 24 >= minBoardRoom
             let panelSpace: CGFloat = showInfo ? CGFloat(panelW) + 24 : 0
             let usable = geo.size.width - panelSpace
             // 盤面高度留出：上邊距＋運限表的大限、流年兩列（約 90）＋底部工具列（約 90），一打開就看得到大限流年
             let boardW = min(usable - 48, boardMaxWidth, max(460, (geo.size.height - 210) / boardAspect))
+            let _ = autoSidebar(geo.size.width)
             ZStack(alignment: .bottom) {
                 ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                     VStack(spacing: 12) {
@@ -126,6 +130,15 @@ struct ChartScreen: View {
                         .frame(width: boardW * sharpZoom, height: boardW * boardAspect * sharpZoom)
                         // 標註層：畫筆、螢光筆、框線、文字（座標跟著盤面大小）
                         .overlay { AnnotationLayer(chartID: person.id, tool: annoTool, color: annoColor, size: annoSize) }
+                        // 備註圖釘（像 Figma 留言）：圖釘隨時可點；選到備註工具時點盤面新增
+                        .overlay { CommentLayer(chartID: person.id, active: annoTool == .comment) }
+                        // 游標在命盤上：換成目前工具的游標（選取＝一般箭頭）
+                        .onContinuousHover { phase in
+                            switch phase {
+                            case .active: ToolCursor.cursor(for: annoTool).set()
+                            case .ended: NSCursor.arrow.set()
+                            }
+                        }
                         .scaleEffect(zoom / sharpZoom, anchor: .top)
                         .frame(width: boardW * zoom, height: boardW * boardAspect * zoom, alignment: .top)
                         .gesture(magnify)
@@ -183,7 +196,9 @@ struct ChartScreen: View {
                 if showInfo {
                     ScrollView(showsIndicators: false) {
                         InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace, width: CGFloat(panelW),
-                                  notesBirth: max(0, shownLevel - 2) == 0, notesScopes: activeScopes)
+                                  notesBirth: max(0, shownLevel - 2) == 0, notesScopes: activeScopes,
+                                  notesNames: shownLevel >= 1 ? model?.horo.scope(shownLevel).palaceNames : nil,
+                                  notesPrefix: shownLevel >= 1 ? ZW.scopeTags[shownLevel - 1] : "")
                             .padding(.top, 12)
                             .padding(.bottom, 96) // 底部留給右下角的快捷鈕
                             .padding(.horizontal, 16) // 留空間給卡片陰影
@@ -219,6 +234,8 @@ struct ChartScreen: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
+            // 左下角「?」：看盤小提示（點開展開，點旁邊收起）
+            .overlay(alignment: .bottomLeading) { TipsButton().padding(.leading, 20).padding(.bottom, 24) }
             .overlay(alignment: .bottomTrailing) {
                 VStack(alignment: .trailing, spacing: 10) {
                     if zoom > 1 {
@@ -250,12 +267,22 @@ struct ChartScreen: View {
                     return e
                 }
                 guard let ch = e.charactersIgnoringModifiers?.uppercased(),
-                      let t = AnnoTool.allCases.first(where: { $0.key == ch }) else { return e }
+                      let t = AnnoTool.visible.first(where: { $0.key == ch }) else { return e }
                 withAnimation(Motion.fast) { annoTool = t }
                 return nil
             }
         }
         .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
+        // 驗證用：ZIWEI_CURSOR_DUMP=資料夾 把各工具游標存成 PNG
+        .task {
+            guard let dir = ProcessInfo.processInfo.environment["ZIWEI_CURSOR_DUMP"] else { return }
+            for t in AnnoTool.allCases where t != .select {
+                let img = ToolCursor.cursor(for: t).image
+                if let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(t.rawValue).png"))
+                }
+            }
+        }
         .modifier(ChartChrome(enabled: chrome, title: ChartScreen.title(person), showInfo: $showInfo))
         .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
             let target = pick
@@ -270,6 +297,20 @@ struct ChartScreen: View {
                 withTransaction(t) { model = m; shownLevel = target.level }
             }
             Engine.shared.prefetch(person, around: target)
+        }
+    }
+
+    /// 命盤至少要留的寬度（扣掉右側面板後）
+    private var minBoardRoom: CGFloat { 560 }
+
+    /// 視窗變窄時自動收起左側欄；變寬到側欄放回去也夠用時再打開（中間留一段緩衝，避免一收一放來回跳）
+    private func autoSidebar(_ width: CGFloat) {
+        let room = width - (self.showInfo ? CGFloat(panelW) + 24 : 0)
+        let narrow: Bool? = room < minBoardRoom + 40 ? true : room > minBoardRoom + 340 ? false : nil
+        guard let narrow, narrow != lastNarrow else { return }
+        DispatchQueue.main.async {
+            lastNarrow = narrow
+            NotificationCenter.default.post(name: .infoPanelWide, object: narrow)
         }
     }
 
@@ -400,5 +441,43 @@ struct AddBoardButton: View {
         .buttonStyle(PressStyle())
         .onHover { hover = $0 }
         .help("加一張盤（左右滑動切換）")
+    }
+}
+
+/// 命盤區左下角的「?」：點開是看盤小提示，點旁邊就收起來
+struct TipsButton: View {
+    @State private var open = false
+    @State private var hover = false
+
+    var body: some View {
+        Button { open.toggle() } label: {
+            Image(systemName: "questionmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.zText2)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(hover || open ? Color.zHover : Color.zCard))
+                .overlay(Circle().stroke(Color.zLine))
+                .shadow(color: Color.zShadow, radius: 6, y: 2)
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressStyle())
+        .onHover { hover = $0 }
+        .help("看盤小提示")
+        .popover(isPresented: $open, arrowEdge: .top) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("看盤小提示").zText(.calloutStrong).foregroundStyle(Color.zText)
+                tip("hand.tap", "點宮位：看三方四正和宮干飛化；再點一次取消")
+                tip("lock", "長按或點兩下宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按或點兩下解鎖")
+                tip("arrow.triangle.2.circlepath", "右鍵宮位：以這一宮為命（轉宮）")
+                tip("pencil.tip", "底部工具列可以畫線、框、箭頭和放備註；快捷鍵 V P H A R E C，Esc 回到選取")
+            }
+            .padding(16)
+            .frame(width: 300)
+        }
+    }
+
+    private func tip(_ icon: String, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: icon).font(Font.zCaption).foregroundStyle(Color.zText3).frame(width: 14)
+            Text(text).zText(.subheadline).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
