@@ -92,14 +92,14 @@ struct StarNotesCard: View {
     var includeBirth = true                    // 生年四化有沒有在顯示範圍（跟盤面一樣最多三層）
     var scopes: [(String, [String])] = []      // 目前顯示的運限四化：（大限、流年…, 祿權科忌四顆星）
 
-    /// 對宮、三合只看有四化的星：星名 → 「生年祿・流年忌」
+    /// 對宮、三合：輔星一律看，其他星有四化才看（星名 → 四化標籤「生年祿・流年忌」，輔星沒四化就是空字串）
     private func mutagenTags(_ p: Palace) -> [String: String] {
         var out: [String: String] = [:]
         for s in p.stars {
             var t: [String] = []
             if includeBirth, !s.mutagen.isEmpty { t.append("生年" + s.mutagen) }
             for (label, list) in scopes { if let k = list.firstIndex(of: s.name), k < 4 { t.append(label + ["祿", "權", "科", "忌"][k]) } }
-            if !t.isEmpty { out[s.name] = t.joined(separator: "・") }
+            if !t.isEmpty || s.type == "soft" { out[s.name] = t.joined(separator: "・") }
         }
         return out
     }
@@ -128,7 +128,7 @@ private struct PalaceNotes: View {
     @ObservedObject private var notes = StarNotes.shared
     @Environment(\.zSettings) private var settings
     let palace: Palace
-    var only: [String: String]? = nil   // 只列這些星（對宮、三合：有四化的星 → 四化標籤）
+    var only: [String: String]? = nil   // 只列這些星（對宮、三合：輔星＋有四化的星 → 四化標籤）
     @State private var expanded: Set<String> = []
 
     var body: some View {
@@ -136,7 +136,7 @@ private struct PalaceNotes: View {
         let list = notes.keys(for: palace).filter { only == nil || only![$0.key] != nil }
         VStack(alignment: .leading, spacing: 8) {
             if list.isEmpty {
-                Text(only != nil ? "沒有四化星" : palace.stars.isEmpty ? "空宮" : "沒有星曜筆記").font(Font.zCaption).foregroundStyle(Color.zText3)
+                Text(only != nil ? "沒有輔星或四化星" : palace.stars.isEmpty ? "空宮" : "沒有星曜筆記").font(Font.zCaption).foregroundStyle(Color.zText3)
             }
             ForEach(list, id: \.key) { item in
                 let n = notes.note(item.key)
@@ -144,7 +144,7 @@ private struct PalaceNotes: View {
                     HStack(spacing: 6) {
                         Text(item.key).font(Font.zBodyStrong)
                             .foregroundStyle(item.type == "mutagen" ? Color.zText : settings.starTone(type: item.type).color)
-                        if let tag = only?[item.key] {
+                        if let tag = only?[item.key], !tag.isEmpty {
                             Text(tag).font(Font.zCaptionStrong).foregroundStyle(Color.zAccent)
                         } else if let first = n.summary.split(separator: "\n").first, first.count <= 12 {
                             Text(first).font(Font.zCaption).foregroundStyle(Color.zText3)
