@@ -14,6 +14,13 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.1.3.1", date: "2026 年 10 月 3 日",
+            improved: [
+                "左下角帳號選單精簡成外觀、設定、新功能、回報問題，每一項都有圖示",
+            ],
+            fixed: [
+                "「此刻」盤上固定出現的綠色小點：其實是畫筆模式下不小心點一下留下的標註；現在只點一下不會留下點，以前留下的也會自動消失",
+            ]),
         ReleaseNote(version: "2.1.3", date: "2026 年 10 月 3 日", major: true,
             new: [
                 "滑鼠停在星曜上一下，會跳出小卡說明這顆星的重點，以及落在這一宮的意思",
