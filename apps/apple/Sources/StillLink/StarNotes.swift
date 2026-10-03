@@ -378,11 +378,6 @@ struct StarNotesPage: View {
                     Text(key).font(.zTitle).foregroundStyle(Color.zText)
                     Text(notes.isCustom(key) ? "已自己改寫" : "預設內容").font(Font.zCaption).foregroundStyle(Color.zText3)
                     Spacer()
-                    if StarNotes.isDoc(key) {
-                        Button(editingDoc ? "完成" : "編輯") { withAnimation(Motion.fast) { editingDoc.toggle() } }
-                            .buttonStyle(.plain).font(Font.zCallout).foregroundStyle(Color.zAccent)
-                            .padding(.trailing, 8)
-                    }
                     if notes.isCustom(key) {
                         Button("還原成預設") { notes.reset(key); draft = notes.note(key); Toast.show("「\(key)」已還原成預設") }
                             .buttonStyle(.plain).font(Font.zCallout).foregroundStyle(Color.zAccent)
@@ -390,11 +385,12 @@ struct StarNotesPage: View {
                 }
                 .padding(.bottom, 4)
                 let doc = StarNotes.isDoc(key)
-                Text(doc ? "參考內容，可以自己改寫。改了會自動存。" : "點宮位時，右側會顯示這顆星的總論和「落在這一宮」的意思。改了會自動存。")
+                Text(doc ? "參考內容。每張卡片右上角的筆可以單獨改寫，改了會自動存。" : "點宮位時，右側會顯示這顆星的總論和「落在這一宮」的意思。改了會自動存。")
                     .font(Font.zCallout).foregroundStyle(Color.zText3).padding(.bottom, 16)
 
-                if doc && !editingDoc {
-                    DocView(text: draft.summary)
+                if doc {
+                    DocView(text: draft.summary) { draft.summary = $0; commit() }
+                        .id(key)
                         .padding(.bottom, 18)
                 } else {
                     label(doc ? "內容" : "總論")
@@ -414,7 +410,7 @@ struct StarNotesPage: View {
                     }
                 }
             }
-            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: StarNotes.isDoc(key) ? .infinity : 760, alignment: .leading)   // 參考文件用滿寬度
             .padding(.horizontal, 28).padding(.vertical, 20)
             .frame(maxWidth: .infinity, alignment: .leading)   // 貼著左邊列表，不置中
         }
@@ -455,12 +451,32 @@ extension Notification.Name {
 /// 參考文件的排版：「## 」小標題一段一張卡片（寬的時候兩欄）、「・鍵：值」左標籤右內文、「A｜B」表格、數字步驟
 struct DocView: View {
     let text: String
+    var onChange: ((String) -> Void)? = nil   // 有給才可以編輯（每張卡片右上角的筆）
+    @State private var editing: Int?           // 正在編輯的段落（原文段落編號）
+    @State private var draft = ""
+
+    /// 原文切成段落：每個「## 」開頭是一段，第一個標題前的內容是第 0 段（可能是空的）
+    private var rawSections: [String] {
+        var out = [""]
+        for line in text.components(separatedBy: "\n") {
+            if line.trimmingCharacters(in: .whitespaces).hasPrefix("## ") { out.append(line) }
+            else { out[out.count - 1] += (out[out.count - 1].isEmpty ? "" : "\n") + line }
+        }
+        return out.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    }
+
+    private func save(_ i: Int, _ newText: String) {
+        var raws = rawSections
+        guard i < raws.count else { return }
+        raws[i] = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+        onChange?(raws.filter { !$0.isEmpty }.joined(separator: "\n\n"))
+    }
 
     private enum Block { case bullet(String), step(String), table([[String]]), para(String) }
     private struct Section: Identifiable { let id: Int; let title: String?; var blocks: [Block] }
 
-    private var sections: [Section] {
-        var out: [Section] = []
+    /// 一段原文 → 排版用的段落
+    private static func parse(_ text: String) -> Section {
         var cur = Section(id: 0, title: nil, blocks: [])
         var rows: [[String]] = []
         func flush() { if !rows.isEmpty { cur.blocks.append(.table(rows)); rows = [] } }
@@ -469,33 +485,69 @@ struct DocView: View {
             if l.contains("｜") { rows.append(l.components(separatedBy: "｜")); continue }
             flush()
             if l.isEmpty { continue }
-            if l.hasPrefix("## ") {
-                if cur.title != nil || !cur.blocks.isEmpty { out.append(cur) }
-                cur = Section(id: out.count, title: String(l.dropFirst(3)), blocks: [])
-            } else if l.hasPrefix("・") { cur.blocks.append(.bullet(String(l.dropFirst()))) }
+            if l.hasPrefix("## ") { cur = Section(id: 0, title: String(l.dropFirst(3)), blocks: cur.blocks) }
+            else if l.hasPrefix("・") { cur.blocks.append(.bullet(String(l.dropFirst()))) }
             else if l.first?.isNumber == true, l.contains(".") { cur.blocks.append(.step(l)) }
             else { cur.blocks.append(.para(l)) }
         }
         flush()
-        if cur.title != nil || !cur.blocks.isEmpty { out.append(cur) }
-        return out
+        return cur
     }
 
     var body: some View {
-        let secs = sections
-        let intro = secs.first?.title == nil ? secs.first : nil
-        let rest = secs.filter { $0.title != nil }
-        // 有表格的段落獨佔一整行；其他小卡寬的時候排兩欄
-        let wide = rest.filter { $0.blocks.contains { if case .table = $0 { true } else { false } } }.map(\.id)
+        let raws = rawSections
+        // 每段各自排版；有表格的段落獨佔一整行，其他小卡寬的時候自動排多欄
+        let parsed = raws.enumerated().map { i, r in (i, DocView.parse(r)) }
+        let intro = parsed.first.flatMap { $0.1.title == nil && !$0.1.blocks.isEmpty ? $0 : nil }
+        let rest = parsed.filter { $0.1.title != nil }
+        let isWide: (Section) -> Bool = { $0.blocks.contains { if case .table = $0 { true } else { false } } }
         VStack(alignment: .leading, spacing: 16) {
-            if let intro { blocks(intro.blocks) }
-            ForEach(rest.filter { wide.contains($0.id) }) { card($0) }
+            if let intro { editable(intro.0, raws[intro.0]) { blocks(intro.1.blocks) } }
+            ForEach(rest.filter { isWide($0.1) }, id: \.0) { i, sec in editable(i, raws[i]) { card(sec) } }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
-                ForEach(rest.filter { !wide.contains($0.id) }) { card($0) }
+                ForEach(rest.filter { !isWide($0.1) }, id: \.0) { i, sec in editable(i, raws[i]) { card(sec) } }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .textSelection(.enabled)
+    }
+
+    /// 一段的外框：右上角一支筆，點了這一段變成文字框，「完成」收起
+    @ViewBuilder
+    private func editable<C: View>(_ i: Int, _ raw: String, @ViewBuilder _ content: () -> C) -> some View {
+        if editing == i {
+            VStack(alignment: .leading, spacing: 10) {
+                TextField("", text: $draft, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .zText(.body)
+                    .lineLimit(3...40)
+                HStack {
+                    Text("「## 」開頭是小標題、「・」開頭是條列、用「｜」隔開是表格").font(Font.zCaption).foregroundStyle(Color.zText3)
+                    Spacer()
+                    Button("取消") { withAnimation(Motion.fast) { editing = nil } }
+                        .buttonStyle(ZSecondaryButton(small: true))
+                    Button("完成") { save(i, draft); withAnimation(Motion.fast) { editing = nil } }
+                        .buttonStyle(ZPrimaryButton(small: true))
+                }
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zAccent, lineWidth: 1.5))
+        } else {
+            content()
+                .overlay(alignment: .topTrailing) {
+                    if onChange != nil {
+                        Button { draft = raw; withAnimation(Motion.fast) { editing = i } } label: {
+                            Image(systemName: "pencil").font(Font.zCallout).foregroundStyle(Color.zText3)
+                                .frame(width: 28, height: 28).contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressStyle())
+                        .help("編輯這一段")
+                        .padding(8)
+                    }
+                }
+        }
     }
 
     private func card(_ s: Section) -> some View {
