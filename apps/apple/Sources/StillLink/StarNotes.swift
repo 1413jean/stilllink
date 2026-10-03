@@ -66,6 +66,12 @@ final class StarNotes: ObservableObject {
         if let d = try? enc.encode(custom) { try? d.write(to: url, options: .atomic) }
     }
 
+    /// 一句話重點：總論第一行夠短就當重點（紫微 → 皇帝）
+    static func tagline(_ n: StarNote) -> String {
+        guard let f = n.summary.split(separator: "\n").first, f.count <= 12 else { return "" }
+        return String(f)
+    }
+
     /// 宮名 → 筆記用的一個字（命宮→命、交友→友、官祿→官…）
     static func palaceKey(_ name: String) -> String {
         if name.contains("友") || name.contains("僕") { return "友" }
@@ -106,78 +112,152 @@ struct StarNotesCard: View {
         return out
     }
 
+    var onOpen: (String, String) -> Void = { _, _ in }   // 點一顆星：（筆記 key、宮名）打開單獨介紹
+
     var body: some View {
         let sf = ZW.sanFang(index)   // [本宮, 三合, 三合, 對宮]
         let parts: [(String, Int)] = [("本宮", sf[0]), ("對宮", sf[3]), ("三合", sf[1]), ("三合", sf[2])]
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(parts, id: \.1) { label, i in
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
-                        Text(label).font(Font.zCaptionStrong).foregroundStyle(Color.zOnColor)
-                            .padding(.horizontal, 6).frame(height: 18)
-                            .background(Capsule().fill(label == "本宮" ? Color.zAccent : Color.zText3))
-                        Text(chart.palaces[i].name).font(Font.zCalloutStrong).foregroundStyle(Color.wmRed)
-                    }
-                    PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(label)・\(chart.palaces[i].name)").font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
+                    PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]), onOpen: onOpen)
                 }
             }
         }
     }
 }
 
-/// 一個宮位裡每顆星的筆記
+/// 一個宮位裡每顆星的重點（黑灰色、只留重點；點了打開單獨介紹）
 private struct PalaceNotes: View {
     @ObservedObject private var notes = StarNotes.shared
-    @Environment(\.zSettings) private var settings
     let palace: Palace
     var only: [String: String]? = nil   // 只列這些星（對宮、三合：輔星＋有四化的星 → 四化標籤）
-    @State private var expanded: Set<String> = []
+    var onOpen: (String, String) -> Void
 
     var body: some View {
         let pk = StarNotes.palaceKey(palace.name)
         let list = notes.keys(for: palace).filter { only == nil || only![$0.key] != nil }
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             if list.isEmpty {
-                Text(only != nil ? "沒有輔星或四化星" : palace.stars.isEmpty ? "空宮" : "沒有星曜筆記").font(Font.zCaption).foregroundStyle(Color.zText3)
+                Text(only != nil ? "沒有輔星或四化星" : palace.stars.isEmpty ? "空宮" : "沒有星曜筆記")
+                    .font(Font.zCaption).foregroundStyle(Color.zText3).padding(.vertical, 4)
             }
             ForEach(list, id: \.key) { item in
                 let n = notes.note(item.key)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(item.key).font(Font.zBodyStrong)
-                            .foregroundStyle(item.type == "mutagen" ? Color.zText : settings.starTone(type: item.type).color)
-                        if let tag = only?[item.key], !tag.isEmpty {
-                            Text(tag).font(Font.zCaptionStrong).foregroundStyle(Color.zAccent)
-                        } else if let first = n.summary.split(separator: "\n").first, first.count <= 12 {
-                            Text(first).font(Font.zCaption).foregroundStyle(Color.zText3)
+                Button { onOpen(item.key, palace.name) } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(item.key).font(Font.zCalloutStrong).foregroundStyle(Color.zText)
+                                Text(only?[item.key].flatMap { $0.isEmpty ? nil : $0 } ?? StarNotes.tagline(n))
+                                    .font(Font.zCaption).foregroundStyle(Color.zText3).lineLimit(1)
+                            }
+                            if let t = n.palaces[pk], !t.isEmpty {
+                                Text(t).font(Font.zCaption).foregroundStyle(Color.zText2).lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                         Spacer(minLength: 0)
-                        Button { NotificationCenter.default.post(name: .openStarNotes, object: item.key) } label: {
-                            Image(systemName: "square.and.pencil").font(Font.zCaption).foregroundStyle(Color.zText3)
-                                .frame(width: 22, height: 22).contentShape(Rectangle())
-                        }
-                        .buttonStyle(PressStyle()).help("編輯「\(item.key)」的筆記")
+                        Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(Color.zText3)
                     }
-                    if let t = n.palaces[pk], !t.isEmpty {
-                        Text("落\(palace.name)：\(t)").font(Font.zCallout).foregroundStyle(Color.zText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    let open = expanded.contains(item.key)
-                    if !n.summary.isEmpty {
-                        Text(n.summary).font(Font.zCaption).foregroundStyle(Color.zText2)
-                            .lineLimit(open ? nil : 2)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Button(open ? "收起" : "更多") {
-                            withAnimation(Motion.fast) { if open { expanded.remove(item.key) } else { expanded.insert(item.key) } }
-                        }
-                        .buttonStyle(.plain).font(Font.zCaption).foregroundStyle(Color.zAccent)
-                    }
+                    .padding(.vertical, 7)
+                    .contentShape(Rectangle())
                 }
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 9).fill(Color.zHover))
+                .buttonStyle(PressStyle())
+                if item.key != list.last?.key { Rectangle().fill(Color.zLine).frame(height: 0.5) }
             }
         }
+    }
+}
+
+/// 右側單獨介紹一顆星：重點、落在這一宮、總論、十二宮
+struct StarDetailView: View {
+    @ObservedObject private var notes = StarNotes.shared
+    let key: String
+    let palaceName: String
+    var onBack: () -> Void
+
+    var body: some View {
+        let n = notes.note(key)
+        let pk = StarNotes.palaceKey(palaceName)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.zText2)
+                        .frame(width: 26, height: 26).background(Circle().fill(Color.zHover))
+                }
+                .buttonStyle(PressStyle()).help("返回")
+                .keyboardShortcut(.cancelAction)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(key).font(Font.zHeadline).foregroundStyle(Color.zText)
+                    let tl = StarNotes.tagline(n)
+                    if !tl.isEmpty { Text(tl).font(Font.zCaption).foregroundStyle(Color.zText3) }
+                }
+                Spacer()
+                Button { NotificationCenter.default.post(name: .openStarNotes, object: key) } label: {
+                    Image(systemName: "square.and.pencil").font(Font.zCallout).foregroundStyle(Color.zText2)
+                }
+                .buttonStyle(.plain).help("編輯筆記")
+            }
+            if let t = n.palaces[pk], !t.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("落\(palaceName)").font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
+                    Text(t).font(Font.zCallout).foregroundStyle(Color.zText).fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.leading, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .leading) { Rectangle().fill(Color.zText).frame(width: 2) }
+            }
+            // 總論：第一行已經當重點放在標題下，就不重複
+            let body = StarNotes.tagline(n).isEmpty ? n.summary : n.summary.split(separator: "\n").dropFirst().joined(separator: "\n")
+            if !body.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("總論").font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
+                    Text(body).font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if !n.palaces.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("落在各宮").font(Font.zCaptionStrong).foregroundStyle(Color.zText3)
+                    ForEach(StarNotes.palaceKeys.filter { n.palaces[$0] != nil && $0 != pk }, id: \.self) { k in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(k).font(Font.zCalloutStrong).foregroundStyle(Color.zText).frame(width: 16)
+                            Text(n.palaces[k] ?? "").font(Font.zCaption).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+        }
+        .textSelection(.enabled)
+    }
+}
+
+/// 盤面上滑鼠移到星曜：深色小卡顯示重點（像留言框）
+struct StarHoverCard: View {
+    let key: String
+    let palaceName: String
+
+    var body: some View {
+        let n = StarNotes.shared.note(key)
+        let t = n.palaces[StarNotes.palaceKey(palaceName)] ?? ""
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(key).font(Font.zCalloutStrong).foregroundStyle(Color.white)
+                let tl = StarNotes.tagline(n)
+                if !tl.isEmpty { Text(tl).font(Font.zCaption).foregroundStyle(Color.white.opacity(0.6)) }
+            }
+            if !t.isEmpty {
+                Text("落\(palaceName)：\(t)").font(Font.zCaption).foregroundStyle(Color.white.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 9)
+        .frame(width: 240, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(white: 0.16)))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08)))
+        .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
+        .allowsHitTesting(false)
     }
 }
 

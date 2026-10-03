@@ -23,6 +23,8 @@ struct ChartBoard: View, Equatable {
     @State private var locked: Int?    // 長按鎖定的宮位（比較兩組三方四正）
     @State private var taiji: Int?     // 轉宮：以這一宮為命
     @State private var userPicked = false   // 使用者自己點的宮位（自動跳到運限命宮時不算）
+    @State private var hoverStar: StarHoverInfo?
+    @State private var hoverTask: Task<Void, Never>?
     @State private var lastTap: (Int, Date)?   // 上一次點的宮位與時間（判斷點兩下）
     @State private var cleared = false      // 再點一次已選的宮位＝取消選取（不顯示三方四正、飛化）
     @Environment(\.zSettings) private var settings
@@ -84,7 +86,15 @@ struct ChartBoard: View, Equatable {
                     .enterFromBelow(appeared, index: 8)
                     .frame(width: cw * 2, height: ch * 2)
                     .offset(x: m + cw, y: m + ch)
+                // 滑鼠停在星曜上：深色小卡顯示這顆星的重點（測試版）
+                if let h = hoverStar {
+                    StarHoverCard(key: h.key, palaceName: h.palace)
+                        .offset(x: min(h.rect.maxX + 6, geo.size.width - 246), y: max(4, h.rect.minY))
+                        .transition(.opacity)
+                }
             }
+            .coordinateSpace(name: "board")
+            .environment(\.starHover, StarNotes.enabled ? { info in setHover(info) } : nil)
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
@@ -110,6 +120,17 @@ struct ChartBoard: View, Equatable {
         guard settings.showTransfer else { return nil }
         if let taiji { return taiji }
         return userPicked && selected != chart.soulIndex ? selected : nil
+    }
+
+    /// 停 0.35 秒才出現，滑過去不會一直閃
+    private func setHover(_ info: StarHoverInfo?) {
+        hoverTask?.cancel()
+        guard let info, StarNotes.shared.hasNote(info.key) else { withAnimation(Motion.fast) { hoverStar = nil }; return }
+        hoverTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(Motion.fast) { hoverStar = info }
+        }
     }
 
     private func toggleLock(_ i: Int, _ chart: Chart) {
@@ -406,7 +427,7 @@ extension PalaceCell {
         let showMinorMutagen = minor && settings.showMinorMutagen && lowest <= 2
         return FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(p.stars, id: \.name) { s in
-                StarColumn(star: s, fs: f, fly: flyStars[s.name],
+                StarColumn(star: s, fs: f, palaceName: p.name, fly: flyStars[s.name],
                            showBirth: lowest == 0,
                            minor: showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                            hepanMut: hepan?.mutagen(star: s.name),
@@ -423,8 +444,10 @@ extension PalaceCell {
 
 private struct StarColumn: View {
     @Environment(\.zSettings) private var settings
+    @Environment(\.starHover) private var starHover
     let star: Star
     let fs: CGFloat
+    var palaceName = ""
     let fly: Mutagen?    // 點選宮位的宮干四化落在這顆星
     let showBirth: Bool  // 生年四化是否在顯示範圍（最近三層）內
     let minor: Mutagen?  // 小限四化
@@ -442,6 +465,17 @@ private struct StarColumn: View {
                 .padding(.vertical, 1)
                 .frame(width: fs * 1.18)
                 .background(fly?.fill ?? .clear)
+                // 滑鼠停在星名上：回報位置給盤面顯示小卡
+                .overlay {
+                    if let starHover {
+                        GeometryReader { g in
+                            Color.clear.contentShape(Rectangle())
+                                .onHover { inside in
+                                    starHover(inside ? StarHoverInfo(key: star.name, palace: palaceName, rect: g.frame(in: .named("board"))) : nil)
+                                }
+                        }
+                    }
+                }
             Text(star.brightness.isEmpty ? " " : star.brightness)
                 .font(ChartType.font(ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
@@ -681,5 +715,20 @@ struct FlowLayout: Layout {
             v.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(s))
             x += s.width + spacing; lineH = max(lineH, s.height)
         }
+    }
+}
+
+/// 滑鼠停在哪顆星（筆記 key、宮名、在盤面上的位置）
+struct StarHoverInfo: Equatable {
+    let key: String
+    let palace: String
+    let rect: CGRect
+}
+
+private struct StarHoverKey: EnvironmentKey { static let defaultValue: ((StarHoverInfo?) -> Void)? = nil }
+extension EnvironmentValues {
+    var starHover: ((StarHoverInfo?) -> Void)? {
+        get { self[StarHoverKey.self] }
+        set { self[StarHoverKey.self] = newValue }
     }
 }

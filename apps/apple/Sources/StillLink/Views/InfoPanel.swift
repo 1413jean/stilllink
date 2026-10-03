@@ -26,6 +26,7 @@ struct InfoPanel: View {
     let chart: Chart?
     @Binding var hepanYear: Int?
     var selectedPalace: Int? = nil
+    @State private var starDetail: (String, String)?   // 打開單獨介紹的星（筆記 key、宮名）
     var width: CGFloat = infoPanelWidth
     var notesBirth = true                         // 星曜筆記：生年四化在顯示範圍內
     var notesScopes: [(String, [String])] = []    // 星曜筆記：目前顯示的運限四化
@@ -45,6 +46,23 @@ struct InfoPanel: View {
     private var isTemp: Bool { !isNow && !store.people.contains { $0.id == person.id } }
 
     var body: some View {
+        // 點了星曜筆記裡的一顆星：整個右側換成那顆星的單獨介紹
+        if let d = starDetail {
+            StarDetailView(key: d.0, palaceName: d.1) { withAnimation(Motion.base) { starDetail = nil } }
+                .padding(14)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard).shadow(color: Color.zShadow.opacity(0.6), radius: 10, y: 3))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
+                .frame(width: width)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+                .onChange(of: selectedPalace) { _ in withAnimation(Motion.base) { starDetail = nil } }
+        } else {
+            cards
+                // 驗證用：ZIWEI_STAR_DETAIL=紫微 直接打開那顆星的單獨介紹
+                .onAppear { if let k = ProcessInfo.processInfo.environment["ZIWEI_STAR_DETAIL"] { starDetail = (k, "命宮") } }
+        }
+    }
+
+    private var cards: some View {
         VStack(spacing: 12) {
                 card("命主資料",
                      action: isNow ? nil : ("square.and.pencil", { NotificationCenter.default.post(name: .editChart, object: person.id) }),
@@ -85,7 +103,8 @@ struct InfoPanel: View {
                 if StarNotes.enabled, let chart, let i = selectedPalace, i < chart.palaces.count {
                     card("星曜筆記 · \(chart.palaces[i].name)三方四正",
                          action: ("book.closed", { NotificationCenter.default.post(name: .openStarNotes, object: nil) })) {
-                        StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes).id(i)
+                        StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes,
+                                      onOpen: { k, p in withAnimation(Motion.base) { starDetail = (k, p) } }).id(i)
                     }
                 }
 

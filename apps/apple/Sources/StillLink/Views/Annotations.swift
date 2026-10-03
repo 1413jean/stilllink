@@ -8,6 +8,16 @@ struct Mark: Codable, Identifiable, Equatable {
     var points: [CGPoint]          // 畫筆、螢光筆：路徑；框線：起點＋終點；文字：左上角
     var color: String              // AnnoColor 的 rawValue
     var text = ""
+    var size: String? = nil        // AnnoSize 的 rawValue（舊標註沒有＝中）
+}
+
+/// 筆的粗細：畫筆、框線用前一個數字，螢光筆用後一個
+enum AnnoSize: String, CaseIterable {
+    case thin, medium, thick
+    var pen: CGFloat { switch self { case .thin: 1.4; case .medium: 2.4; case .thick: 4.5 } }
+    var highlight: CGFloat { switch self { case .thin: 9; case .medium: 16; case .thick: 26 } }
+    var dot: CGFloat { switch self { case .thin: 4; case .medium: 7; case .thick: 11 } }
+    var label: String { switch self { case .thin: "細"; case .medium: "中"; case .thick: "粗" } }
 }
 
 enum AnnoTool: String, CaseIterable {
@@ -101,13 +111,14 @@ struct AnnotationLayer: View {
     let chartID: UUID
     let tool: AnnoTool
     let color: AnnoColor
+    var size: AnnoSize = .medium
     @ObservedObject private var store = AnnotationStore.shared
     @State private var drawing: Mark?
     @State private var editingText: UUID?
     @FocusState private var textFocused: Bool
 
-    init(chartID: UUID, tool: AnnoTool, color: AnnoColor) {
-        self.chartID = chartID; self.tool = tool; self.color = color
+    init(chartID: UUID, tool: AnnoTool, color: AnnoColor, size: AnnoSize = .medium) {
+        self.chartID = chartID; self.tool = tool; self.color = color; self.size = size
     }
 
     var body: some View {
@@ -144,14 +155,15 @@ struct AnnotationLayer: View {
             p.move(to: first)
             if pts.count == 1 { p.addLine(to: CGPoint(x: first.x + 0.1, y: first.y)) }
             for pt in pts.dropFirst() { p.addLine(to: pt) }
-            let w: CGFloat = m.kind == .pen ? 2.2 : 16
+            let sz = AnnoSize(rawValue: m.size ?? "") ?? .medium
+            let w: CGFloat = m.kind == .pen ? sz.pen : sz.highlight
             ctx.stroke(p, with: .color(m.kind == .pen ? c : c.opacity(0.28)),
                        style: StrokeStyle(lineWidth: w, lineCap: .round, lineJoin: .round))
         case .rect:
             guard pts.count == 2 else { return }
             let r = CGRect(x: min(pts[0].x, pts[1].x), y: min(pts[0].y, pts[1].y),
                            width: abs(pts[1].x - pts[0].x), height: abs(pts[1].y - pts[0].y))
-            ctx.stroke(Path(roundedRect: r, cornerRadius: 4), with: .color(c), lineWidth: 2.2)
+            ctx.stroke(Path(roundedRect: r, cornerRadius: 4), with: .color(c), lineWidth: (AnnoSize(rawValue: m.size ?? "") ?? .medium).pen)
         case .text:
             break
         }
@@ -194,10 +206,10 @@ struct AnnotationLayer: View {
         let p = norm(v.location, size)
         switch tool {
         case .pen, .highlight:
-            if drawing == nil { drawing = Mark(kind: tool == .pen ? .pen : .highlight, points: [norm(v.startLocation, size)], color: color.rawValue) }
+            if drawing == nil { drawing = Mark(kind: tool == .pen ? .pen : .highlight, points: [norm(v.startLocation, size)], color: color.rawValue, size: self.size.rawValue) }
             drawing?.points.append(p)
         case .rect:
-            drawing = Mark(kind: .rect, points: [norm(v.startLocation, size), p], color: color.rawValue)
+            drawing = Mark(kind: .rect, points: [norm(v.startLocation, size), p], color: color.rawValue, size: self.size.rawValue)
         case .eraser:
             erase(at: v.location, size: size)
         default:
@@ -271,6 +283,7 @@ struct AnnotationToolbar: View {
     let chartID: UUID
     @Binding var tool: AnnoTool
     @Binding var color: AnnoColor
+    @Binding var size: AnnoSize
     @ObservedObject private var store = AnnotationStore.shared
     @State private var confirmClear = false
 
@@ -300,6 +313,19 @@ struct AnnotationToolbar: View {
                 }
                 .buttonStyle(PressStyle())
                 .help(["red": "紅", "blue": "藍", "green": "綠", "orange": "橘", "black": "黑"][c.rawValue] ?? "")
+            }
+            divider
+            // 粗細：細、中、粗（畫筆、螢光筆、框線）
+            ForEach(AnnoSize.allCases, id: \.self) { z in
+                Button { size = z; if tool == .select || tool == .eraser || tool == .text { tool = .pen } } label: {
+                    Circle().fill(Color.white.opacity(size == z ? 1 : 0.55))
+                        .frame(width: z.dot, height: z.dot)
+                        .frame(width: 26, height: 38)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(size == z ? Color.white.opacity(0.14) : .clear).padding(.vertical, 6))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressStyle())
+                .help(z.label)
             }
             divider
             Button { store.undoLast(chartID) } label: {
