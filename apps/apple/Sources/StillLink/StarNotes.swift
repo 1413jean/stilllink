@@ -225,11 +225,15 @@ struct StarDetailView: View {
             if !n.palaces.isEmpty {
                 VStack(alignment: .leading, spacing: 11) {
                     Text("落在各宮").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
-                    ForEach(StarNotes.palaceKeys.filter { n.palaces[$0] != nil && $0 != pk }, id: \.self) { k in
+                    // 十二宮全部列出；目前這一宮粗體＋左邊色條
+                    ForEach(StarNotes.palaceKeys.filter { n.palaces[$0] != nil }, id: \.self) { k in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(k).font(Font.zBodyStrong).foregroundStyle(Color.zText).frame(width: 16)
-                            Text(n.palaces[k] ?? "").zText(.subheadline).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+                            Text(k).font(Font.zBodyStrong).foregroundStyle(k == pk ? Color.zAccent : Color.zText).frame(width: 16)
+                            Text(n.palaces[k] ?? "").zText(k == pk ? .subheadlineStrong : .subheadline)
+                                .foregroundStyle(k == pk ? Color.zText : Color.zText2).fixedSize(horizontal: false, vertical: true)
                         }
+                        .padding(.leading, 6)
+                        .overlay(alignment: .leading) { if k == pk { Rectangle().fill(Color.zAccent).frame(width: 2) } }
                     }
                 }
             }
