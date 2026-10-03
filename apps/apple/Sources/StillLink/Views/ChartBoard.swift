@@ -246,10 +246,9 @@ private struct PalaceCell: View {
         let laiyin = settings.showLaiyin && index < 10 && p.stem == String(chart.chineseDate.prefix(1))
         VStack(alignment: .leading, spacing: 2) {
             // 第一行：左上合盤宮名（合命、合兄…）、右上地理方位
-            // 小限框、來因也放這一行（放底部會跟運限宮名、干支擠在一起）
+            // 來因也放這一行（放底部會跟運限宮名、干支擠在一起）
             let hn = hepan?.palaceName(at: p.branch)
-            let minorBadge = level >= 2 && !settings.showMinorOverlay && horo.age.index == index
-            if hn != nil || settings.showCompass || minorBadge || laiyin {
+            if hn != nil || settings.showCompass || laiyin {
                 HStack(spacing: 3) {
                     if let hn { Text(hn).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmEarth) }
                     if laiyin {
@@ -257,11 +256,7 @@ private struct PalaceCell: View {
                             .padding(.horizontal, 2).padding(.vertical, 1)
                             .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
                     }
-                    if minorBadge {
-                        Text("小限").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText2)
-                            .padding(.horizontal, 2).padding(.vertical, 1)
-                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
-                    }
+
                     Spacer(minLength: 0)
                     if settings.showCompass {
                         Text(ZW.compass[index]).font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
@@ -375,6 +370,13 @@ private struct PalaceCell: View {
                             .padding(.bottom, 2)
                     }
                     VStack(spacing: 0) {
+                        // 小限疊盤關著時：小限命宮在長生上面標一個直排小框「小限」（同一欄，不會把版面擠歪）
+                        if level >= 2 && !settings.showMinorOverlay && horo.age.index == index {
+                            VerticalText("小限", size: ChartType.meta(fs), color: .zText2)
+                                .padding(.vertical, 2).padding(.horizontal, 1)
+                                .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
+                                .padding(.bottom, 3)
+                        }
                         // 長生十二神：自己一個開關（預設關）
                         if settings.showChangsheng {
                             VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
