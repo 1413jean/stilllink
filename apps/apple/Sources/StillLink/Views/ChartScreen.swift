@@ -267,7 +267,7 @@ struct ChartScreen: View {
                     return e
                 }
                 guard let ch = e.charactersIgnoringModifiers?.uppercased(),
-                      let t = AnnoTool.allCases.first(where: { $0.key == ch }) else { return e }
+                      let t = AnnoTool.visible.first(where: { $0.key == ch }) else { return e }
                 withAnimation(Motion.fast) { annoTool = t }
                 return nil
             }
@@ -467,7 +467,7 @@ struct TipsButton: View {
                 tip("hand.tap", "點宮位：看三方四正和宮干飛化；再點一次取消")
                 tip("lock", "長按或點兩下宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按或點兩下解鎖")
                 tip("arrow.triangle.2.circlepath", "右鍵宮位：以這一宮為命（轉宮）")
-                tip("pencil.tip", "底部工具列可以畫線、框、箭頭、寫字和放備註；快捷鍵 V P H A R T E C，Esc 回到選取")
+                tip("pencil.tip", "底部工具列可以畫線、框、箭頭和放備註；快捷鍵 V P H A R E C，Esc 回到選取")
             }
             .padding(16)
             .frame(width: 300)

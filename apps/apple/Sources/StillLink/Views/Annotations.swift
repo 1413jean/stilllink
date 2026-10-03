@@ -35,6 +35,9 @@ enum AnnoTool: String, CaseIterable {
         case .arrow: "arrow.up.right"
         }
     }
+    /// 工具列上顯示的工具（文字註解拿掉了）
+    static var visible: [AnnoTool] { allCases.filter { $0 != .text } }
+
     /// 快捷鍵（單一字母；打字中不會觸發）
     var key: String {
         switch self { case .select: "V"; case .pen: "P"; case .highlight: "H"; case .rect: "R"; case .text: "T"; case .eraser: "E"; case .comment: "C"; case .arrow: "A" }
@@ -324,7 +327,7 @@ struct AnnotationToolbar: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(AnnoTool.allCases, id: \.self) { t in
+            ForEach(AnnoTool.visible, id: \.self) { t in
                 Button { withAnimation(Motion.fast) { tool = t } } label: {
                     Image(systemName: t.icon)
                         .font(.system(size: 15, weight: .medium))
@@ -366,7 +369,7 @@ struct AnnotationToolbar: View {
                 if t == .select { divider }
             }
             // 顏色、粗細：選到畫筆、螢光筆、框線、文字時才展開
-            if [.pen, .highlight, .arrow, .rect, .text].contains(tool) {
+            if [.pen, .highlight, .arrow, .rect].contains(tool) {
             divider
             ForEach(AnnoColor.allCases, id: \.self) { c in
                 Button { color = c; if tool == .select || tool == .eraser { tool = .pen } } label: {
@@ -379,7 +382,7 @@ struct AnnotationToolbar: View {
                 .buttonStyle(PressStyle())
                 .help(["red": "紅", "blue": "藍", "green": "綠", "orange": "橘", "black": "黑"][c.rawValue] ?? "")
             }
-            if tool != .text {
+            if true {
             divider
             // 粗細：細、中、粗（畫筆、螢光筆、框線）
             ForEach(AnnoSize.allCases, id: \.self) { z in
@@ -465,8 +468,16 @@ enum ToolCursor {
                 white.draw(in: rect.offsetBy(dx: CGFloat(dx), dy: CGFloat(dy)))
             }
             NSGraphicsContext.restoreGraphicsState()
-            let ink = base.withSymbolConfiguration(conf.applying(.init(paletteColors: [tool == .comment ? NSColor(red: 0x0D / 255, green: 0x99 / 255, blue: 1, alpha: 1) : .black])))!
-            ink.draw(in: rect)
+            if tool == .comment {
+                // 備註：白底泡泡＋主色外框
+                let outline = NSImage(systemSymbolName: "bubble.left", accessibilityDescription: nil)?
+                    .withSymbolConfiguration(conf.applying(.init(paletteColors: [NSColor(Color.zAccent)])))
+                white.draw(in: rect)
+                outline?.draw(in: rect)
+            } else {
+                let ink = base.withSymbolConfiguration(conf.applying(.init(paletteColors: [.black])))!
+                ink.draw(in: rect)
+            }
             return true
         }
         let c = NSCursor(image: img, hotSpot: NSPoint(x: hot.x * size.width, y: hot.y * size.height))

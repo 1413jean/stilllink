@@ -267,9 +267,13 @@ private struct PalaceCell: View {
             }
             HStack(alignment: .top, spacing: 3) {
                 // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
-                ViewThatFits(in: .vertical) {
-                    ForEach(Array([(1.0, 1.0), (1.0, 0.9), (0.92, 0.84), (0.84, 0.78), (0.76, 0.72), (0.68, 0.66)].enumerated()), id: \.offset) { _, k in
-                        starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1)
+                // 先試「主星和雜曜同一排」：放不下就先縮雜曜、再一起縮；真的縮到底還放不下才換第二排
+                ViewThatFits(in: [.horizontal, .vertical]) {
+                    ForEach(Array([(1.0, 1.0), (1.0, 0.9), (1.0, 0.82), (0.94, 0.76), (0.88, 0.72), (0.82, 0.68)].enumerated()), id: \.offset) { _, k in
+                        starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1, wrap: false)
+                    }
+                    ForEach(Array([(1.0, 1.0), (0.92, 0.84), (0.84, 0.78), (0.76, 0.72), (0.68, 0.66)].enumerated()), id: \.offset) { _, k in
+                        starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1, wrap: true)
                     }
                 }
                 .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
@@ -432,12 +436,22 @@ extension PalaceCell {
         return out
     }
 
-    func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> some View {
+    @ViewBuilder
+    func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat, wrap: Bool) -> some View {
+        if wrap {
+            FlowLayout(spacing: 1, lineSpacing: 4) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
+        } else {
+            HStack(alignment: .top, spacing: 1) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
+                .fixedSize()
+        }
+    }
+
+    @ViewBuilder
+    func starItems(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> some View {
         // 四化只顯示最近三層（0 生年、1 大限、2 流年、3 流月、4 流日、5 流時）＋小限（有流年時）
         // 例：選到流月＝大限、流年、流月；選到流時＝流月、流日、流時
         let lowest = max(0, level - 2)
         let showMinorMutagen = minor && settings.showMinorMutagen && lowest <= 2
-        return FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(p.stars, id: \.name) { s in
                 StarColumn(star: s, fs: f, palaceName: p.name, fly: flyStars[s.name],
                            showBirth: lowest == 0,
@@ -450,7 +464,6 @@ extension PalaceCell {
             ForEach(settings.showAdj ? p.adj : [], id: \.name) { s in
                 VerticalText(s.name, size: adjF, color: settings.tone(.misc).color)
             }
-        }
     }
 }
 
