@@ -582,8 +582,9 @@ struct DocView: View {
                 case .step(let t):
                     let parts = t.split(separator: ".", maxSplits: 1).map(String.init)
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(parts[0]).font(Font.zCalloutStrong.monospacedDigit()).foregroundStyle(Color.zOnColor)
-                            .frame(width: 20, height: 20).background(Circle().fill(Color.zText))
+                        // 一般的「1.」編號（圓圈底在深色模式下數字會看不到）
+                        Text("\(parts[0]).").font(Font.zReadStrong.monospacedDigit()).foregroundStyle(Color.zText3)
+                            .frame(minWidth: 20, alignment: .leading)
                         Text(parts.count > 1 ? parts[1].trimmingCharacters(in: .whitespaces) : "").font(Font.zRead).foregroundStyle(Color.zText)
                     }
                 case .table(let rows): table(rows)
