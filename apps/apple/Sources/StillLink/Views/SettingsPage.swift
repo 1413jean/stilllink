@@ -161,12 +161,12 @@ struct SettingsPage: View {
             toggle("顯示長生十二神", "長生、沐浴、冠帶…養，寫在每宮天干地支上面", s.showChangsheng)
             toggle("顯示流曜", "選到大限、流年時，宮內加上大祿、大羊、年鸞、年喜…這些流曜", s.showFlowStars, last: true)
             Text("星曜顏色").font(Font.zBodyStrong).foregroundStyle(Color.zText).padding(.top, 18)
-            note("盤面上五類星曜各用一種顏色，一眼分出主星、輔星、吉星、凶星、雜曜。")
+            note("盤面上四類星曜各用一種顏色，一眼分出主星、輔星、凶星、雜曜。")
             ForEach(ZW.StarClass.allCases, id: \.self) { c in
                 row(c.label, c.members, last: c == .misc) {
                     HStack(spacing: 10) {
                         Spacer()
-                        Text(c == .major ? "紫微" : c == .aux ? "右弼" : c == .lucky ? "祿存" : c == .tough ? "擎羊" : "紅鸞")
+                        Text(c == .major ? "紫微" : c == .aux ? "右弼" : c == .tough ? "擎羊" : "紅鸞")
                             .font(ChartType.font(15, .medium)).foregroundStyle(store.settings.tone(c).color)
                         Text(store.settings.tone(c).label).font(Font.zCallout).foregroundStyle(Color.zText3)
                     }

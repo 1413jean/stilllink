@@ -97,6 +97,9 @@ extension Font {
     static let zTitle = Font.system(size: 20, weight: .semibold)        // 彈窗標題
     static let zHeadline = Font.system(size: 14, weight: .medium)       // 卡片內人名
     static let zInput = Font.system(size: 14)                           // 表單輸入框
+    static let zReadTitle = Font.system(size: 16, weight: .semibold)    // 閱讀內容的小標題（星曜筆記、參考文件）
+    static let zRead = Font.system(size: 15)                            // 閱讀內容（星曜筆記、參考文件）
+    static let zReadStrong = Font.system(size: 15, weight: .medium)
     static let zBody = Font.system(size: 13)                            // 內文、側欄列
     static let zBodyStrong = Font.system(size: 13, weight: .medium)
     static let zCallout = Font.system(size: 12)                         // 次要內文、資料列

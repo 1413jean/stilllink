@@ -118,28 +118,26 @@ enum ZW {
         var label: String { ["red": "紅", "green": "綠", "blue": "藍", "black": "黑", "earth": "褐", "purple": "紫", "gray": "灰"][rawValue] ?? "" }
     }
 
-    /// 星曜分五類，各自一種顏色（設定裡可改）
+    /// 星曜分四類，各自一種顏色（祿存、天馬併在輔星）
     enum StarClass: String, CaseIterable {
-        case major, aux, lucky, tough, misc
-        var label: String { ["major": "十四主星", "aux": "輔星", "lucky": "吉星", "tough": "凶星", "misc": "雜曜"][rawValue] ?? "" }
+        case major, aux, tough, misc
+        var label: String { ["major": "十四主星", "aux": "輔星", "tough": "凶星", "misc": "雜曜"][rawValue] ?? "" }
         var members: String {
             switch self {
             case .major: "紫微、天機、太陽、武曲、天同、廉貞、天府、太陰、貪狼、巨門、天相、天梁、七殺、破軍"
-            case .aux: "六吉：左輔、右弼、文昌、文曲、天魁、天鉞"
-            case .lucky: "祿存、天馬"
+            case .aux: "左輔、右弼、文昌、文曲、天魁、天鉞、祿存、天馬"
             case .tough: "六煞：擎羊、陀羅、火星、鈴星、地空、地劫"
             case .misc: "紅鸞、天喜、天姚、天刑、三台、八座…其他小星"
             }
         }
         var defaultTone: Tone {
-            switch self { case .major: .red; case .aux: .green; case .lucky: .purple; case .tough: .black; case .misc: .blue }
+            switch self { case .major: .red; case .aux: .green; case .tough: .black; case .misc: .blue }
         }
         /// iztro 的星曜 type → 類別
         init(type: String) {
             switch type {
             case "major": self = .major
-            case "soft": self = .aux
-            case "lucun", "tianma": self = .lucky
+            case "soft", "lucun", "tianma": self = .aux
             case "tough": self = .tough
             default: self = .misc
             }

@@ -22,8 +22,7 @@ final class StarNotes: ObservableObject {
         ("雙星組合", ["紫微天府", "紫微貪狼", "紫微天相", "紫微七殺", "紫微破軍", "天機太陰", "天機巨門", "天機天梁",
                     "太陽太陰", "太陽巨門", "太陽天梁", "武曲天府", "武曲貪狼", "武曲天相", "武曲七殺", "武曲破軍",
                     "天同太陰", "天同巨門", "天同天梁", "廉貞天府", "廉貞貪狼", "廉貞天相", "廉貞七殺", "廉貞破軍"]),
-        ("輔星", ["左輔", "右弼", "文昌", "文曲", "天魁", "天鉞"]),
-        ("吉星", ["祿存", "天馬"]),
+        ("輔星", ["左輔", "右弼", "文昌", "文曲", "天魁", "天鉞", "祿存", "天馬"]),
         ("凶星", ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫"]),
         ("雜曜", ["紅鸞", "天喜", "天姚", "天刑", "咸池"]),
         ("四化", ["化祿", "化權", "化科", "化忌"]),
@@ -100,14 +99,14 @@ struct StarNotesCard: View {
     var includeBirth = true                    // 生年四化有沒有在顯示範圍（跟盤面一樣最多三層）
     var scopes: [(String, [String])] = []      // 目前顯示的運限四化：（大限、流年…, 祿權科忌四顆星）
 
-    /// 對宮、三合：輔星一律看，其他星有四化才看（星名 → 四化標籤「生年祿・流年忌」，輔星沒四化就是空字串）
+    /// 對宮、三合：輔星（含祿存天馬）、凶星一律看，其他星有四化才看（星名 → 四化標籤「生年祿・流年忌」，沒四化就是空字串）
     private func mutagenTags(_ p: Palace) -> [String: String] {
         var out: [String: String] = [:]
         for s in p.stars {
             var t: [String] = []
             if includeBirth, !s.mutagen.isEmpty { t.append("生年" + s.mutagen) }
             for (label, list) in scopes { if let k = list.firstIndex(of: s.name), k < 4 { t.append(label + ["祿", "權", "科", "忌"][k]) } }
-            if !t.isEmpty || s.type == "soft" { out[s.name] = t.joined(separator: "・") }
+            if !t.isEmpty || ["soft", "lucun", "tianma", "tough"].contains(s.type) { out[s.name] = t.joined(separator: "・") }
         }
         return out
     }
@@ -117,9 +116,12 @@ struct StarNotesCard: View {
     var body: some View {
         let sf = ZW.sanFang(index)   // [本宮, 三合, 三合, 對宮]
         let parts: [(String, Int)] = [("本宮", sf[0]), ("對宮", sf[3]), ("三合", sf[1]), ("三合", sf[2])]
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(parts, id: \.1) { label, i in
-                VStack(alignment: .leading, spacing: 4) {
+        let shown = parts.filter { label, i in
+            label == "本宮" || StarNotes.shared.keys(for: chart.palaces[i]).contains { mutagenTags(chart.palaces[i])[$0.key] != nil }
+        }
+        VStack(alignment: .leading, spacing: 20) {
+            ForEach(shown, id: \.1) { label, i in
+                VStack(alignment: .leading, spacing: 6) {
                     Text("\(label)・\(chart.palaces[i].name)").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
                     PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]), onOpen: onOpen)
                 }
@@ -147,7 +149,7 @@ private struct PalaceNotes: View {
                 let n = notes.note(item.key)
                 Button { onOpen(item.key, palace.name) } label: {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 5) {
                             HStack(spacing: 6) {
                                 Text(item.key).font(Font.zBodyStrong).foregroundStyle(Color.zText)
                                 Text(only?[item.key].flatMap { $0.isEmpty ? nil : $0 } ?? StarNotes.tagline(n))
@@ -155,13 +157,13 @@ private struct PalaceNotes: View {
                             }
                             if let t = n.palaces[pk], !t.isEmpty {
                                 Text(t).font(Font.zCallout).foregroundStyle(Color.zText2).lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                             }
                         }
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(Color.zText3)
                     }
-                    .padding(.vertical, 7)
+                    .padding(.vertical, 11)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PressStyle())
@@ -349,7 +351,7 @@ struct StarNotesPage: View {
                                     HStack {
                                         Image(systemName: Self.icons(k).first ?? "circle")
                                             .font(Font.zCaption).foregroundStyle(Color.zText).frame(width: 18)
-                                        Text(k).font(Font.zBody).foregroundStyle(Color.zText)
+                                        Text(k).font(Font.zInput).foregroundStyle(Color.zText)
                                         Spacer()
                                         if notes.isCustom(k) { Circle().fill(Color.zAccent).frame(width: 6, height: 6).help("已自己改寫") }
                                     }
@@ -404,7 +406,7 @@ struct StarNotesPage: View {
                     label("落在各宮")
                     ForEach(StarNotes.palaceKeys, id: \.self) { pk in
                         HStack(alignment: .top, spacing: 10) {
-                            Text(pk).font(Font.zBodyStrong).foregroundStyle(Color.wmRed).frame(width: 22).padding(.top, 8)
+                            Text(pk).font(Font.zReadStrong).foregroundStyle(Color.wmRed).frame(width: 22).padding(.top, 9)
                             field(Binding(get: { draft.palaces[pk] ?? "" }, set: { draft.palaces[pk] = $0; commit() }), minH: 36)
                         }
                         .padding(.bottom, 8)
@@ -418,12 +420,12 @@ struct StarNotesPage: View {
     }
 
     private func label(_ t: String) -> some View {
-        Text(t).font(Font.zCalloutStrong).foregroundStyle(Color.zText2).padding(.bottom, 6)
+        Text(t).font(Font.zBodyStrong).foregroundStyle(Color.zText2).padding(.bottom, 6)
     }
 
     private func field(_ b: Binding<String>, minH: CGFloat) -> some View {
         TextEditor(text: b)
-            .font(Font.zBody)
+            .font(Font.zRead)
             .scrollContentBackground(.hidden)
             .frame(minHeight: minH)
             .fixedSize(horizontal: false, vertical: true)
@@ -449,91 +451,127 @@ extension Notification.Name {
     static let openStarNotes = Notification.Name("zw.openStarNotes")
 }
 
-/// 參考文件的排版：「## 」小標題、「・」條列（「鍵：值」的鍵加粗）、「A｜B」表格、數字開頭的步驟、空行分段
+/// 參考文件的排版：「## 」小標題一段一張卡片（寬的時候兩欄）、「・鍵：值」左標籤右內文、「A｜B」表格、數字步驟
 struct DocView: View {
     let text: String
 
-    private enum Block { case heading(String), bullet(String), step(String), table([[String]]), para(String), gap }
+    private enum Block { case bullet(String), step(String), table([[String]]), para(String) }
+    private struct Section: Identifiable { let id: Int; let title: String?; var blocks: [Block] }
 
-    private var blocks: [Block] {
-        var out: [Block] = []
+    private var sections: [Section] {
+        var out: [Section] = []
+        var cur = Section(id: 0, title: nil, blocks: [])
         var rows: [[String]] = []
-        func flush() { if !rows.isEmpty { out.append(.table(rows)); rows = [] } }
+        func flush() { if !rows.isEmpty { cur.blocks.append(.table(rows)); rows = [] } }
         for raw in text.components(separatedBy: "\n") {
             let l = raw.trimmingCharacters(in: .whitespaces)
             if l.contains("｜") { rows.append(l.components(separatedBy: "｜")); continue }
             flush()
-            if l.isEmpty { out.append(.gap) }
-            else if l.hasPrefix("## ") { out.append(.heading(String(l.dropFirst(3)))) }
-            else if l.hasPrefix("・") { out.append(.bullet(String(l.dropFirst()))) }
-            else if l.first?.isNumber == true, l.contains(".") { out.append(.step(l)) }
-            else { out.append(.para(l)) }
+            if l.isEmpty { continue }
+            if l.hasPrefix("## ") {
+                if cur.title != nil || !cur.blocks.isEmpty { out.append(cur) }
+                cur = Section(id: out.count, title: String(l.dropFirst(3)), blocks: [])
+            } else if l.hasPrefix("・") { cur.blocks.append(.bullet(String(l.dropFirst()))) }
+            else if l.first?.isNumber == true, l.contains(".") { cur.blocks.append(.step(l)) }
+            else { cur.blocks.append(.para(l)) }
         }
         flush()
+        if cur.title != nil || !cur.blocks.isEmpty { out.append(cur) }
         return out
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { i, b in
-                switch b {
-                case .heading(let t):
-                    Text(t).font(Font.zBodyStrong).foregroundStyle(Color.zText).padding(.top, i == 0 ? 0 : 10)
-                case .bullet(let t):
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Circle().fill(Color.zText3).frame(width: 4, height: 4).alignmentGuide(.firstTextBaseline) { $0[.bottom] + 4 }
-                        keyed(t)
-                    }
-                case .step(let t):
-                    let parts = t.split(separator: ".", maxSplits: 1).map(String.init)
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(parts[0]).font(Font.zCalloutStrong.monospacedDigit()).foregroundStyle(Color.zAccent).frame(width: 16, alignment: .trailing)
-                        Text(parts.count > 1 ? parts[1].trimmingCharacters(in: .whitespaces) : "").font(Font.zCallout).foregroundStyle(Color.zText)
-                    }
-                case .table(let rows):
-                    table(rows)
-                case .para(let t):
-                    Text(t).font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
-                case .gap:
-                    Color.clear.frame(height: 2)
-                }
+        let secs = sections
+        let intro = secs.first?.title == nil ? secs.first : nil
+        let rest = secs.filter { $0.title != nil }
+        // 有表格的段落獨佔一整行；其他小卡寬的時候排兩欄
+        let wide = rest.filter { $0.blocks.contains { if case .table = $0 { true } else { false } } }.map(\.id)
+        VStack(alignment: .leading, spacing: 16) {
+            if let intro { blocks(intro.blocks) }
+            ForEach(rest.filter { wide.contains($0.id) }) { card($0) }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
+                ForEach(rest.filter { !wide.contains($0.id) }) { card($0) }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .textSelection(.enabled)
     }
 
-    /// 「鍵：值」：鍵加粗
-    private func keyed(_ t: String) -> some View {
+    private func card(_ s: Section) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let t = s.title {
+                HStack(spacing: 8) {
+                    // 「XX化祿」這類標題：前面加上跟盤面一樣的四化方塊
+                    if let m = Mutagen.allCases.first(where: { t.hasSuffix("化" + $0.rawValue) }) {
+                        Text(m.rawValue).font(Font.zCalloutStrong).foregroundStyle(Color.zOnColor)
+                            .frame(width: 22, height: 22).background(RoundedRectangle(cornerRadius: 5).fill(m.fill))
+                    }
+                    Text(t).font(Font.zReadTitle).foregroundStyle(Color.zText)
+                }
+            }
+            blocks(s.blocks)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
+    }
+
+    @ViewBuilder
+    private func blocks(_ bs: [Block]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(bs.enumerated()), id: \.offset) { _, b in
+                switch b {
+                case .bullet(let t): bullet(t)
+                case .step(let t):
+                    let parts = t.split(separator: ".", maxSplits: 1).map(String.init)
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(parts[0]).font(Font.zCalloutStrong.monospacedDigit()).foregroundStyle(Color.zOnColor)
+                            .frame(width: 20, height: 20).background(Circle().fill(Color.zText))
+                        Text(parts.count > 1 ? parts[1].trimmingCharacters(in: .whitespaces) : "").font(Font.zRead).foregroundStyle(Color.zText)
+                    }
+                case .table(let rows): table(rows)
+                case .para(let t):
+                    Text(t).font(Font.zRead).foregroundStyle(Color.zText2).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// 「鍵：值」：左邊灰色小標籤、右邊內文；沒有鍵就是一般條列
+    @ViewBuilder
+    private func bullet(_ t: String) -> some View {
         let parts = t.split(separator: "：", maxSplits: 1).map(String.init)
-        let text: Text = parts.count == 2 && parts[0].count <= 12
-            ? Text(parts[0] + "：").font(Font.zCalloutStrong).foregroundColor(Color.zText) + Text(parts[1]).font(Font.zCallout).foregroundColor(Color.zText)
-            : Text(t).font(Font.zCallout).foregroundColor(Color.zText)
-        return text.fixedSize(horizontal: false, vertical: true)
+        if parts.count == 2 && parts[0].count <= 8 {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(parts[0]).font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
+                Text(parts[1]).font(Font.zRead).foregroundStyle(Color.zText).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+            }
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Circle().fill(Color.zText3).frame(width: 5, height: 5).alignmentGuide(.firstTextBaseline) { $0[.bottom] + 5 }
+                Text(t).font(Font.zRead).foregroundStyle(Color.zText).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 
     private func table(_ rows: [[String]]) -> some View {
         let cols = rows.map(\.count).max() ?? 1
-        return Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 0) {
+        return Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.offset) { r, row in
                 GridRow {
                     ForEach(0..<cols, id: \.self) { c in
                         Text(c < row.count ? row[c] : "")
-                            .font(r == 0 ? Font.zCaptionStrong : Font.zCallout)
+                            .font(r == 0 ? Font.zCalloutStrong : (c == 0 ? Font.zReadStrong : Font.zRead))
                             .foregroundStyle(r == 0 ? Color.zText3 : (c == 0 ? Color.zText : Color.zText2))
                             .fixedSize(horizontal: c == 0, vertical: true)
-                            .padding(.vertical, 7)
+                            .padding(.vertical, 9)
                     }
                 }
-                // 整列一條分隔線（最後一列不畫）
                 if r < rows.count - 1 {
                     Rectangle().fill(Color.zLine).frame(height: 0.5).gridCellColumns(cols)
                 }
             }
         }
-        .padding(.horizontal, 12).padding(.vertical, 4)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.zLine))
-        .padding(.vertical, 4)
     }
 }
