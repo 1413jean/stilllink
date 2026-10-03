@@ -80,9 +80,9 @@ struct TopFade: View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
         ZStack {
             BackdropBlur(fadeFromTop: edge == .top)
-            // 疊一層底色漸層（同背景色），模糊材質的灰色就會融進背景
-            LinearGradient(stops: [.init(color: color, location: 0), .init(color: color.opacity(0.85), location: 0.3),
-                                   .init(color: color.opacity(0.4), location: 0.65), .init(color: color.opacity(0), location: 1)],
+            // 照 Figma Navbar - Morning：上面 30% 實心底色，往下 70% 線性淡到 0
+            LinearGradient(stops: [.init(color: color, location: 0), .init(color: color, location: 0.3),
+                                   .init(color: color.opacity(0), location: 1)],
                            startPoint: start, endPoint: end)
         }
             .frame(height: height)
