@@ -32,6 +32,10 @@ enum AnnoTool: String, CaseIterable {
         case .eraser: "eraser"
         }
     }
+    /// 快捷鍵（單一字母；打字中不會觸發）
+    var key: String {
+        switch self { case .select: "V"; case .pen: "P"; case .highlight: "H"; case .rect: "R"; case .text: "T"; case .eraser: "E" }
+    }
     var help: String {
         switch self {
         case .select: "選取（一般看盤）"
@@ -286,6 +290,9 @@ struct AnnotationToolbar: View {
     @Binding var size: AnnoSize
     @ObservedObject private var store = AnnotationStore.shared
     @State private var confirmClear = false
+    @State private var hoverTool: AnnoTool?
+    @State private var tipTool: AnnoTool?
+    @State private var tipTask: Task<Void, Never>?
 
     var body: some View {
         HStack(spacing: 4) {
@@ -299,7 +306,35 @@ struct AnnotationToolbar: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressStyle())
-                .help(t.help)
+                // hover 停一下：上方出現深色小標籤「名稱  快捷鍵」（像 Figma）
+                .onHover { inside in
+                    tipTask?.cancel()
+                    if inside {
+                        hoverTool = t
+                        tipTask = Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 450_000_000)
+                            if !Task.isCancelled, hoverTool == t { withAnimation(Motion.fast) { tipTool = t } }
+                        }
+                    } else if hoverTool == t {
+                        hoverTool = nil
+                        withAnimation(Motion.fast) { tipTool = nil }
+                    }
+                }
+                .overlay(alignment: .top) {
+                    if tipTool == t {
+                        HStack(spacing: 8) {
+                            Text(t.help.replacingOccurrences(of: "（一般看盤）", with: "")).font(Font.zCalloutStrong)
+                            Text(t.key).font(Font.zCallout).opacity(0.6)
+                        }
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 10).frame(height: 28)
+                        .background(RoundedRectangle(cornerRadius: 7).fill(Color(white: 0.12)))
+                        .fixedSize()
+                        .offset(y: -40)
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                    }
+                }
                 if t == .select { divider }
             }
             // 顏色、粗細：選到畫筆、螢光筆、框線、文字時才展開
@@ -353,8 +388,7 @@ struct AnnotationToolbar: View {
             } message: { Text("可以按復原（⌘Z）找回來。") }
         }
         .padding(.horizontal, 8).padding(.vertical, 6)
-        .background(BackdropBlur(material: .popover).clipShape(RoundedRectangle(cornerRadius: 16)))
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color.zCard.opacity(0.55)))
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.zCard))   // 實心：淺色白底、深色深底
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.zLine))
         .shadow(color: Color.zShadow, radius: 14, y: 6)
         .animation(Motion.base, value: tool)

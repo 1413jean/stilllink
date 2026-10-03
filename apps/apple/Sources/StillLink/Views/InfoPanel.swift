@@ -82,20 +82,7 @@ struct InfoPanel: View {
                                     .font(Font.zCaption).foregroundStyle(Color.zText3)
                             }
                         }
-                        .padding(.bottom, 4)
-                        row("calendar", "國曆", mask(chart?.solarDate ?? current.solar))
-                        row("moon", "農曆", mask(chart.map { "\($0.lunarGanzhiDate) \($0.time)" } ?? ""))
-                        if let ts = current.trueSolar {
-                            row("sun.max", "真太陽時", mask(ts))
-                            row("clock", "鐘錶時間", mask(current.clock ?? ""))
-                        } else {
-                            row("clock", "時辰", mask(ZW.hours[current.hour] + "時"))
-                        }
-                        if let pl = current.place {
-                            row("mappin.and.ellipse", "出生地", pl.name)
-                        } else {
-                            row("mappin.slash", "出生地", "未填（無法換算真太陽時）")
-                        }
+                        // 國曆、農曆、時辰、出生地不再列出（中宮已經有）
                     }
                 }
 

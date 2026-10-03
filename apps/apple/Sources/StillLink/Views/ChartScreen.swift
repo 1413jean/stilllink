@@ -58,6 +58,7 @@ struct ChartScreen: View {
     @State private var annoTool: AnnoTool = .select      // 底部工具列：目前的標註工具（選取＝一般看盤）
     @State private var annoColor: AnnoColor = .red
     @State private var annoSize: AnnoSize = .medium
+    @State private var keyMonitor: Any?     // 標註工具快捷鍵（V P H R T E、Esc 回到選取）
     @State private var model: ChartModel?
     @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
@@ -238,6 +239,22 @@ struct ChartScreen: View {
             }
         }
         .background(Color.zBg)
+        .onAppear {
+            // 標註工具快捷鍵：打字中（焦點在文字框）不攔；Esc 回到選取
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
+                if e.window?.firstResponder is NSText { return e }
+                if !e.modifierFlags.intersection([.command, .control, .option]).isEmpty { return e }
+                if e.keyCode == 53 {   // Esc
+                    if annoTool != .select { withAnimation(Motion.fast) { annoTool = .select }; return nil }
+                    return e
+                }
+                guard let ch = e.charactersIgnoringModifiers?.uppercased(),
+                      let t = AnnoTool.allCases.first(where: { $0.key == ch }) else { return e }
+                withAnimation(Motion.fast) { annoTool = t }
+                return nil
+            }
+        }
+        .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
         .modifier(ChartChrome(enabled: chrome, title: ChartScreen.title(person), showInfo: $showInfo))
         .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
             let target = pick
