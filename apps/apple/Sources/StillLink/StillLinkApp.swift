@@ -128,7 +128,7 @@ struct RootView: View {
             }
             // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
             .transaction(value: route) { $0.animation = nil }
-            .overlay(alignment: .top) { TopFade(color: .zBg, height: 96) }
+            .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }
         }
         .toolbarBackground(.hidden, for: .windowToolbar)
         .overlay(alignment: .bottom) { ToastHost() }

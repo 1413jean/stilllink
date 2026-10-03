@@ -100,7 +100,9 @@ struct BackdropBlur: NSViewRepresentable {
             wantsLayer = true
             gradient.frame = bounds
             // 圖層座標原點在左下：startPoint y=1 是上面
-            gradient.colors = [NSColor.black.cgColor, NSColor.clear.cgColor]
+            // 緩和曲線（ease-out）：邊緣不會有一條明顯的界線
+            gradient.colors = [1, 0.8, 0.45, 0.15, 0].map { NSColor.black.withAlphaComponent($0).cgColor }
+            gradient.locations = [0, 0.25, 0.55, 0.8, 1]
             gradient.startPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
             gradient.endPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
             layer?.mask = gradient
