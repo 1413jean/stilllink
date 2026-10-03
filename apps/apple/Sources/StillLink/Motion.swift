@@ -72,16 +72,20 @@ struct PressStyle: ButtonStyle {
 /// 視窗頂端（工具列）漸層：底色 100% → 0%，整條寬度
 struct TopFade: View {
     let color: Color
+    var edge: VerticalEdge = .top
+    var height: CGFloat = 64
     var body: some View {
-        // 背景模糊＋底色，都由上（100%）往下漸變到 0；整排頂部一樣
+        // 背景模糊（前 60% 完整、之後淡出）＋底色由實到透；頂部、底部共用
+        let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
         ZStack {
             Rectangle().fill(.regularMaterial)
-                .mask(LinearGradient(colors: [.black, .black.opacity(0)], startPoint: .top, endPoint: .bottom))
-            LinearGradient(colors: [color, color.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.6), .init(color: .clear, location: 1)],
+                                     startPoint: start, endPoint: end))
+            LinearGradient(colors: [color.opacity(0.85), color.opacity(0)], startPoint: start, endPoint: end)
         }
-            .frame(height: 64)
-            .ignoresSafeArea(edges: .top)
-            .allowsHitTesting(false)
+        .frame(height: height)
+        .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
+        .allowsHitTesting(false)
     }
 }
 

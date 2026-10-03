@@ -278,7 +278,7 @@ struct AnnotationLayer: View {
     }
 }
 
-/// 底部浮動工具列（像 Figma）：工具、顏色、復原、清除
+/// 底部浮動工具列（像 Figma）：工具、顏色、復原、清除。淺色模式白底、深色模式深底（zCard）
 struct AnnotationToolbar: View {
     let chartID: UUID
     @Binding var tool: AnnoTool
@@ -293,7 +293,7 @@ struct AnnotationToolbar: View {
                 Button { withAnimation(Motion.fast) { tool = t } } label: {
                     Image(systemName: t.icon)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(tool == t ? Color.white : Color.white.opacity(0.75))
+                        .foregroundStyle(tool == t ? Color.zOnColor : Color.zText)
                         .frame(width: 38, height: 38)
                         .background(RoundedRectangle(cornerRadius: 10).fill(tool == t ? Color.zAccent : .clear))
                         .contentShape(Rectangle())
@@ -307,9 +307,9 @@ struct AnnotationToolbar: View {
             divider
             ForEach(AnnoColor.allCases, id: \.self) { c in
                 Button { color = c; if tool == .select || tool == .eraser { tool = .pen } } label: {
-                    Circle().fill(c == .black ? Color.white : c.color)
+                    Circle().fill(c.color)
                         .frame(width: 16, height: 16)
-                        .overlay(Circle().stroke(Color.white, lineWidth: color == c ? 2 : 0).padding(-3))
+                        .overlay(Circle().stroke(Color.zText, lineWidth: color == c ? 2 : 0).padding(-3))
                         .frame(width: 26, height: 38)
                         .contentShape(Rectangle())
                 }
@@ -321,10 +321,10 @@ struct AnnotationToolbar: View {
             // 粗細：細、中、粗（畫筆、螢光筆、框線）
             ForEach(AnnoSize.allCases, id: \.self) { z in
                 Button { size = z; if tool == .select || tool == .eraser || tool == .text { tool = .pen } } label: {
-                    Circle().fill(Color.white.opacity(size == z ? 1 : 0.55))
+                    Circle().fill(size == z ? Color.zText : Color.zText3)
                         .frame(width: z.dot, height: z.dot)
                         .frame(width: 26, height: 38)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(size == z ? Color.white.opacity(0.14) : .clear).padding(.vertical, 6))
+                        .background(RoundedRectangle(cornerRadius: 8).fill(size == z ? Color.zHover : .clear).padding(.vertical, 6))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressStyle())
@@ -335,7 +335,7 @@ struct AnnotationToolbar: View {
             divider
             Button { store.undoLast(chartID) } label: {
                 Image(systemName: "arrow.uturn.backward").font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(store.canUndo(chartID) ? 0.85 : 0.3))
+                    .foregroundStyle(store.canUndo(chartID) ? Color.zText : Color.zText3)
                     .frame(width: 34, height: 38).contentShape(Rectangle())
             }
             .buttonStyle(PressStyle()).disabled(!store.canUndo(chartID))
@@ -343,7 +343,7 @@ struct AnnotationToolbar: View {
             .help("復原 ⌘Z")
             Button { confirmClear = true } label: {
                 Image(systemName: "trash").font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(store.list(chartID).isEmpty ? 0.3 : 0.85))
+                    .foregroundStyle(store.list(chartID).isEmpty ? Color.zText3 : Color.zText)
                     .frame(width: 34, height: 38).contentShape(Rectangle())
             }
             .buttonStyle(PressStyle()).disabled(store.list(chartID).isEmpty)
@@ -353,14 +353,15 @@ struct AnnotationToolbar: View {
             } message: { Text("可以按復原（⌘Z）找回來。") }
         }
         .padding(.horizontal, 8).padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.16)))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.08)))
-        .shadow(color: Color.black.opacity(0.25), radius: 14, y: 6)
+        .background(RoundedRectangle(cornerRadius: 16).fill(.regularMaterial))
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.zCard.opacity(0.55)))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.zLine))
+        .shadow(color: Color.zShadow, radius: 14, y: 6)
         .animation(Motion.base, value: tool)
         .onExitCommand { tool = .select }   // Esc 回到選取
     }
 
     private var divider: some View {
-        Rectangle().fill(Color.white.opacity(0.14)).frame(width: 1, height: 26).padding(.horizontal, 4)
+        Rectangle().fill(Color.zLine).frame(width: 1, height: 26).padding(.horizontal, 4)
     }
 }

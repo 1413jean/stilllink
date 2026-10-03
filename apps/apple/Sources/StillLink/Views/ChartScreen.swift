@@ -151,6 +151,11 @@ struct ChartScreen: View {
                 .scrollClipDisabled()
                 .mask(Rectangle().padding(.top, -80))
 
+                // 命盤區底部：跟頂部一樣的漸層＋背景模糊
+                TopFade(color: .zBg, edge: .bottom, height: 90)
+                    .frame(width: usable)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
                 // 底部浮動工具列（標註）：在命盤區正中間
                 AnnotationToolbar(chartID: person.id, tool: $annoTool, color: $annoColor, size: $annoSize)
                     .frame(width: usable)

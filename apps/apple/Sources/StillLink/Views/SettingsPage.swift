@@ -19,26 +19,39 @@ struct SettingsPage: View {
         }
     }
 
+    /// 左邊的分類（整理過：相關的放在同一頁）
     enum Section: String, CaseIterable, Identifiable {
-        case profile = "個人檔案", account = "帳號與同步", chart = "排盤", mutagen = "四化", stars = "星曜", periods = "運限", display = "盤面標記", panel = "右側面板", feel = "音效與動畫", appearance = "外觀", data = "資料", about = "關於"
+        case profile = "個人檔案與資料", account = "帳號與同步", chart = "排盤", display = "盤面顯示", look = "外觀與音效", about = "關於"
         var id: String { rawValue }
         var icon: String {
             switch self {
             case .profile: "person.crop.circle"
             case .account: "icloud"
             case .chart: "square.grid.3x3"
-            case .mutagen: "sparkle"
-            case .stars: "sparkles"
-            case .periods: "calendar"
             case .display: "eye"
-            case .panel: "sidebar.right"
-            case .feel: "speaker.wave.2"
-            case .appearance: "circle.lefthalf.filled"
-            case .data: "externaldrive"
+            case .look: "circle.lefthalf.filled"
             case .about: "info.circle"
             }
         }
+        /// 這一頁由哪幾段組成
+        fileprivate var parts: [Part] {
+            switch self {
+            case .profile: [.profile, .data]
+            case .account: [.account]
+            case .chart: [.chart, .mutagen]
+            case .display: [.stars, .periods, .display, .panel]
+            case .look: [.appearance, .feel]
+            case .about: [.about]
+            }
+        }
+        /// 舊的分類名稱也找得到（ZIWEI_SETTINGS=stars 之類）
+        static func find(_ key: String) -> Section? {
+            allCases.first { "\($0)" == key } ?? Part(rawValue: key).flatMap { p in allCases.first { $0.parts.contains(p) } }
+        }
     }
+
+    /// 每一頁裡的一段
+    fileprivate enum Part: String { case profile, account, chart, mutagen, stars, periods, display, panel, feel, appearance, data, about }
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -69,7 +82,13 @@ struct SettingsPage: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    if let doc { legalPage(doc) } else { content }
+                    if let doc { legalPage(doc) } else {
+                        Text(section.rawValue).font(Font.zTitle).foregroundStyle(Color.zText).padding(.bottom, 8)
+                        ForEach(section.parts, id: \.self) { p in
+                            VStack(alignment: .leading, spacing: 0) { part(p) }
+                                .padding(.bottom, p == section.parts.last ? 0 : 28)
+                        }
+                    }
                 }
                 .frame(maxWidth: 720, alignment: .leading)
                 .padding(.horizontal, 32)
@@ -78,6 +97,7 @@ struct SettingsPage: View {
                 .id(doc?.id ?? section.rawValue)
                 .transition(.opacity)
             }
+            .defaultScrollAnchor(.top)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color.zBg)
@@ -85,9 +105,9 @@ struct SettingsPage: View {
     }
 
     @ViewBuilder
-    private var content: some View {
+    private func part(_ p: Part) -> some View {
         let s = $store.settings
-        switch section {
+        switch p {
         case .profile:
             title("個人檔案")
             row("頭貼", "顯示在左下角與你的命盤；上傳後可裁切，會自動壓縮") {
@@ -351,8 +371,12 @@ struct SettingsPage: View {
 
     // MARK: 版面元件（同新增命盤頁）
 
+    /// 每一段的小標題；跟頁面標題一樣時就不重複
+    @ViewBuilder
     private func title(_ t: String) -> some View {
-        Text(t).font(Font.zTitle).foregroundStyle(Color.zText).padding(.bottom, 8)
+        if t != section.rawValue {
+            Text(t).font(Font.zCalloutStrong).foregroundStyle(Color.zText3).padding(.bottom, 4)
+        }
     }
 
     private func note(_ t: String) -> some View {

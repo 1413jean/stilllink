@@ -199,7 +199,7 @@ struct RootView: View {
         if env["ZIWEI_NEWSELF"] != nil { go(.newSelf) }
         if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
-            if let s = SettingsPage.Section.allCases.first(where: { "\($0)" == v }) {
+            if let s = SettingsPage.Section.find(v) {
                 NotificationCenter.default.post(name: .openSettings, object: s)
             } else { go(.settings) }
         }

@@ -69,12 +69,12 @@ struct Sidebar: View {
                             Button("個人檔案…") { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) }
                         }
                     }
-                    NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", selected: route == .new, action: onNew)
                     if StarNotes.enabled {
                     NavRow(icon: "book.closed", title: "星曜筆記", selected: { if case .starNotes = route { true } else { false } }()) {
                         NotificationCenter.default.post(name: .openStarNotes, object: nil)
                     }
                     }
+                    NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", selected: route == .new, action: onNew)
                     if searching {
                         HStack(spacing: 8) {
                             Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
@@ -434,7 +434,7 @@ private struct SectionLabel: View {
                     }
                     .pickerStyle(.inline)
                 } label: {
-                    Image(systemName: sort.wrappedValue == .custom ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                    Image(systemName: "line.3.horizontal.decrease")
                         .font(Font.zCaptionStrong)
                         .foregroundStyle(sortHover || sort.wrappedValue != .custom ? Color.zText : Color.zText3)
                         .frame(width: 22, height: 22)

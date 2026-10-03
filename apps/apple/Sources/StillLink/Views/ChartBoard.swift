@@ -272,6 +272,7 @@ private struct PalaceCell: View {
                     .fixedSize()
                 }
             }
+            .frame(minHeight: fs * 2.4, alignment: .top)   // 星曜區至少留一行主星的高度，不會被下方擠到消失
             .layoutPriority(-1)
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -352,28 +353,32 @@ private struct PalaceCell: View {
                     }
                 }
                 Spacer(minLength: 0)
-                VStack(spacing: 0) {
-                    // 身宮：排在長生上面（同一欄），不會壓到字
-                    if p.isBody && settings.showBody {
-                        VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
-                            .padding(.vertical, 3).padding(.horizontal, 1)
-                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
-                            .padding(.bottom, 3)
+                // 身宮、來因放在天干地支左邊並排（往上疊會太高，把星曜區擠沒）
+                HStack(alignment: .bottom, spacing: 2) {
+                    if (p.isBody && settings.showBody) || laiyin {
+                        VStack(spacing: 3) {
+                            if p.isBody && settings.showBody {
+                                VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
+                                    .padding(.vertical, 3).padding(.horizontal, 1)
+                                    .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
+                            }
+                            if laiyin {
+                                VerticalText("來因", size: ChartType.meta(fs), color: .zOnColor, weight: .semibold)
+                                    .padding(.vertical, 2).padding(.horizontal, 1)
+                                    .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
+                            }
+                        }
+                        .padding(.bottom, 2)
                     }
-                    // 來因宮：直排紅底，放在長生上面
-                    if laiyin {
-                        VerticalText("來因", size: ChartType.meta(fs), color: .zOnColor, weight: .semibold)
-                            .padding(.vertical, 2).padding(.horizontal, 1)
-                            .background(RoundedRectangle(cornerRadius: 2).fill(Color.wmRed))
-                            .padding(.bottom, 2)
+                    VStack(spacing: 0) {
+                        // 長生十二神：自己一個開關（預設關）
+                        if settings.showChangsheng {
+                            VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
+                                .padding(.bottom, 2)
+                        }
+                        Text(p.stem).font(ChartType.font(ChartType.ganzhi(fs)))
+                        Text(p.branch).font(ChartType.font(ChartType.ganzhi(fs)))
                     }
-                    // 長生十二神：自己一個開關（預設關）
-                    if settings.showChangsheng {
-                        VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
-                            .padding(.bottom, 2)
-                    }
-                    Text(p.stem).font(ChartType.font(ChartType.ganzhi(fs)))
-                    Text(p.branch).font(ChartType.font(ChartType.ganzhi(fs)))
                 }
                 .foregroundStyle(Color.zText)
             }
