@@ -77,7 +77,7 @@ struct GroupDial: View {
             .background(GeometryReader { fg in
                 Color.clear
                     .onAppear { frame = fg.frame(in: .global) }
-                    .onChange(of: fg.frame(in: .global)) { _, f in frame = f }
+                    .onChange(of: fg.frame(in: .global)) { f in frame = f }
             })
         }
         .frame(height: 46)
@@ -93,7 +93,7 @@ struct GroupDial: View {
             if let monitor { NSEvent.removeMonitor(monitor) }
             monitor = nil
         }
-        .onChange(of: selection) { _, s in
+        .onChange(of: selection) { s in
             guard let i = options.firstIndex(of: s), i != current else { return }
             withAnimation(Motion.snap) { offset = CGFloat(i) * itemW }
         }

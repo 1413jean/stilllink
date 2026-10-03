@@ -158,12 +158,12 @@ struct PanRow<Content: View>: View {
                 .background(GeometryReader { cg in
                     Color.clear
                         .onAppear { contentW = cg.size.width; contentH = cg.size.height }
-                        .onChange(of: cg.size) { _, z in contentW = z.width; contentH = z.height; clamp() }
+                        .onChange(of: cg.size) { z in contentW = z.width; contentH = z.height; clamp() }
                 })
                 .offset(x: -offset)
                 .frame(width: g.size.width, alignment: .leading)
                 .onAppear { viewW = g.size.width }
-                .onChange(of: g.size.width) { _, w in viewW = w; clamp() }
+                .onChange(of: g.size.width) { w in viewW = w; clamp() }
         }
         .frame(height: contentH)   // GeometryReader 本身沒有高度，照內容撐
         .clipped()
@@ -186,7 +186,7 @@ struct PanRow<Content: View>: View {
         .background(GeometryReader { fg in
             Color.clear
                 .onAppear { frame = fg.frame(in: .global) }
-                .onChange(of: fg.frame(in: .global)) { _, f in frame = f }
+                .onChange(of: fg.frame(in: .global)) { f in frame = f }
         })
         .onAppear(perform: installScrollMonitor)
         .onDisappear {

@@ -139,7 +139,7 @@ struct SettingsPage: View {
             .help("關閉（Esc）")
             .padding(14)
         }
-        .onChange(of: query) { _, _ in matches = [:] }
+        .onChange(of: query) { _ in matches = [:] }
     }
 
     /// 左欄：搜尋＋分組分類
