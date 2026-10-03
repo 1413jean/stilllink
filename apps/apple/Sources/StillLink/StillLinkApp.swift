@@ -169,7 +169,7 @@ struct RootView: View {
                 else if !wide, sidebarAutoHidden { columns = .all; sidebarAutoHidden = false }
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openStarNotes)) { n in go(.starNotes(n.object as? String)) }
+        .onReceive(NotificationCenter.default.publisher(for: .openStarNotes)) { n in if StarNotes.enabled { go(.starNotes(n.object as? String)) } }
         .onReceive(NotificationCenter.default.publisher(for: .openTemp)) { n in
             if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
         }

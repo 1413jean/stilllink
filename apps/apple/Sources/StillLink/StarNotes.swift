@@ -12,6 +12,8 @@ struct StarNote: Codable, Equatable {
 @MainActor
 final class StarNotes: ObservableObject {
     static let shared = StarNotes()
+    /// 星曜筆記先只在測試版開放，正式版隱藏（Jean：正式先不要上）
+    nonisolated static var enabled: Bool { AppInfo.isBeta }
     static let palaceKeys = ["命", "兄", "夫", "子", "財", "疾", "遷", "友", "官", "田", "福", "父"]
 
     /// 筆記頁的分組（依序）

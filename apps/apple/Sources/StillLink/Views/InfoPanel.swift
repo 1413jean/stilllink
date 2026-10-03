@@ -82,7 +82,7 @@ struct InfoPanel: View {
                 }
 
                 // 星曜筆記：點選宮位裡每顆星的意思（總論＋落在這一宮），可以自己改寫
-                if let chart, let i = selectedPalace, i < chart.palaces.count {
+                if StarNotes.enabled, let chart, let i = selectedPalace, i < chart.palaces.count {
                     card("星曜筆記 · \(chart.palaces[i].name)三方四正",
                          action: ("book.closed", { NotificationCenter.default.post(name: .openStarNotes, object: nil) })) {
                         StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes).id(i)
