@@ -54,6 +54,7 @@ struct ChartScreen: View {
     @AppStorage("showInfoPanel") private var showInfo = true
     @AppStorage("infoPanelW") private var panelW: Double = Double(infoPanelWidth)   // 右側面板寬度（左緣可拖拉，會記住）
     @State private var dragStartW: Double?
+    @State private var lastNarrow: Bool?        // 上一次因為視窗窄收起側欄的狀態
     @State private var handleHover = false
     @State private var annoTool: AnnoTool = .select      // 底部工具列：目前的標註工具（選取＝一般看盤）
     @State private var annoColor: AnnoColor = .red
@@ -105,10 +106,13 @@ struct ChartScreen: View {
     var body: some View {
         // 捲動區佔滿整個寬度（捲軸貼在視窗最右邊）；右側資訊卡固定浮在右上角，不跟著捲
         GeometryReader { geo in
+            // 視窗太窄：先收左側欄（見下方 onChange），還是太窄才暫時藏右側面板，命盤不被犧牲
+            let showInfo = self.showInfo && geo.size.width - CGFloat(panelW) - 24 >= minBoardRoom
             let panelSpace: CGFloat = showInfo ? CGFloat(panelW) + 24 : 0
             let usable = geo.size.width - panelSpace
             // 盤面高度留出：上邊距＋運限表的大限、流年兩列（約 90）＋底部工具列（約 90），一打開就看得到大限流年
             let boardW = min(usable - 48, boardMaxWidth, max(460, (geo.size.height - 210) / boardAspect))
+            let _ = autoSidebar(geo.size.width)
             ZStack(alignment: .bottom) {
                 ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                     VStack(spacing: 12) {
@@ -274,6 +278,20 @@ struct ChartScreen: View {
                 withTransaction(t) { model = m; shownLevel = target.level }
             }
             Engine.shared.prefetch(person, around: target)
+        }
+    }
+
+    /// 命盤至少要留的寬度（扣掉右側面板後）
+    private var minBoardRoom: CGFloat { 560 }
+
+    /// 視窗變窄時自動收起左側欄；變寬到側欄放回去也夠用時再打開（中間留一段緩衝，避免一收一放來回跳）
+    private func autoSidebar(_ width: CGFloat) {
+        let room = width - (self.showInfo ? CGFloat(panelW) + 24 : 0)
+        let narrow: Bool? = room < minBoardRoom + 40 ? true : room > minBoardRoom + 340 ? false : nil
+        guard let narrow, narrow != lastNarrow else { return }
+        DispatchQueue.main.async {
+            lastNarrow = narrow
+            NotificationCenter.default.post(name: .infoPanelWide, object: narrow)
         }
     }
 

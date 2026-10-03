@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 命盤上的標註：畫筆、螢光筆、框線、文字。座標存成 0～1（相對盤面大小），縮放、換視窗大小都對得上
 struct Mark: Codable, Identifiable, Equatable {
-    enum Kind: String, Codable { case pen, highlight, rect, text }
+    enum Kind: String, Codable { case pen, highlight, rect, text, arrow }
     var id = UUID()
     var kind: Kind
     var points: [CGPoint]          // 畫筆、螢光筆：路徑；框線：起點＋終點；文字：左上角
@@ -21,7 +21,7 @@ enum AnnoSize: String, CaseIterable {
 }
 
 enum AnnoTool: String, CaseIterable {
-    case select, pen, highlight, rect, text, eraser, comment
+    case select, pen, highlight, arrow, rect, text, eraser, comment
     var icon: String {
         switch self {
         case .select: "cursorarrow"
@@ -31,11 +31,12 @@ enum AnnoTool: String, CaseIterable {
         case .text: "t.square"
         case .eraser: "eraser"
         case .comment: "bubble.left"
+        case .arrow: "arrow.up.right"
         }
     }
     /// 快捷鍵（單一字母；打字中不會觸發）
     var key: String {
-        switch self { case .select: "V"; case .pen: "P"; case .highlight: "H"; case .rect: "R"; case .text: "T"; case .eraser: "E"; case .comment: "C" }
+        switch self { case .select: "V"; case .pen: "P"; case .highlight: "H"; case .rect: "R"; case .text: "T"; case .eraser: "E"; case .comment: "C"; case .arrow: "A" }
     }
     var help: String {
         switch self {
@@ -46,6 +47,7 @@ enum AnnoTool: String, CaseIterable {
         case .text: "文字註解"
         case .eraser: "橡皮擦"
         case .comment: "備註"
+        case .arrow: "箭頭直線"
         }
     }
 }
@@ -170,6 +172,20 @@ struct AnnotationLayer: View {
             let r = CGRect(x: min(pts[0].x, pts[1].x), y: min(pts[0].y, pts[1].y),
                            width: abs(pts[1].x - pts[0].x), height: abs(pts[1].y - pts[0].y))
             ctx.stroke(Path(roundedRect: r, cornerRadius: 4), with: .color(c), lineWidth: (AnnoSize(rawValue: m.size ?? "") ?? .medium).pen)
+        case .arrow:
+            // 直線＋箭頭（箭頭大小跟著粗細）
+            guard pts.count == 2 else { return }
+            let w = (AnnoSize(rawValue: m.size ?? "") ?? .medium).pen
+            let a = pts[0], b = pts[1]
+            let ang = atan2(b.y - a.y, b.x - a.x), head = max(9, w * 4)
+            var line = Path(); line.move(to: a); line.addLine(to: CGPoint(x: b.x - cos(ang) * head * 0.6, y: b.y - sin(ang) * head * 0.6))
+            ctx.stroke(line, with: .color(c), style: StrokeStyle(lineWidth: w, lineCap: .round))
+            var tip = Path()
+            tip.move(to: b)
+            tip.addLine(to: CGPoint(x: b.x - cos(ang - .pi / 7) * head, y: b.y - sin(ang - .pi / 7) * head))
+            tip.addLine(to: CGPoint(x: b.x - cos(ang + .pi / 7) * head, y: b.y - sin(ang + .pi / 7) * head))
+            tip.closeSubpath()
+            ctx.fill(tip, with: .color(c))
         case .text:
             break
         }
@@ -214,8 +230,8 @@ struct AnnotationLayer: View {
         case .pen, .highlight:
             if drawing == nil { drawing = Mark(kind: tool == .pen ? .pen : .highlight, points: [norm(v.startLocation, size)], color: color.rawValue, size: self.size.rawValue) }
             drawing?.points.append(p)
-        case .rect:
-            drawing = Mark(kind: .rect, points: [norm(v.startLocation, size), p], color: color.rawValue, size: self.size.rawValue)
+        case .rect, .arrow:
+            drawing = Mark(kind: tool == .rect ? .rect : .arrow, points: [norm(v.startLocation, size), p], color: color.rawValue, size: self.size.rawValue)
         case .eraser:
             erase(at: v.location, size: size)
         default:
@@ -225,8 +241,11 @@ struct AnnotationLayer: View {
 
     private func ended(_ v: DragGesture.Value, size: CGSize) {
         switch tool {
-        case .pen, .highlight, .rect:
-            if let m = drawing { store.edit(chartID) { $0.append(m) } }
+        case .pen, .highlight, .rect, .arrow:
+            // 箭頭太短（只是點一下）就不留
+            if let m = drawing, m.kind != .arrow || hypot((m.points[1].x - m.points[0].x) * size.width, (m.points[1].y - m.points[0].y) * size.height) > 6 {
+                store.edit(chartID) { $0.append(m) }
+            }
             drawing = nil
         case .text:
             finishText()
@@ -275,6 +294,12 @@ struct AnnotationLayer: View {
                 let r = CGRect(x: min(pts[0].x, pts[1].x), y: min(pts[0].y, pts[1].y),
                                width: abs(pts[1].x - pts[0].x), height: abs(pts[1].y - pts[0].y))
                 return r.insetBy(dx: -8, dy: -8).contains(p) && !r.insetBy(dx: 8, dy: 8).contains(p)
+            case .arrow:
+                guard pts.count == 2 else { return false }
+                // 點到線段的距離
+                let a = pts[0], b = pts[1], dx = b.x - a.x, dy = b.y - a.y
+                let t = max(0, min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / max(1, dx * dx + dy * dy)))
+                return hypot(a.x + t * dx - p.x, a.y + t * dy - p.y) < 10
             case .text:
                 guard let o = pts.first else { return false }
                 return CGRect(x: o.x - 4, y: o.y - 4, width: 200, height: 30).contains(p)
@@ -340,7 +365,7 @@ struct AnnotationToolbar: View {
                 if t == .select { divider }
             }
             // 顏色、粗細：選到畫筆、螢光筆、框線、文字時才展開
-            if [.pen, .highlight, .rect, .text].contains(tool) {
+            if [.pen, .highlight, .arrow, .rect, .text].contains(tool) {
             divider
             ForEach(AnnoColor.allCases, id: \.self) { c in
                 Button { color = c; if tool == .select || tool == .eraser { tool = .pen } } label: {

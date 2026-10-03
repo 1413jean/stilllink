@@ -212,6 +212,7 @@ struct VerticalText: View {
 
 private struct PalaceCell: View {
     @Environment(\.zSettings) private var settings
+    @Environment(\.displayScale) private var displayScale
     let model: ChartModel
     let index: Int
     let level: Int
@@ -393,7 +394,7 @@ private struct PalaceCell: View {
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(selected ? Color.wmSel : inSF || inLockedSF ? Color.wmSF : Color.clear)   // 鎖定那組只靠框線區分，底色一樣用三方灰
-        .overlay(Rectangle().stroke(Color.zGrid, lineWidth: 0.5))
+        .overlay(Rectangle().stroke(Color.zGrid, lineWidth: max(0.5, 1 / displayScale)))   // 固定 1 個實際像素：一般螢幕（1x）上 0.5pt 會淡到看不見
         // 鎖定的宮位：粗實線；它的三方四正：細一點的強調色邊框
         .overlay(isLocked ? Rectangle().strokeBorder(Color.zAccent, lineWidth: 3) : nil)
         .overlay(inLockedSF ? Rectangle().strokeBorder(Color.zAccent.opacity(0.8), lineWidth: 1.6) : nil)
@@ -519,6 +520,7 @@ private struct StarColumn: View {
 }
 
 private struct CenterInfo: View {
+    @Environment(\.displayScale) private var displayScale
     @Environment(\.zSettings) private var settings
     @AppStorage("hideBirth") private var hideBirth = false
     private func mask(_ s: String) -> String { hideBirth ? "••••••" : s }
@@ -641,7 +643,7 @@ private struct CenterInfo: View {
             .padding(.vertical, fs * 0.4)
             .minimumScaleFactor(0.8)
         }
-        .overlay(Rectangle().stroke(Color.zGrid, lineWidth: 0.5))
+        .overlay(Rectangle().stroke(Color.zGrid, lineWidth: max(0.5, 1 / displayScale)))   // 固定 1 個實際像素：一般螢幕（1x）上 0.5pt 會淡到看不見
     }
 
     private func label(_ s: String) -> some View {
