@@ -31,6 +31,9 @@ struct StillLinkApp: App {
                 Button("新增命盤") { NotificationCenter.default.post(name: .newChart, object: nil) }
                     .keyboardShortcut("n")
             }
+            CommandGroup(replacing: .help) {
+                Button("回報問題…") { BugReport.run(store: store) }
+            }
         }
     }
 }
@@ -199,6 +202,9 @@ struct RootView: View {
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
         if env["ZIWEI_NEW"] != nil { go(.new) }
         if env["ZIWEI_NEWSELF"] != nil { go(.newSelf) }
+        if let p = env["ZIWEI_REPORT"] {   // 驗證用：把問題回報內容寫到檔案
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { try? BugReport.report(store: store).write(toFile: p, atomically: true, encoding: .utf8) }
+        }
         if let t = env["ZIWEI_TOAST"] { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { Toast.show(t) } }   // 驗證用：跳一個提示條
         if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節

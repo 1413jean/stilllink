@@ -455,6 +455,7 @@ struct AddBoardButton: View {
 
 /// 命盤區左下角的「?」：點開是看盤小提示，點旁邊就收起來
 struct TipsButton: View {
+    @EnvironmentObject private var store: Store
     @State private var open = false
     @State private var hover = false
 
@@ -477,6 +478,15 @@ struct TipsButton: View {
                 tip("lock", "長按或點兩下宮位：鎖定這組三方四正，再點別的宮位就能兩組一起比較；再長按或點兩下解鎖")
                 tip("arrow.triangle.2.circlepath", "右鍵宮位：以這一宮為命（轉宮）")
                 tip("pencil.tip", "底部工具列可以畫線、框、箭頭和放備註；快捷鍵 V P H A R E C，Esc 回到選取")
+                Divider().padding(.vertical, 2)
+                // 畫面怪怪的：一鍵複製版本、系統、螢幕資訊，貼給 Jean
+                Button { open = false; BugReport.run(store: store) } label: {
+                    Label("回報問題…", systemImage: "exclamationmark.bubble")
+                        .zText(.footnote).foregroundStyle(Color.zText2)
+                        .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
             .padding(16)
             .frame(width: 300)
