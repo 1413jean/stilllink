@@ -81,6 +81,25 @@ struct InfoPanel: View {
                     }
                 }
 
+                // 盤面顯示：常用的顯示開關，點標籤就開關（跟設定頁同一份設定）
+                card("盤面顯示", action: ("gearshape", { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.stars) })) {
+                    FlowLayout(spacing: 6, lineSpacing: 6) {
+                        displayToggle("雜曜", \.showAdj)
+                        displayToggle("流曜", \.showFlowStars)
+                        displayToggle("神煞", \.showShensha)
+                        displayToggle("長生十二神", \.showChangsheng)
+                        displayToggle("小限疊盤", \.showMinorOverlay)
+                        displayToggle("流年小限歲數", \.showAgeLines)
+                        displayToggle("身宮", \.showBody)
+                        displayToggle("來因宮", \.showLaiyin)
+                        displayToggle("三方四正線", \.showSanfang)
+                        displayToggle("自化箭頭", \.showSelf)
+                        displayToggle("轉宮宮名", \.showTransfer)
+                        displayToggle("方位", \.showCompass)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
                 // 星曜筆記：點選宮位裡每顆星的意思（總論＋落在這一宮），可以自己改寫
                 if StarNotes.enabled, let chart, let i = selectedPalace, i < chart.palaces.count {
                     card("星曜筆記 · \(chart.palaces[i].name)三方四正",
@@ -228,6 +247,25 @@ struct InfoPanel: View {
             Image(systemName: icon).font(Font.zCaption).foregroundStyle(Color.zText3).frame(width: 14)
             Text(text).font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// 盤面顯示的小標籤：開著＝深色實心＋勾，關著＝外框
+    private func displayToggle(_ title: String, _ key: WritableKeyPath<ZSettings, Bool>) -> some View {
+        let on = store.settings[keyPath: key]
+        return Button {
+            withAnimation(Motion.fast) { store.settings[keyPath: key].toggle() }
+        } label: {
+            HStack(spacing: 4) {
+                if on { Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)) }
+                Text(title).font(Font.zCaption)
+            }
+            .foregroundStyle(on ? Color.zBg : Color.zText2)
+            .padding(.horizontal, 10).frame(height: 28)
+            .background(Capsule().fill(on ? Color.zText : Color.clear))
+            .overlay(Capsule().stroke(on ? Color.clear : Color.zLine))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressStyle())
     }
 
     private func card<C: View>(_ title: String, action: (String, () -> Void)? = nil, actions: [(String, String, () -> Void)] = [],
