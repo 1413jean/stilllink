@@ -499,7 +499,12 @@ extension PalaceCell {
                                return (m, lv == 0 ? Color.fBirth : Color.fScopes[lv - 1])
                            })
             }
-            ForEach(settings.showAdj ? p.adj : [], id: \.name) { s in
+            // 重要雜曜（紅鸞、天喜、咸池、天姚、天刑）用主星字級排在前面，其他雜曜小字
+            let adj = settings.showAdj ? p.adj : []
+            ForEach(adj.filter { ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
+                VerticalText(s.name, size: ChartType.star(f), color: settings.tone(.misc).color)
+            }
+            ForEach(adj.filter { !ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
                 VerticalText(s.name, size: adjF, color: settings.tone(.misc).color)
             }
     }
@@ -519,7 +524,7 @@ private struct StarColumn: View {
     var body: some View {
         let tone = settings.starTone(type: star.type)
         let list = boxes
-        let size: CGFloat = list.count > 3 ? 0.98 : 1.12
+        let size: CGFloat = list.count > 3 ? 1.06 : 1.22   // 四化方塊放大一點，比星名更醒目
         // 星名下同一直排：生年 → 大限 → 流年 → 小限 → 流月…（最多三層＋小限）
         VStack(spacing: 0.5) {
             VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,

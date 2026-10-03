@@ -139,26 +139,68 @@ enum Toast {
     static func show(_ text: String) { NotificationCenter.default.post(name: .toast, object: text) }
 }
 
+/// 提示條要對齊的水平中心（視窗座標）：命盤頁會回報底部工具列的中心，其他頁用整個畫面的中間
+@MainActor
+final class ToastAnchor: ObservableObject {
+    static let shared = ToastAnchor()
+    @Published var centerX: CGFloat?
+}
+
 /// 畫面底部的提示條，2 秒後自動消失
 struct ToastHost: View {
     @State private var text: String?
     @State private var token = 0
+    @ObservedObject private var anchor = ToastAnchor.shared
     var body: some View {
+        GeometryReader { g in
+            let frame = g.frame(in: .global)
+            let x = anchor.centerX.map { $0 - frame.minX } ?? frame.width / 2
+            bar.position(x: x, y: frame.height - 104)   // 在底部工具列正上方
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// 依訊息內容配 icon：失敗／錯誤用驚嘆號，提示說明用 i，其他（已複製、已儲存…）用打勾
+    private static func kind(_ t: String) -> Int {
+        if t.contains("失敗") || t.contains("不是") || t.contains("錯誤") { return 2 }
+        if t.hasPrefix("已") && !t.contains("鎖定「") { return 0 }
+        return 1
+    }
+    static func icon(for t: String) -> String {
+        ["checkmark.circle.fill", "info.circle.fill", "exclamationmark.triangle.fill"][kind(t)]
+    }
+    static func iconColor(for t: String) -> Color {
+        [Color.zAccent, Color.zBg.opacity(0.85), Color(red: 1, green: 0.62, blue: 0.3)][kind(t)]
+    }
+
+    private var bar: some View {
         ZStack {
             if let text {
-                Text(text)
-                    .font(Font.zCalloutStrong)
-                    .foregroundStyle(Color.zBg)
-                    .padding(.horizontal, 16).frame(height: 36)
-                    .background(Capsule().fill(Color.zText))
+                HStack(spacing: 10) {
+                    Image(systemName: Self.icon(for: text))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Self.iconColor(for: text))
+                    Text(text)
+                        .font(Font.zCalloutStrong)
+                        .foregroundStyle(Color.zBg)
+                        .lineLimit(2)
+                }
+                .padding(.leading, 18).padding(.trailing, 22).padding(.vertical, 12)
+                // 背景模糊＋半透明深色，後面的盤面隱約透出來
+                .background(
+                    ZStack {
+                        BackdropBlur(material: .hudWindow)
+                        Color.zText.opacity(0.64)
+                    }
+                    .clipShape(Capsule())
+                )
+                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                     // 兩層陰影：一層大而柔、一層貼近輪廓，浮起來比較明顯
                     .shadow(color: .black.opacity(0.18), radius: 14, y: 6)
                     .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
                     .transition(.opacity.combined(with: .offset(y: 12)))
             }
         }
-        .padding(.bottom, 124)   // 剛好在下方 AI 輸入框上面一點
-        .allowsHitTesting(false)
         .onReceive(NotificationCenter.default.publisher(for: .toast)) { n in
             guard let t = n.object as? String else { return }
             token += 1

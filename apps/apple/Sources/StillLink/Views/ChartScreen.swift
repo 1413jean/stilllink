@@ -173,6 +173,12 @@ struct ChartScreen: View {
 
                 // 底部浮動工具列（標註）：在命盤區正中間
                 AnnotationToolbar(chartID: person.id, tool: $annoTool, color: $annoColor, size: $annoSize)
+                    // 回報工具列的水平中心，提示條（snackbar）對齊它
+                    .background(GeometryReader { tg in
+                        Color.clear
+                            .onAppear { ToastAnchor.shared.centerX = tg.frame(in: .global).midX }
+                            .onChange(of: tg.frame(in: .global).midX) { _, v in ToastAnchor.shared.centerX = v }
+                    })
                     .frame(width: usable)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, store.settings.showComposer ? 150 : 22)
@@ -272,7 +278,10 @@ struct ChartScreen: View {
                 return nil
             }
         }
-        .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
+        .onDisappear {
+            if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
+            ToastAnchor.shared.centerX = nil
+        }
         // 驗證用：ZIWEI_CURSOR_DUMP=資料夾 把各工具游標存成 PNG
         .task {
             guard let dir = ProcessInfo.processInfo.environment["ZIWEI_CURSOR_DUMP"] else { return }
