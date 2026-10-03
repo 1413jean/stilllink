@@ -325,6 +325,14 @@ private struct PalaceCell: View {
                         Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
                             .lineLimit(1).fixedSize()
                     }
+                    // 小限疊盤關著時：小限命宮在流月上面標一個橫的小框「小限」
+                    if level >= 2 && !settings.showMinorOverlay && horo.age.index == index {
+                        Text("小限").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText2)
+                            .padding(.horizontal, 3).padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
+                            .fixedSize()
+                            .padding(.bottom, 2)
+                    }
                     // 流月（同文墨天機，例：冬月庚）：寫在神煞欄最上面
                     if let monthLabel { Text(monthLabel).foregroundStyle(Color.wmEarth) }
                     if settings.showShensha {
@@ -395,13 +403,6 @@ private struct PalaceCell: View {
                             .padding(.bottom, 2)
                     }
                     VStack(spacing: 0) {
-                        // 小限疊盤關著時：小限命宮在長生上面標一個直排小框「小限」（同一欄，不會把版面擠歪）
-                        if level >= 2 && !settings.showMinorOverlay && horo.age.index == index {
-                            VerticalText("小限", size: ChartType.meta(fs), color: .zText2)
-                                .padding(.vertical, 2).padding(.horizontal, 1)
-                                .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
-                                .padding(.bottom, 3)
-                        }
                         // 長生十二神：自己一個開關（預設關）
                         if settings.showChangsheng {
                             VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
@@ -662,7 +663,9 @@ private struct CenterInfo: View {
                                     }
                                 Text(String(gz.suffix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.suffix(1))).color)
                                 Text("\(age)歲").font(ChartType.font(ChartType.godLabel(fs))).foregroundStyle(Color.zText2)
+                                    .lineLimit(1).minimumScaleFactor(0.6)
                                 Text(verbatim: "\(birthYear + age - 1)").font(ChartType.font(ChartType.godLabel(fs)).monospacedDigit()).foregroundStyle(Color.zText3)
+                                    .lineLimit(1).minimumScaleFactor(0.6)
                             }
                             .frame(width: fs * 1.75)
                         }
