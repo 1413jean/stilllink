@@ -76,15 +76,19 @@ struct NewChartSheet: View {
                             }
                             .transition(.opacity)
                         } else {
-                            // 刻度尺：左右滑選分組（每過一個震一下）；右邊「＋」新增分組
+                            // 分組：下拉選單（預設）或刻度尺（設定 → 外觀可切換）；右邊「＋」新增分組
                             HStack(spacing: 8) {
-                                GroupDial(options: groupOptions, selection: $group)
+                                if store.settings.groupPicker == .dial {
+                                    GroupDial(options: groupOptions, selection: $group)
+                                } else {
+                                    ZMenuField(options: groupOptions, selection: $group)
+                                }
                                 Button {
                                     withAnimation(Motion.base) { addingGroup = true }
                                     DispatchQueue.main.async { groupFocused = true }
                                 } label: {
                                     Image(systemName: "plus").font(Font.zCalloutStrong).foregroundStyle(Color.zText2)
-                                        .frame(width: 34, height: 50)
+                                        .frame(width: 34, height: store.settings.groupPicker == .dial ? 50 : 38)
                                         .background(RoundedRectangle(cornerRadius: 10).fill(Color.zCard))
                                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.zLine))
                                         .contentShape(Rectangle())

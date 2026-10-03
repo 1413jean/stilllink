@@ -35,6 +35,10 @@ struct ZSettings: Codable, Equatable {
     var hiddenPanels: [String] = []   // 右側面板隱藏的卡片（PanelCard 的 rawValue）
     var showComposer = false    // 命盤下方的 AI 對話框（AI 還沒推出，預設隱藏）
 
+    // 介面
+    enum GroupPicker: String, Codable, CaseIterable { case menu, dial }        // 新增命盤選分組：下拉選單／刻度尺
+    var groupPicker: GroupPicker = .menu
+
     // 音效與動畫
     var motion = true
     var sound = true

@@ -253,8 +253,11 @@ struct SettingsPage: View {
             .disabled(!store.settings.sound).opacity(store.settings.sound ? 1 : 0.4)
         case .appearance:
             title("外觀")
-            row("主題", "淺色、深色或跟隨系統", last: true) {
+            row("主題", "淺色、深色或跟隨系統") {
                 ZSegmented(options: Appearance.allCases.map { ($0, $0.label) }, selection: store.appearanceWithTransition)
+            }
+            row("分組選擇方式", "新增命盤時怎麼選分組：下拉選單，或左右滑的刻度尺", last: true) {
+                ZSegmented(options: [(.menu, "下拉選單"), (.dial, "刻度尺")], selection: s.groupPicker)
             }
         case .data:
             title("資料")
