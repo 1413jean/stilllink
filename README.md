@@ -38,6 +38,8 @@
 
 ## 從原始碼建置
 
+> 要請 AI（Codex、Claude）協作，先看 [`AGENTS.md`](AGENTS.md)：開發流程、驗證方法、發佈步驟、不能做的事。
+
 需要 Xcode 15 以上（Swift 5.9+）。
 
 ```sh

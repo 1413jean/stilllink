@@ -490,6 +490,13 @@ private struct AccountBar: View {
                     Label("設定…", systemImage: "gearshape")
                 }
                 .keyboardShortcut(",")
+                Divider()
+                Button { NotificationCenter.default.post(name: .openWhatsNew, object: nil) } label: {
+                    Label("新功能…", systemImage: "sparkles")
+                }
+                Button { BugReport.run(store: store) } label: {
+                    Label("回報問題…", systemImage: "exclamationmark.bubble")
+                }
             } label: {
                 HStack(spacing: 8) {
                     AvatarView(name: store.userAvatar, size: 20)
@@ -501,6 +508,7 @@ private struct AccountBar: View {
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
             }
+            .labelStyle(.titleAndIcon)   // 選單每一項都顯示圖示
             .menuStyle(.button)
             .buttonStyle(.plain)
             .menuIndicator(.hidden)

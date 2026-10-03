@@ -16,7 +16,15 @@ struct ChartBoard: View, Equatable {
 
     /// 只有資料真的換了才重畫（點運限表時，盤面不會先拿舊資料多畫一次）
     static func == (a: ChartBoard, b: ChartBoard) -> Bool {
-        a.person == b.person && a.model.id == b.model.id && a.level == b.level && a.zoom == b.zoom && a.hepan == b.hepan
+        samePerson(a.person, b.person) && a.model.id == b.model.id && a.level == b.level && a.zoom == b.zoom && a.hepan == b.hepan
+    }
+    /// 「此刻」盤每分鐘換一次鐘錶時間，但盤面用不到它（只有換時辰才變）：不要因此整盤重畫
+    /// （每分鐘整盤重畫，在部分外接螢幕上會留下綠色殘點）
+    private static func samePerson(_ a: Person, _ b: Person) -> Bool {
+        guard a.id == NowChart.id, b.id == NowChart.id else { return a == b }
+        var x = a, y = b
+        x.clock = nil; y.clock = nil
+        return x == y
     }
     @State private var sel: Int?
     @State private var appeared = false
@@ -90,7 +98,7 @@ struct ChartBoard: View, Equatable {
                     .enterFromBelow(appeared, index: 8)
                     .frame(width: cw * 2, height: ch * 2)
                     .offset(x: m + cw, y: m + ch)
-                // 滑鼠停在星曜上：深色小卡顯示這顆星的重點（測試版）
+                // 滑鼠停在星曜上：深色小卡顯示這顆星落在這一宮的重點（正式版也有；筆記頁本身只開在測試版）
                 if let h = hoverStar {
                     StarHoverCard(key: h.key, palaceName: h.palace)
                         .offset(x: min(h.rect.maxX + 6, geo.size.width - 246), y: max(4, h.rect.minY))
@@ -98,7 +106,7 @@ struct ChartBoard: View, Equatable {
                 }
             }
             .coordinateSpace(name: "board")
-            .environment(\.starHover, StarNotes.enabled ? { info in setHover(info) } : nil)
+            .environment(\.starHover, { info in setHover(info) })
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
