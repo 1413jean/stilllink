@@ -181,7 +181,7 @@ struct StarDetailView: View {
     var body: some View {
         let n = notes.note(key)
         let pk = StarNotes.palaceKey(palaceName)
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 8) {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.zText2)
@@ -201,9 +201,9 @@ struct StarDetailView: View {
                 .buttonStyle(.plain).help("編輯筆記")
             }
             if let t = n.palaces[pk], !t.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 7) {
                     Text("落\(palaceName)").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
-                    Text(t).font(Font.zBody).foregroundStyle(Color.zText).fixedSize(horizontal: false, vertical: true)
+                    Text(t).font(Font.zBody).foregroundStyle(Color.zText).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.leading, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -212,18 +212,18 @@ struct StarDetailView: View {
             // 總論：第一行已經當重點放在標題下，就不重複
             let body = StarNotes.tagline(n).isEmpty ? n.summary : n.summary.split(separator: "\n").dropFirst().joined(separator: "\n")
             if !body.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 7) {
                     Text("總論").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
-                    Text(body).font(Font.zBody).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+                    Text(body).font(Font.zBody).foregroundStyle(Color.zText2).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
                 }
             }
             if !n.palaces.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 11) {
                     Text("落在各宮").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
                     ForEach(StarNotes.palaceKeys.filter { n.palaces[$0] != nil && $0 != pk }, id: \.self) { k in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(k).font(Font.zBodyStrong).foregroundStyle(Color.zText).frame(width: 16)
-                            Text(n.palaces[k] ?? "").font(Font.zCallout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
+                            Text(n.palaces[k] ?? "").font(Font.zCallout).foregroundStyle(Color.zText2).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
