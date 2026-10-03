@@ -422,9 +422,9 @@ struct StarNotesPage: View {
                     }
                 }
             }
-            .frame(maxWidth: StarNotes.isDoc(key) ? .infinity : 760, alignment: .leading)   // 參考文件用滿寬度
-            .padding(.horizontal, 28).padding(.vertical, 20)
-            .frame(maxWidth: .infinity, alignment: .leading)   // 貼著左邊列表，不置中
+            .frame(maxWidth: StarNotes.isDoc(key) ? 860 : 760, alignment: .leading)   // 不要排太滿：限制寬度
+            .padding(.horizontal, 40).padding(.vertical, 20)
+            .frame(maxWidth: .infinity)   // 置中，左右留白
         }
     }
 
@@ -507,24 +507,13 @@ struct DocView: View {
         return cur
     }
 
-    /// 照原文順序排：分組標題、表格各佔一整行；中間連續的小卡排成多欄
-    private enum Chunk { case full(Int), grid([Int]) }
-
     var body: some View {
         let raws = rawSections
         let parsed = raws.map { DocView.parse($0) }
-        let isWide: (Section) -> Bool = { $0.group || $0.title == nil || $0.blocks.contains { if case .table = $0 { true } else { false } } }
-        var chunks: [Chunk] = []
-        for (i, sec) in parsed.enumerated() where sec.title != nil || !sec.blocks.isEmpty {
-            if isWide(sec) { chunks.append(.full(i)) }
-            else if case .grid(let ids)? = chunks.last { chunks[chunks.count - 1] = .grid(ids + [i]) }
-            else { chunks.append(.grid([i])) }
-        }
-        return VStack(alignment: .leading, spacing: 16) {
-            ForEach(Array(chunks.enumerated()), id: \.offset) { _, ch in
-                switch ch {
-                case .full(let i):
-                    let sec = parsed[i]
+        // 每一段都佔一整行（像附錄八）：兩欄排時只有一段會只佔半邊，看起來像缺一半
+        return VStack(alignment: .leading, spacing: 22) {
+            ForEach(Array(parsed.enumerated()), id: \.offset) { i, sec in
+                if sec.title != nil || !sec.blocks.isEmpty {
                     editable(i, raws[i]) {
                         if sec.group {
                             // 分組標題（例：北斗星系）
@@ -532,39 +521,22 @@ struct DocView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(.top, i <= 1 ? 0 : 12)
                         } else if sec.title == nil { blocks(sec.blocks) } else { card(sec) }
                     }
-                case .grid(let ids):
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 32, alignment: .top)], alignment: .leading, spacing: 24) {
-                        ForEach(ids, id: \.self) { i in editable(i, raws[i]) { card(parsed[i]) } }
-                    }
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .textSelection(.enabled)
+        // 驗證用：ZIWEI_DOC_EDIT=段落編號 直接打開那一段的編輯
+        .onAppear { if let v = ProcessInfo.processInfo.environment["ZIWEI_DOC_EDIT"].flatMap(Int.init) { editing = v } }
     }
 
     /// 一段的外框：右上角一支筆，點了這一段變成文字框，「完成」收起
     @ViewBuilder
     private func editable<C: View>(_ i: Int, _ raw: String, @ViewBuilder _ content: () -> C) -> some View {
         if editing == i {
-            VStack(alignment: .leading, spacing: 10) {
-                TextField("", text: $draft, axis: .vertical)
-                    .textFieldStyle(.plain)
-                    .zText(.body)
-                    .lineLimit(3...40)
-                HStack {
-                    Text("「## 」開頭是小標題、「・」開頭是條列、用「｜」隔開是表格").font(Font.zCaption).foregroundStyle(Color.zText3)
-                    Spacer()
-                    Button("取消") { withAnimation(Motion.fast) { editing = nil } }
-                        .buttonStyle(ZSecondaryButton(small: true))
-                    Button("完成") { save(i, draft); withAnimation(Motion.fast) { editing = nil } }
-                        .buttonStyle(ZPrimaryButton(small: true))
-                }
-            }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zAccent, lineWidth: 1.5))
+            DocSectionEditor(raw: raw,
+                             onCancel: { withAnimation(Motion.fast) { editing = nil } },
+                             onSave: { t in save(i, t); withAnimation(Motion.fast) { editing = nil } })
         } else {
             content()
                 .overlay(alignment: .topTrailing) {
@@ -657,5 +629,143 @@ struct DocView: View {
                 }
             }
         }
+    }
+}
+
+/// 參考文件一段的逐項編輯：標題、條列、「鍵：值」、段落、表格每一格各一個輸入框（不用在一大塊文字裡找）
+private struct DocSectionEditor: View {
+    let raw: String
+    var onCancel: () -> Void
+    var onSave: (String) -> Void
+
+    enum Kind { case title(String), kv, bullet, step, para, row }
+    struct Line: Identifiable {
+        let id = UUID()
+        var kind: Kind
+        var a = ""            // 標題／內文／鍵
+        var b = ""            // 「鍵：值」的值
+        var cells: [String] = []
+        var isRow: Bool { if case .row = kind { return true } else { return false } }
+    }
+
+    @State private var lines: [Line] = []
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(lines.indices), id: \.self) { i in
+                line(i)
+                // 表格最後一列下面：新增一列
+                if lines[i].isRow && (i + 1 == lines.count || !lines[i + 1].isRow) {
+                    addButton("新增一列") {
+                        lines.insert(Line(kind: .row, cells: Array(repeating: "", count: lines[i].cells.count)), at: i + 1)
+                    }
+                }
+            }
+            HStack(spacing: 8) {
+                addButton("條列") { lines.append(Line(kind: .bullet)) }
+                addButton("鍵：值") { lines.append(Line(kind: .kv)) }
+                addButton("段落") { lines.append(Line(kind: .para)) }
+                Spacer()
+                Button("取消", action: onCancel).buttonStyle(ZSecondaryButton(small: true))
+                Button("完成") { onSave(serialize()) }.buttonStyle(ZPrimaryButton(small: true))
+            }
+            .padding(.top, 6)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zAccent, lineWidth: 1.5))
+        .onAppear { lines = Self.parse(raw) }
+    }
+
+    @ViewBuilder
+    private func line(_ i: Int) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            switch lines[i].kind {
+            case .title:
+                input("標題", $lines[i].a, font: .title3)
+            case .kv:
+                input("標籤", $lines[i].a, font: .calloutStrong).frame(width: 130)
+                input("內容", $lines[i].b)
+            case .bullet:
+                Text("・").zText(.body).foregroundStyle(Color.zText3).padding(.top, 6)
+                input("條列內容", $lines[i].a)
+            case .step, .para:
+                input("段落", $lines[i].a)
+            case .row:
+                // 表格：每一格一個輸入框；第一列是表頭
+                let header = i == 0 || !lines[i - 1].isRow
+                ForEach(Array(lines[i].cells.indices), id: \.self) { c in
+                    input(header ? "表頭" : "", $lines[i].cells[c], font: header ? .calloutStrong : .body)
+                        .frame(maxWidth: c == 0 ? 160 : .infinity)
+                }
+            }
+            Button { lines.remove(at: i) } label: {
+                Image(systemName: "minus.circle").font(Font.zCallout).foregroundStyle(Color.zText3)
+                    .frame(width: 26, height: 30).contentShape(Rectangle())
+            }
+            .buttonStyle(PressStyle())
+            .help("刪掉這一行")
+        }
+    }
+
+    private func input(_ placeholder: String, _ b: Binding<String>, font: ZType = .body) -> some View {
+        TextField(placeholder, text: b, axis: .vertical)
+            .textFieldStyle(.plain)
+            .zText(font)
+            .foregroundStyle(Color.zText)
+            .lineLimit(1...12)
+            .padding(.horizontal, 9).padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color.zHover))
+            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine, lineWidth: 0.5))
+    }
+
+    private func addButton(_ t: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(t, systemImage: "plus").labelStyle(.titleAndIcon)
+                .zText(.subheadline).foregroundStyle(Color.zText2)
+                .padding(.horizontal, 10).frame(height: 28)
+                .background(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressStyle())
+    }
+
+    /// 原文 → 一行一項（語法同 DocView：「## 」標題、「・」條列、「・鍵：值」、「A｜B」表格、「1.」步驟）
+    static func parse(_ raw: String) -> [Line] {
+        raw.components(separatedBy: "\n").compactMap { r in
+            let l = r.trimmingCharacters(in: .whitespaces)
+            if l.isEmpty { return nil }
+            if l.contains("｜") { return Line(kind: .row, cells: l.components(separatedBy: "｜")) }
+            if l.hasPrefix("## ") { return Line(kind: .title("## "), a: String(l.dropFirst(3))) }
+            if l.hasPrefix("# ") { return Line(kind: .title("# "), a: String(l.dropFirst(2))) }
+            if l.hasPrefix("・") {
+                let t = String(l.dropFirst())
+                let parts = t.split(separator: "：", maxSplits: 1).map(String.init)
+                if parts.count == 2 && parts[0].count <= 8 { return Line(kind: .kv, a: parts[0], b: parts[1]) }
+                return Line(kind: .bullet, a: t)
+            }
+            if l.first?.isNumber == true, l.contains(".") { return Line(kind: .step, a: l) }
+            return Line(kind: .para, a: l)
+        }
+    }
+
+    /// 一行一項 → 原文
+    private func serialize() -> String {
+        lines.compactMap { l -> String? in
+            let a = l.a.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " ")
+            let b = l.b.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " ")
+            switch l.kind {
+            case .title(let p): return a.isEmpty ? nil : p + a
+            case .kv: return a.isEmpty && b.isEmpty ? nil : "・\(a)：\(b)"
+            case .bullet: return a.isEmpty ? nil : "・" + a
+            case .step, .para: return a.isEmpty ? nil : a
+            case .row:
+                let cells = l.cells.map { $0.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "｜", with: "/") }
+                return cells.allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty } ? nil : cells.joined(separator: "｜")
+            }
+        }
+        .joined(separator: "\n")
     }
 }
