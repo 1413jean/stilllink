@@ -57,8 +57,8 @@ struct CommentLayer: View {
 
     private let pin: CGFloat = 28
     private let cardW: CGFloat = 300
-    /// 照 Figma 留言的藍色
-    private let figmaBlue = Color(red: 0x0D / 255, green: 0x99 / 255, blue: 0xFF / 255)
+    /// 備註的強調色：用 App 主色（原本照 Figma 用藍色，Jean 要改主色系）
+    private let figmaBlue = Color.zAccent
     private var bubble: UnevenRoundedRectangle {
         UnevenRoundedRectangle(topLeadingRadius: pin / 2, bottomLeadingRadius: 3, bottomTrailingRadius: pin / 2, topTrailingRadius: pin / 2)
     }
