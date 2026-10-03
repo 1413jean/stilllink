@@ -98,7 +98,7 @@ struct ChartBoard: View, Equatable {
                     .enterFromBelow(appeared, index: 8)
                     .frame(width: cw * 2, height: ch * 2)
                     .offset(x: m + cw, y: m + ch)
-                // 滑鼠停在星曜上：深色小卡顯示這顆星的重點（測試版）
+                // 滑鼠停在星曜上：深色小卡顯示這顆星落在這一宮的重點（正式版也有；筆記頁本身只開在測試版）
                 if let h = hoverStar {
                     StarHoverCard(key: h.key, palaceName: h.palace)
                         .offset(x: min(h.rect.maxX + 6, geo.size.width - 246), y: max(4, h.rect.minY))
@@ -106,7 +106,7 @@ struct ChartBoard: View, Equatable {
                 }
             }
             .coordinateSpace(name: "board")
-            .environment(\.starHover, StarNotes.enabled ? { info in setHover(info) } : nil)
+            .environment(\.starHover, { info in setHover(info) })
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))

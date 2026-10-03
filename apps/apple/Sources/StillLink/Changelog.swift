@@ -14,8 +14,9 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
-        ReleaseNote(version: "2.2.0", date: "2026 年 10 月 3 日", major: true,
+        ReleaseNote(version: "2.1.3", date: "2026 年 10 月 3 日", major: true,
             new: [
+                "滑鼠停在星曜上一下，會跳出小卡說明這顆星的重點，以及落在這一宮的意思",
                 "設定改成浮在畫面上的設定窗：左上角可以搜尋，分類整理成「設定、命盤、其他」三組，關掉馬上看到盤面變化",
                 "運限表每一列 hover 時左右出現箭頭：點一下捲一段、按住持續捲；也可以按住盤面左右拖",
                 "新增命盤的分組可以選「下拉選單」或「刻度尺」（設定 → 一般），預設下拉選單",
