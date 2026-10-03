@@ -133,7 +133,7 @@ enum ZW {
             }
         }
         var defaultTone: Tone {
-            switch self { case .major: .red; case .aux: .green; case .tough: .black; case .misc: .blue }
+            switch self { case .major: .red; case .aux: .green; case .tough: .black; case .misc: .gray }
         }
         /// iztro 的星曜 type → 類別
         init(type: String) {

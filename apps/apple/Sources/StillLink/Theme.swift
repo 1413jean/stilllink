@@ -26,6 +26,7 @@ extension Color {
     // 命盤（照文墨天機）
     static let wmRed = dynamic(0xD0102A, 0xFF6B76)
     static let wmBlue = dynamic(0x1F5FBF, 0x7AABF5)
+    static let wmIron = dynamic(0x666666, 0x9E9E9E)   // 鐵灰（約 K60）：雜曜，跟藍綠色的流曜分開；深色模式提亮一點
     static let wmGreen = dynamic(0x1F8A3A, 0x5BCB8A)
     static let wmBlack = dynamic(0x1C1B19, 0xECEAE4)
     static let wmEarth = dynamic(0xB5701A, 0xE0A84A)
@@ -70,7 +71,7 @@ extension Color {
 
 extension ZW.Tone {
     var color: Color {
-        switch self { case .red: .wmRed; case .blue: .wmBlue; case .black: .wmBlack; case .green: .wmGreen; case .earth: .wmEarth; case .purple: .mQuan; case .gray: .zText2 }
+        switch self { case .red: .wmRed; case .blue: .wmBlue; case .black: .wmBlack; case .green: .wmGreen; case .earth: .wmEarth; case .purple: .mQuan; case .gray: .wmIron }
     }
 }
 
