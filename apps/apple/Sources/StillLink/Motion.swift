@@ -71,22 +71,31 @@ struct PressStyle: ButtonStyle {
 
 /// 視窗頂端（工具列）漸層：底色 100% → 0%，整條寬度
 struct TopFade: View {
-    let color: Color
+    let color: Color   // 保留參數相容，現在不疊底色
     var edge: VerticalEdge = .top
     var height: CGFloat = 64
     var body: some View {
-        // 背景模糊（前 60% 完整、之後淡出）＋底色由實到透；頂部、底部共用
+        // 背景模糊做漸層（不疊底色）：頂部由上往下 100%→0%，底部由上往下 0%→100%
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
-        ZStack {
-            Rectangle().fill(.regularMaterial)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.6), .init(color: .clear, location: 1)],
-                                     startPoint: start, endPoint: end))
-            LinearGradient(colors: [color.opacity(0.85), color.opacity(0)], startPoint: start, endPoint: end)
-        }
-        .frame(height: height)
-        .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
-        .allowsHitTesting(false)
+        BackdropBlur()
+            .mask(LinearGradient(colors: [.black, .black.opacity(0)], startPoint: start, endPoint: end))
+            .frame(height: height)
+            .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
+            .allowsHitTesting(false)
     }
+}
+
+/// 背景模糊：把視窗裡在它後面的內容模糊化（NSVisualEffectView，within window）
+struct BackdropBlur: NSViewRepresentable {
+    var material: NSVisualEffectView.Material = .headerView
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.material = material
+        v.blendingMode = .withinWindow
+        v.state = .active
+        return v
+    }
+    func updateNSView(_ v: NSVisualEffectView, context: Context) { v.material = material }
 }
 
 // MARK: Snackbar 提示

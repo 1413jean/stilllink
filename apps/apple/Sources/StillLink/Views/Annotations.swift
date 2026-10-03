@@ -353,7 +353,7 @@ struct AnnotationToolbar: View {
             } message: { Text("可以按復原（⌘Z）找回來。") }
         }
         .padding(.horizontal, 8).padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 16).fill(.regularMaterial))
+        .background(BackdropBlur(material: .popover).clipShape(RoundedRectangle(cornerRadius: 16)))
         .background(RoundedRectangle(cornerRadius: 16).fill(Color.zCard.opacity(0.55)))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.zLine))
         .shadow(color: Color.zShadow, radius: 14, y: 6)
