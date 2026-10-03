@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-/// 頭貼：存在 media 資料夾，裁成圓形、縮到 256×256、JPEG 壓縮後才存（每張約 20KB）
+/// 頭貼：存在 media 資料夾，裁成圓形、縮到 256×256；檔案本來就小（≤60KB）存 PNG 不壓縮，大的才 JPEG 壓縮
 enum AvatarStore {
     static let size: CGFloat = 256
 
@@ -29,9 +29,13 @@ enum AvatarStore {
         ctx.translateBy(x: -src.minX * scale, y: -(h - src.maxY) * scale)
         ctx.scaleBy(x: scale, y: scale)
         ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
-        guard let result = ctx.makeImage(),
-              let data = NSBitmapImageRep(cgImage: result).representation(using: .jpeg, properties: [.compressionFactor: 0.8]) else { return nil }
-        let name = "avatar-\(UUID().uuidString).jpg"
+        guard let result = ctx.makeImage() else { return nil }
+        let rep = NSBitmapImageRep(cgImage: result)
+        // 容量很小就不壓縮（PNG 無損）；大的才用 JPEG 壓縮
+        let png = rep.representation(using: .png, properties: [:])
+        let usePNG = (png?.count ?? .max) <= 60_000
+        guard let data = usePNG ? png : rep.representation(using: .jpeg, properties: [.compressionFactor: 0.8]) else { return nil }
+        let name = "avatar-\(UUID().uuidString).\(usePNG ? "png" : "jpg")"
         do { try data.write(to: Media.url(name)) } catch { return nil }
         return name
     }
@@ -153,12 +157,13 @@ struct AvatarField: View {
     @Binding var name: String?
     @State private var picked: NSImage?
     @State private var hover = false
+    @State private var menu = false
 
     /// 只放一個頭貼：點了上傳／更換（右下角相機標記提示可以點），右鍵可移除
     var body: some View {
         HStack {
             Spacer()
-            Button { picked = AvatarStore.pick() } label: {
+            Button { if name == nil { picked = AvatarStore.pick() } else { menu = true } } label: {
                 AvatarView(name: name, size: 44)
                     .overlay {
                         if hover {
@@ -178,7 +183,11 @@ struct AvatarField: View {
             }
             .buttonStyle(PressStyle())
             .onHover { hover = $0 }
-            .help(name == nil ? "上傳頭貼" : "更換頭貼（右鍵可移除）")
+            .help(name == nil ? "上傳頭貼" : "更換或移除頭貼")
+            .popover(isPresented: $menu, arrowEdge: .bottom) {
+                AvatarMenu(onChange: { menu = false; DispatchQueue.main.async { picked = AvatarStore.pick() } },
+                           onRemove: { menu = false; AvatarStore.remove(name); name = nil })
+            }
             .contextMenu {
                 Button(name == nil ? "上傳頭貼…" : "更換頭貼…") { picked = AvatarStore.pick() }
                 if name != nil { Button("移除頭貼", role: .destructive) { AvatarStore.remove(name); name = nil } }
@@ -202,6 +211,7 @@ struct AvatarButton: View {
     var enabled = true
     @State private var picked: NSImage?
     @State private var hover = false
+    @State private var menu = false
 
     var body: some View {
         AvatarView(name: name, size: size)
@@ -214,8 +224,12 @@ struct AvatarButton: View {
             }
             .contentShape(Circle())
             .onHover { h in withAnimation(Motion.fast) { hover = h } }
-            .onTapGesture { if enabled { picked = AvatarStore.pick() } }
-            .help(enabled ? "點一下上傳或更換頭貼" : "")
+            .onTapGesture { if enabled { if name == nil { picked = AvatarStore.pick() } else { menu = true } } }
+            .help(enabled ? (name == nil ? "點一下上傳頭貼" : "點一下更換或移除頭貼") : "")
+            .popover(isPresented: $menu, arrowEdge: .bottom) {
+                AvatarMenu(onChange: { menu = false; DispatchQueue.main.async { picked = AvatarStore.pick() } },
+                           onRemove: { menu = false; AvatarStore.remove(name); name = nil })
+            }
             .sheet(item: Binding(get: { picked.map(Picked.init) }, set: { picked = $0?.image })) { p in
                 AvatarCropSheet(image: p.image) { saved in
                     if let saved { AvatarStore.remove(name); name = saved }
@@ -225,4 +239,41 @@ struct AvatarButton: View {
     }
 
     private struct Picked: Identifiable { let image: NSImage; var id: ObjectIdentifier { ObjectIdentifier(image) } }
+}
+
+/// 已有頭貼時點一下：小選單「更換照片／移除照片」（popover，點旁邊就關）
+struct AvatarMenu: View {
+    var onChange: () -> Void
+    var onRemove: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            row("photo", "更換照片", Color.zText, onChange)
+            row("trash", "移除照片", Color.wmRed, onRemove)
+        }
+        .padding(6)
+        .frame(width: 168)
+    }
+    private func row(_ icon: String, _ title: String, _ color: Color, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon).font(Font.zIcon).frame(width: 16)
+                Text(title).font(Font.zBody)
+                Spacer()
+            }
+            .foregroundStyle(color)
+            .padding(.horizontal, 10).frame(height: 32)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(MenuRowStyle())
+    }
+}
+
+/// 選單列：滑過有灰底
+private struct MenuRowStyle: ButtonStyle {
+    @State private var hover = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(RoundedRectangle(cornerRadius: 7).fill(hover || configuration.isPressed ? Color.zHover : .clear))
+            .onHover { hover = $0 }
+    }
 }
