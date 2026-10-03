@@ -5,17 +5,31 @@
 ## 字型
 - 全部用 SF Pro（`.system`），中文由系統自動用蘋方補字。不用宋體或其他字型。
 
-### 介面字級（`Font.z*`）
-| token | 大小／字重 | 用途 |
-|---|---|---|
-| `zDisplay` | 32 medium | 首頁大標 |
-| `zTitle` | 20 semibold | 彈窗標題 |
-| `zHeadline` | 14 medium | 卡片內的人名 |
-| `zBody` / `zBodyStrong` | 13 | 內文、輸入框、側欄列表 |
-| `zCallout` / `zCalloutStrong` | 12 | 次要內文、資料列；Strong 用在卡片標題、表頭 |
-| `zCaption` / `zCaptionStrong` | 11 | 說明、標籤 |
-| `zMicro` / `zMicroStrong` | 10 | 時間戳、方位、計數 |
-| `zIcon`、`zIconBold`、`zIconLarge`、`zIconHero` | 12／12 bold／20 light／28 light | 圖示 |
+### 介面字級（設計系統 `ZType`）
+跟 Figma「Stillink Design System」的文字樣式同名：Typography 變數集合有 **iOS** 和 **macOS** 兩個模式，Mac app 用 macOS 模式的數值。改字級先改 Figma，再同步 `Theme.swift` 的 `ZType`。
+多行文字用 `.zText(.樣式)`（字體＋行高＋字距一起套）；單行可用 `Font.z*` 舊名稱（都對應到下表）。
+
+| Figma 樣式 | `ZType` | macOS 字級／行高 | iOS 字級／行高 | 舊名稱 | 用途 |
+|---|---|---|---|---|---|
+| title/title.large | `.titleLarge` | 32 / 38 粗 | 34 / 41 | `zDisplay` | 首頁大標 |
+| title/title.1 | `.title1` | 22 / 28 粗 | 28 / 34 | — | 大標 |
+| title/title.2 | `.title2` | 20 / 26 粗 | 22 / 28 | `zTitle` | 頁面、彈窗標題 |
+| title/title.3 | `.title3` | 16 / 22 粗 | 20 / 25 | `zReadTitle` | 閱讀內容的小標題 |
+| body/body.headline | `.headline` | 14 / 20 粗 | 17 / 22 | `zHeadline`、`zBrand` | 卡片內人名、產品名 |
+| body/body.large | `.body` | 15 / 24 | 17 / 22 | `zRead`、`zInput` | 閱讀內容（星曜筆記、參考文件）、輸入框 |
+| body/body.large.strong | `.bodyStrong` | 15 / 24 粗 | 17 / 22 | `zReadStrong` | 閱讀內容強調 |
+| body/body.callout | `.callout` | 13 / 20 | 16 / 21 | `zBody` | 介面內文、側欄列 |
+| body/body.callout.strong | `.calloutStrong` | 13 / 20 粗 | 16 / 21 | `zBodyStrong` | 按鈕、列表標題 |
+| body/body.subheadline | `.subheadline` | 12 / 18 | 15 / 20 | `zCallout` | 次要內文、資料列 |
+| body/body.subheadline.strong | `.subheadlineStrong` | 12 / 18 粗 | 15 / 20 | `zCalloutStrong` | 卡片標題、表頭 |
+| body/body.footnote | `.footnote` | 11 / 16 | 13 / 18 | `zCaption` | 說明、標籤 |
+| body/body.footnote.strong | `.footnoteStrong` | 11 / 16 粗 | 13 / 18 | `zCaptionStrong` | 小標籤 |
+| body/body.caption.1 | `.caption1` | 10 / 14 | 12 / 16 | `zMicro` | 時間戳、方位、計數 |
+| body/body.caption.1.strong | `.caption1Strong` | 10 / 14 粗 | 12 / 16 | `zMicroStrong` | 小徽章 |
+| body/body.caption.2 | `.caption2` | 9 / 12 | 11 / 13 | `zTiny` | 最小字 |
+| label/label.eyebrow | `.eyebrow` | 10 / 12 粗、字距 +1.4 | 11 / 13 | — | 品牌小標 |
+
+「粗」在 macOS 是 Medium、iOS 是 Semibold（Figma 變數 `font/weight/strong` 依模式不同）。圖示大小（`zIcon*`）不在文字系統內。
 
 ### 命盤字級（`ChartType`）
 命盤字級會跟著盤面大小縮放。基準字級 `fs` 由宮位寬度算出（`ChartType.base`，介於 10 到 14），其他字級都是 `fs` 的比例：

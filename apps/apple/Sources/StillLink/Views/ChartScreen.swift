@@ -107,7 +107,8 @@ struct ChartScreen: View {
         GeometryReader { geo in
             let panelSpace: CGFloat = showInfo ? CGFloat(panelW) + 24 : 0
             let usable = geo.size.width - panelSpace
-            let boardW = min(usable - 48, boardMaxWidth, max(520, geo.size.height - 110))
+            // 盤面高度留出：上邊距＋運限表的大限、流年兩列（約 90）＋底部工具列（約 90），一打開就看得到大限流年
+            let boardW = min(usable - 48, boardMaxWidth, max(460, (geo.size.height - 210) / boardAspect))
             ZStack(alignment: .bottom) {
                 ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                     VStack(spacing: 12) {
