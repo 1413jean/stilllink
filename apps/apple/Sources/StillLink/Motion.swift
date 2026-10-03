@@ -169,9 +169,6 @@ struct ToastHost: View {
     static func icon(for t: String) -> String {
         ["checkmark.circle.fill", "info.circle.fill", "exclamationmark.triangle.fill"][kind(t)]
     }
-    static func iconColor(for t: String) -> Color {
-        [Color.zAccent, Color.zBg.opacity(0.85), Color(red: 1, green: 0.62, blue: 0.3)][kind(t)]
-    }
 
     private var bar: some View {
         ZStack {
@@ -179,7 +176,7 @@ struct ToastHost: View {
                 HStack(spacing: 10) {
                     Image(systemName: Self.icon(for: text))
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Self.iconColor(for: text))
+                        .foregroundStyle(Color.zBg.opacity(0.75))   // icon 一律灰白，不用彩色
                     Text(text)
                         .font(Font.zCalloutStrong)
                         .foregroundStyle(Color.zBg)
