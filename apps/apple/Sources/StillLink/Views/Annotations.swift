@@ -434,6 +434,12 @@ struct AnnotationToolbar: View {
 /// 每個標註工具的游標：SF Symbol 圖示＋白色描邊＋陰影（游標在命盤上時才換）
 enum ToolCursor {
     private static var cache: [AnnoTool: NSCursor] = [:]
+    /// 滑鼠停在備註圖釘或對話串上：換回一般箭頭（盤面的游標會先看這個）
+    static var overComment = false
+    static func setOverComment(_ on: Bool, tool: AnnoTool) {
+        overComment = on
+        (on ? NSCursor.arrow : cursor(for: tool)).set()
+    }
 
     static func cursor(for tool: AnnoTool) -> NSCursor {
         if tool == .select { return .arrow }

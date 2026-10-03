@@ -41,6 +41,7 @@ final class CommentStore: ObservableObject {
 struct CommentLayer: View {
     let chartID: UUID
     let active: Bool                  // 目前是不是備註工具
+    var tool: AnnoTool = .select      // 目前的工具（離開備註時換回它的游標）
     @EnvironmentObject private var app: Store
     @ObservedObject private var store = CommentStore.shared
     @State private var draft: CGPoint?        // 新增中的圖釘位置
@@ -93,7 +94,16 @@ struct CommentLayer: View {
                                 dragging = nil
                             })
                         .onTapGesture { withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) { open = open == t.id ? nil : t.id; draft = nil; reply = "" } }
-                        .onHover { h in withAnimation(Motion.fast) { hoverPin = h ? t.id : (hoverPin == t.id ? nil : hoverPin) } }
+                        .onHover { h in
+                            ToolCursor.setOverComment(h, tool: tool)
+                            withAnimation(Motion.fast) { hoverPin = h ? t.id : (hoverPin == t.id ? nil : hoverPin) }
+                        }
+                        // 右鍵：標成已解決／刪除（刪掉可以從下方提示條復原）
+                        .contextMenu {
+                            Button { resolve(t) } label: { Label("標成已解決", systemImage: "checkmark.circle") }
+                            Divider()
+                            Button(role: .destructive) { hoverPin = nil; remove(t) } label: { Label("刪除", systemImage: "trash") }
+                        }
                         // position 要放最後：它會把 view 撐滿整個盤面，hover 掛在它後面就永遠不會「離開」
                         .position(x: t.point.x * size.width + pin / 2 + d.width, y: t.point.y * size.height - pin / 2 + d.height)
                 }
@@ -261,6 +271,7 @@ struct CommentLayer: View {
         .background(RoundedRectangle(cornerRadius: 14).fill(Color.zRaised))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
         .raisedShadow()
+        .onHover { ToolCursor.setOverComment($0, tool: tool) }
         .offset(x: x + cardW > size.width ? max(0, t.point.x * size.width - cardW - 8) : x, y: min(max(0, y), size.height - 220))
         .transition(.scale(scale: 0.9, anchor: .topLeading).combined(with: .opacity))
     }
