@@ -33,7 +33,7 @@ apps/apple/
       Comments.swift       備註圖釘（像 Figma 留言）
       Annotations.swift    畫筆／螢光筆／箭頭／框線標註，各工具游標
       GroupDial.swift      刻度尺選擇器
-      SettingsPage.swift   設定頁
+      SettingsPage.swift   設定窗（浮窗＋搜尋；新設定用 row()／toggle() 加，才搜得到）
     Theme.swift            顏色 token（Color.z*、wm*、m*、f*）、字級（ZType、ChartType）
     Motion.swift           動畫 token、TopFade（漸進模糊）、Toast 提示條
     Settings.swift         ZSettings（新增欄位要給預設值，舊資料會自動補）
@@ -83,6 +83,7 @@ DESIGN.md                  設計規範
 | `ZIWEI_PICK=宮位編號` | 當成使用者點了那一宮 |
 | `ZIWEI_NEW=1`、`ZIWEI_EDIT` | 直接開新增／編輯命盤 |
 | `ZIWEI_SETTINGS=區段` | 直接開到設定某一節 |
+| `ZIWEI_SETTINGS_QUERY=文字` | 設定窗打開時直接搜尋 |
 | `ZIWEI_TOAST=文字` | 3 秒後跳一個提示條 |
 | `ZIWEI_OPEN_COMMENT=1`、`ZIWEI_DRAFT=文字` | 打開第一則備註／備註輸入框 |
 | `ZIWEI_PAN_HOVER=1` | 運限表左右箭頭不用 hover 也顯示 |

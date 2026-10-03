@@ -259,7 +259,7 @@ struct PanRow<Content: View>: View {
     private func installScrollMonitor() {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { e in
-            guard maxOff > 0, let win = e.window, win.isKeyWindow, let cv = win.contentView else { return e }
+            guard maxOff > 0, !SettingsPage.isOpen, let win = e.window, win.isKeyWindow, let cv = win.contentView else { return e }
             let p = CGPoint(x: e.locationInWindow.x, y: cv.bounds.height - e.locationInWindow.y)
             guard frame.contains(p) else { return e }
             let dx = e.scrollingDeltaX, dy = e.scrollingDeltaY

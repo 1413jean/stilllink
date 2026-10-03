@@ -90,7 +90,9 @@ struct RootView: View {
     @State private var history: [Route] = [.home]
     @State private var cursor = 0
     @State private var stepping = false
-    @State private var settingsSection: SettingsPage.Section = .profile
+    @State private var settingsSection: SettingsPage.Section = .general
+    @State private var showSettings = false        // 設定窗（浮在畫面上，不換頁）
+    @State private var settingsToken = 0           // 每次打開都重建，才會停在指定的分類
     @State private var newGroup: String?
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var sidebarAutoHidden = false   // 右側面板拉寬時自動收起側欄（拉回來再打開）
@@ -136,6 +138,25 @@ struct RootView: View {
             .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }
         }
         .toolbarBackground(.hidden, for: .windowToolbar)
+        // 設定窗：蓋在整個視窗上，點旁邊、按 ×、按 Esc 關閉；關掉馬上看到盤面的變化
+        .overlay {
+            if showSettings {
+                ZStack {
+                    Color.black.opacity(0.32).ignoresSafeArea()
+                        .onTapGesture { closeSettings() }
+                    GeometryReader { g in
+                        SettingsPage(initial: settingsSection, onClose: closeSettings)
+                            .id(settingsToken)
+                            .frame(width: min(1000, g.size.width - 48), height: min(780, g.size.height - 48))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
+                            .raisedShadow()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
         .overlay(alignment: .bottom) { ToastHost() }
         .environment(\.zSettings, store.settings)
         .toolbar {
@@ -154,18 +175,22 @@ struct RootView: View {
             cursor = history.count - 1
         }
         .onReceive(NotificationCenter.default.publisher(for: .newChart)) { n in
+            closeSettings()
             newGroup = n.object as? String   // 從資料夾的 ＋ 進來時帶分組
             go(.new)
         }
         .onReceive(NotificationCenter.default.publisher(for: .editChart)) { n in
+            closeSettings()
             if let id = n.object as? UUID { go(.edit(id)) }
         }
         .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { n in
-            settingsSection = (n.object as? SettingsPage.Section) ?? .profile
-            go(.settings)
+            settingsSection = (n.object as? SettingsPage.Section) ?? .general
+            settingsToken += 1
+            SettingsPage.isOpen = true
+            withAnimation(Motion.fast) { showSettings = true }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .newSelfChart)) { _ in go(.newSelf) }
-        .onReceive(NotificationCenter.default.publisher(for: .openSelf)) { _ in if let me = store.me { route = .person(me.id) } }
+        .onReceive(NotificationCenter.default.publisher(for: .newSelfChart)) { _ in closeSettings(); go(.newSelf) }
+        .onReceive(NotificationCenter.default.publisher(for: .openSelf)) { _ in closeSettings(); if let me = store.me { route = .person(me.id) } }
         .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
         .onReceive(NotificationCenter.default.publisher(for: .infoPanelWide)) { n in
             let wide = (n.object as? Bool) ?? false
@@ -179,6 +204,12 @@ struct RootView: View {
             if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
         }
         .onAppear(perform: applyDebugEnv)
+    }
+
+    private func closeSettings() {
+        guard showSettings else { return }
+        SettingsPage.isOpen = false
+        withAnimation(Motion.fast) { showSettings = false }
     }
 
     private func go(_ r: Route) {
@@ -210,7 +241,7 @@ struct RootView: View {
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
             if let s = SettingsPage.Section.find(v) {
                 NotificationCenter.default.post(name: .openSettings, object: s)
-            } else { go(.settings) }
+            } else { NotificationCenter.default.post(name: .openSettings, object: nil) }
         }
         if let name = env["ZIWEI_EDIT"], let p = store.people.first(where: { $0.name == name }) { go(.edit(p.id)) }
         if let t = env["ZIWEI_NEW_AFTER"].flatMap(Double.init) {
