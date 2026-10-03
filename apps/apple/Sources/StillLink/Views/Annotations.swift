@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// 命盤上的標註：畫筆、螢光筆、框線、文字。座標存成 0～1（相對盤面大小），縮放、換視窗大小都對得上
 struct Mark: Codable, Identifiable, Equatable {
@@ -424,5 +425,52 @@ struct AnnotationToolbar: View {
 
     private var divider: some View {
         Rectangle().fill(Color.zLine).frame(width: 1, height: 26).padding(.horizontal, 4)
+    }
+}
+
+/// 每個標註工具的游標：SF Symbol 圖示＋白色描邊＋陰影（游標在命盤上時才換）
+enum ToolCursor {
+    private static var cache: [AnnoTool: NSCursor] = [:]
+
+    static func cursor(for tool: AnnoTool) -> NSCursor {
+        if tool == .select { return .arrow }
+        if let c = cache[tool] { return c }
+        let (symbol, hot): (String, CGPoint) = {
+            switch tool {
+            case .pen: return ("pencil.tip", CGPoint(x: 0.5, y: 0.92))
+            case .highlight: return ("highlighter", CGPoint(x: 0.2, y: 0.85))
+            case .arrow, .rect: return ("plus", CGPoint(x: 0.5, y: 0.5))
+            case .text: return ("character.cursor.ibeam", CGPoint(x: 0.5, y: 0.5))
+            case .eraser: return ("eraser", CGPoint(x: 0.3, y: 0.8))
+            case .comment: return ("bubble.left.fill", CGPoint(x: 0.12, y: 0.88))
+            case .select: return ("cursorarrow", .zero)
+            }
+        }()
+        let size = NSSize(width: 30, height: 30)
+        let img = NSImage(size: size, flipped: false) { r in
+            let conf = NSImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
+            guard let base = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(conf) else { return false }
+            let s = base.size
+            let rect = NSRect(x: (r.width - s.width) / 2, y: (r.height - s.height) / 2, width: s.width, height: s.height)
+            // 陰影
+            let shadow = NSShadow()
+            shadow.shadowColor = NSColor.black.withAlphaComponent(0.35)
+            shadow.shadowBlurRadius = 3
+            shadow.shadowOffset = NSSize(width: 0, height: -1.5)
+            NSGraphicsContext.saveGraphicsState()
+            shadow.set()
+            // 白色描邊：往四周各畫一次白色版本
+            let white = base.withSymbolConfiguration(conf.applying(.init(paletteColors: [.white])))!
+            for (dx, dy) in [(-1.2, 0), (1.2, 0), (0, -1.2), (0, 1.2), (-0.9, -0.9), (0.9, 0.9), (-0.9, 0.9), (0.9, -0.9)] {
+                white.draw(in: rect.offsetBy(dx: CGFloat(dx), dy: CGFloat(dy)))
+            }
+            NSGraphicsContext.restoreGraphicsState()
+            let ink = base.withSymbolConfiguration(conf.applying(.init(paletteColors: [tool == .comment ? NSColor(red: 0x0D / 255, green: 0x99 / 255, blue: 1, alpha: 1) : .black])))!
+            ink.draw(in: rect)
+            return true
+        }
+        let c = NSCursor(image: img, hotSpot: NSPoint(x: hot.x * size.width, y: hot.y * size.height))
+        cache[tool] = c
+        return c
     }
 }

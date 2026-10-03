@@ -281,7 +281,7 @@ private struct PalaceCell: View {
                         ForEach(Array(stride(from: 0, to: extra.count, by: 4)), id: \.self) { k in
                             HStack(alignment: .top, spacing: 1) {
                                 ForEach(Array(extra[k..<min(k + 4, extra.count)].reversed()), id: \.0) { name, color in
-                                    VerticalText(name, size: ChartType.adj(fs) * 0.92, color: color)
+                                    VerticalText(name, size: ChartType.adj(fs) * 0.76, color: color)   // 流曜是輔助資訊，比雜曜小一點
                                 }
                             }
                         }

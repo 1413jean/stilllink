@@ -132,6 +132,13 @@ struct ChartScreen: View {
                         .overlay { AnnotationLayer(chartID: person.id, tool: annoTool, color: annoColor, size: annoSize) }
                         // 備註圖釘（像 Figma 留言）：圖釘隨時可點；選到備註工具時點盤面新增
                         .overlay { CommentLayer(chartID: person.id, active: annoTool == .comment) }
+                        // 游標在命盤上：換成目前工具的游標（選取＝一般箭頭）
+                        .onContinuousHover { phase in
+                            switch phase {
+                            case .active: ToolCursor.cursor(for: annoTool).set()
+                            case .ended: NSCursor.arrow.set()
+                            }
+                        }
                         .scaleEffect(zoom / sharpZoom, anchor: .top)
                         .frame(width: boardW * zoom, height: boardW * boardAspect * zoom, alignment: .top)
                         .gesture(magnify)
@@ -266,6 +273,16 @@ struct ChartScreen: View {
             }
         }
         .onDisappear { if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil } }
+        // 驗證用：ZIWEI_CURSOR_DUMP=資料夾 把各工具游標存成 PNG
+        .task {
+            guard let dir = ProcessInfo.processInfo.environment["ZIWEI_CURSOR_DUMP"] else { return }
+            for t in AnnoTool.allCases where t != .select {
+                let img = ToolCursor.cursor(for: t).image
+                if let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(t.rawValue).png"))
+                }
+            }
+        }
         .modifier(ChartChrome(enabled: chrome, title: ChartScreen.title(person), showInfo: $showInfo))
         .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
             let target = pick
