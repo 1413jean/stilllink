@@ -479,23 +479,20 @@ private struct AccountBar: View {
                 }
                 .pickerStyle(.inline)
                 Divider()
-                Button { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.account) } label: {
-                    Label("帳號與同步…", systemImage: "icloud")
-                }
-                Divider()
-                Button { NotificationCenter.default.post(name: .openSettings, object: SettingsPage.Section.profile) } label: {
-                    Label("個人檔案…", systemImage: "person.crop.circle")
-                }
+                // 選單項目的圖示：label 直接放 Image＋Text（Label 的圖示在 macOS 選單裡會被藏起來）
                 Button { NotificationCenter.default.post(name: .openSettings, object: nil) } label: {
-                    Label("設定…", systemImage: "gearshape")
+                    Image(systemName: "gearshape")
+                    Text("設定…")
                 }
                 .keyboardShortcut(",")
                 Divider()
                 Button { NotificationCenter.default.post(name: .openWhatsNew, object: nil) } label: {
-                    Label("新功能…", systemImage: "sparkles")
+                    Image(systemName: "sparkles")
+                    Text("新功能…")
                 }
                 Button { BugReport.run(store: store) } label: {
-                    Label("回報問題…", systemImage: "exclamationmark.bubble")
+                    Image(systemName: "exclamationmark.bubble")
+                    Text("回報問題…")
                 }
             } label: {
                 HStack(spacing: 8) {
@@ -508,7 +505,6 @@ private struct AccountBar: View {
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
             }
-            .labelStyle(.titleAndIcon)   // 選單每一項都顯示圖示
             .menuStyle(.button)
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
