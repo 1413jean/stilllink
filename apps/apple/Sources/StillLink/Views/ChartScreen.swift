@@ -55,6 +55,8 @@ struct ChartScreen: View {
     @AppStorage("infoPanelW") private var panelW: Double = Double(infoPanelWidth)   // 右側面板寬度（左緣可拖拉，會記住）
     @State private var dragStartW: Double?
     @State private var handleHover = false
+    @State private var annoTool: AnnoTool = .select      // 底部工具列：目前的標註工具（選取＝一般看盤）
+    @State private var annoColor: AnnoColor = .red
     @State private var model: ChartModel?
     @State private var shownLevel = 1           // 盤面用的層級：跟著 model 一起更新，避免先用舊資料畫一次
     @State private var zoom: CGFloat = 1       // 觸控板捏合縮放（1～2.5）
@@ -119,6 +121,8 @@ struct ChartScreen: View {
                             }
                         }
                         .frame(width: boardW * sharpZoom, height: boardW * boardAspect * sharpZoom)
+                        // 標註層：畫筆、螢光筆、框線、文字（座標跟著盤面大小）
+                        .overlay { AnnotationLayer(chartID: person.id, tool: annoTool, color: annoColor) }
                         .scaleEffect(zoom / sharpZoom, anchor: .top)
                         .frame(width: boardW * zoom, height: boardW * boardAspect * zoom, alignment: .top)
                         .gesture(magnify)
@@ -137,11 +141,17 @@ struct ChartScreen: View {
                     }
                     .frame(width: boardW * zoom)
                     .padding(.top, 14)
-                    .padding(.bottom, store.settings.showComposer ? 150 : 40)
+                    .padding(.bottom, store.settings.showComposer ? 210 : 100)   // 底部留給工具列
                     .frame(width: max(usable, boardW * zoom + 48))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .defaultScrollAnchor(.top)
+
+                // 底部浮動工具列（標註）：在命盤區正中間
+                AnnotationToolbar(chartID: person.id, tool: $annoTool, color: $annoColor)
+                    .frame(width: usable)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, store.settings.showComposer ? 150 : 22)
 
                 if store.settings.showComposer {
                 AIComposer()
