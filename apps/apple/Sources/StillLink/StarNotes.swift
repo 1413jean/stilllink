@@ -67,7 +67,8 @@ final class StarNotes: ObservableObject {
 
     /// 一句話重點：總論第一行夠短就當重點（紫微 → 皇帝）
     static func tagline(_ n: StarNote) -> String {
-        guard let f = n.summary.split(separator: "\n").first, f.count <= 12 else { return "" }
+        // 「人物形象：」這種標籤行不算
+        guard let f = n.summary.split(separator: "\n").first, f.count <= 12, !f.contains("：") else { return "" }
         return String(f)
     }
 
@@ -119,9 +120,9 @@ struct StarNotesCard: View {
         let shown = parts.filter { label, i in
             label == "本宮" || StarNotes.shared.keys(for: chart.palaces[i]).contains { mutagenTags(chart.palaces[i])[$0.key] != nil }
         }
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 26) {
             ForEach(shown, id: \.1) { label, i in
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("\(label)・\(chart.palaces[i].name)").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
                     PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]), onOpen: onOpen)
                 }
@@ -149,21 +150,21 @@ private struct PalaceNotes: View {
                 let n = notes.note(item.key)
                 Button { onOpen(item.key, palace.name) } label: {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 5) {
+                        VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) {
                                 Text(item.key).font(Font.zBodyStrong).foregroundStyle(Color.zText)
                                 Text(only?[item.key].flatMap { $0.isEmpty ? nil : $0 } ?? StarNotes.tagline(n))
                                     .font(Font.zCallout).foregroundStyle(Color.zText3).lineLimit(1)
                             }
                             if let t = n.palaces[pk], !t.isEmpty {
-                                Text(t).font(Font.zCallout).foregroundStyle(Color.zText2).lineLimit(2)
-                                    .lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+                                Text(t).zText(.callout).foregroundStyle(Color.zText2).lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(Color.zText3)
                     }
-                    .padding(.vertical, 11)
+                    .padding(.vertical, 14)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PressStyle())
@@ -205,7 +206,7 @@ struct StarDetailView: View {
             if let t = n.palaces[pk], !t.isEmpty {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("落\(palaceName)").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
-                    Text(t).font(Font.zBody).foregroundStyle(Color.zText).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+                    Text(t).zText(.callout).foregroundStyle(Color.zText).fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.leading, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -216,7 +217,7 @@ struct StarDetailView: View {
             if !body.isEmpty {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("總論").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
-                    Text(body).font(Font.zBody).foregroundStyle(Color.zText2).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+                    Text(body).zText(.callout).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
                 }
             }
             if !n.palaces.isEmpty {
@@ -225,7 +226,7 @@ struct StarDetailView: View {
                     ForEach(StarNotes.palaceKeys.filter { n.palaces[$0] != nil && $0 != pk }, id: \.self) { k in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(k).font(Font.zBodyStrong).foregroundStyle(Color.zText).frame(width: 16)
-                            Text(n.palaces[k] ?? "").font(Font.zCallout).foregroundStyle(Color.zText2).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+                            Text(n.palaces[k] ?? "").zText(.subheadline).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -532,7 +533,7 @@ struct DocView: View {
                     }
                 case .table(let rows): table(rows)
                 case .para(let t):
-                    Text(t).font(Font.zRead).foregroundStyle(Color.zText2).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+                    Text(t).zText(.body).foregroundStyle(Color.zText2).fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -545,12 +546,12 @@ struct DocView: View {
         if parts.count == 2 && parts[0].count <= 8 {
             VStack(alignment: .leading, spacing: 3) {
                 Text(parts[0]).font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
-                Text(parts[1]).font(Font.zRead).foregroundStyle(Color.zText).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+                Text(parts[1]).zText(.body).foregroundStyle(Color.zText).fixedSize(horizontal: false, vertical: true)
             }
         } else {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Circle().fill(Color.zText3).frame(width: 5, height: 5).alignmentGuide(.firstTextBaseline) { $0[.bottom] + 5 }
-                Text(t).font(Font.zRead).foregroundStyle(Color.zText).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
+                Text(t).zText(.body).foregroundStyle(Color.zText).fixedSize(horizontal: false, vertical: true)
             }
         }
     }

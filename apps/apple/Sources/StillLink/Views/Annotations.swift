@@ -302,6 +302,8 @@ struct AnnotationToolbar: View {
                 .help(t.help)
                 if t == .select { divider }
             }
+            // 顏色、粗細：選到畫筆、螢光筆、框線、文字時才展開
+            if [.pen, .highlight, .rect, .text].contains(tool) {
             divider
             ForEach(AnnoColor.allCases, id: \.self) { c in
                 Button { color = c; if tool == .select || tool == .eraser { tool = .pen } } label: {
@@ -314,6 +316,7 @@ struct AnnotationToolbar: View {
                 .buttonStyle(PressStyle())
                 .help(["red": "紅", "blue": "藍", "green": "綠", "orange": "橘", "black": "黑"][c.rawValue] ?? "")
             }
+            if tool != .text {
             divider
             // 粗細：細、中、粗（畫筆、螢光筆、框線）
             ForEach(AnnoSize.allCases, id: \.self) { z in
@@ -326,6 +329,8 @@ struct AnnotationToolbar: View {
                 }
                 .buttonStyle(PressStyle())
                 .help(z.label)
+            }
+            }
             }
             divider
             Button { store.undoLast(chartID) } label: {
@@ -351,6 +356,7 @@ struct AnnotationToolbar: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.16)))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.08)))
         .shadow(color: Color.black.opacity(0.25), radius: 14, y: 6)
+        .animation(Motion.base, value: tool)
         .onExitCommand { tool = .select }   // Esc 回到選取
     }
 
