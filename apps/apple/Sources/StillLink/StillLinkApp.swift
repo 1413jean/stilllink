@@ -188,9 +188,10 @@ struct RootView: View {
                     Button { openWhatsNew() } label: {
                         Label("新功能", systemImage: "sparkles").labelStyle(.titleAndIcon)
                             .zText(.subheadlineStrong).foregroundStyle(Color.zAccent)
-                            .padding(.horizontal, 10).frame(height: 26)
+                            .padding(.horizontal, 12).frame(height: 26)
                             .background(Capsule().fill(Color.zAccent.opacity(0.12)))
                             .contentShape(Capsule())
+                            .padding(.horizontal, 6)   // 跟工具列玻璃膠囊的邊緣留空，不要貼邊
                     }
                     .buttonStyle(.plain)
                     .help("看這次更新了什麼")
