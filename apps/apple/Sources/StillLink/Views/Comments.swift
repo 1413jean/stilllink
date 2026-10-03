@@ -41,6 +41,7 @@ final class CommentStore: ObservableObject {
 struct CommentLayer: View {
     let chartID: UUID
     let active: Bool                  // 目前是不是備註工具
+    var tool: AnnoTool = .select      // 目前的工具（離開備註時換回它的游標）
     @EnvironmentObject private var app: Store
     @ObservedObject private var store = CommentStore.shared
     @State private var draft: CGPoint?        // 新增中的圖釘位置
@@ -83,9 +84,8 @@ struct CommentLayer: View {
                 ForEach(store.list(chartID).filter { !$0.resolved }) { t in
                     let d = dragging?.id == t.id ? dragging!.offset : .zero
                     pinView(selected: open == t.id)
-                        .position(x: t.point.x * size.width + pin / 2 + d.width, y: t.point.y * size.height - pin / 2 + d.height)
                         // 拖曳圖釘可以換位置（放開才存）
-                        .gesture(DragGesture(minimumDistance: 3)
+                        .gesture(DragGesture(minimumDistance: 3, coordinateSpace: .named("comments"))   // 用整層的座標，圖釘跟著動也不會抖
                             .onChanged { v in dragging = (t.id, v.translation); open = nil; hoverPin = nil }
                             .onEnded { v in
                                 let nx = min(1, max(0, t.point.x + v.translation.width / size.width))
@@ -94,7 +94,18 @@ struct CommentLayer: View {
                                 dragging = nil
                             })
                         .onTapGesture { withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) { open = open == t.id ? nil : t.id; draft = nil; reply = "" } }
-                        .onHover { h in withAnimation(Motion.fast) { hoverPin = h ? t.id : (hoverPin == t.id ? nil : hoverPin) } }
+                        .onHover { h in
+                            ToolCursor.setOverComment(h, tool: tool)
+                            withAnimation(Motion.fast) { hoverPin = h ? t.id : (hoverPin == t.id ? nil : hoverPin) }
+                        }
+                        // 右鍵：標成已解決／刪除（刪掉可以從下方提示條復原）
+                        .contextMenu {
+                            Button { resolve(t) } label: { Label("標成已解決", systemImage: "checkmark.circle") }
+                            Divider()
+                            Button(role: .destructive) { hoverPin = nil; remove(t) } label: { Label("刪除", systemImage: "trash") }
+                        }
+                        // position 要放最後：它會把 view 撐滿整個盤面，hover 掛在它後面就永遠不會「離開」
+                        .position(x: t.point.x * size.width + pin / 2 + d.width, y: t.point.y * size.height - pin / 2 + d.height)
                 }
                 if let id = hoverPin, open != id, let t = store.list(chartID).first(where: { $0.id == id }) {
                     preview(t, size: size)
@@ -107,6 +118,7 @@ struct CommentLayer: View {
                     threadCard(t, size: size)
                 }
             }
+            .coordinateSpace(name: "comments")
             .overlay(alignment: .bottom) { undoBar }
         }
         .onChange(of: active) { a in if !a { draft = nil } }
@@ -123,9 +135,10 @@ struct CommentLayer: View {
     private func pinView(selected: Bool) -> some View {
         AvatarView(name: app.userAvatar, size: pin - 6)
             .frame(width: pin, height: pin)
-            .background(bubble.fill(Color.zCard))
-            .overlay(bubble.stroke(selected ? figmaBlue : Color.zCard, lineWidth: selected ? 2.5 : 2))
-            .shadow(color: .black.opacity(0.22), radius: 6, y: 3)
+            .background(bubble.fill(Color.zRaised))
+            .overlay(bubble.stroke(selected ? figmaBlue : Color.zRaised, lineWidth: selected ? 2.5 : 2))
+            .overlay(bubble.stroke(Color.zRaisedLine, lineWidth: 0.5).padding(-1))
+            .raisedShadow(small: true)
             .scaleEffect(selected ? 1.08 : 1)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selected)
             .contentShape(Rectangle())
@@ -168,11 +181,11 @@ struct CommentLayer: View {
             }
             .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 8)
             .frame(width: fieldW, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: empty ? 21 : 14).fill(Color.zCard))
+            .background(RoundedRectangle(cornerRadius: empty ? 21 : 14).fill(Color.zRaised))
             // 被選取的感覺：藍色外框＋外圈淡藍光暈；空白時是一條膠囊
             .overlay(RoundedRectangle(cornerRadius: empty ? 21 : 14).stroke(figmaBlue.opacity(0.85), lineWidth: 1))
             .background(RoundedRectangle(cornerRadius: empty ? 24 : 17).stroke(figmaBlue.opacity(focused ? 0.1 : 0), lineWidth: 3).padding(-2.5))
-            .shadow(color: .black.opacity(0.14), radius: 14, y: 6)
+            .raisedShadow()
             .animation(.spring(response: 0.3, dampingFraction: 0.85), value: empty)
             .transition(.asymmetric(insertion: .scale(scale: 0.2, anchor: .leading).combined(with: .opacity),
                                     removal: .opacity))
@@ -255,9 +268,10 @@ struct CommentLayer: View {
             .padding(.horizontal, 16).padding(.bottom, 16)
         }
         .frame(width: cardW)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
-        .shadow(color: .black.opacity(0.16), radius: 18, y: 8)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.zRaised))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
+        .raisedShadow()
+        .onHover { ToolCursor.setOverComment($0, tool: tool) }
         .offset(x: x + cardW > size.width ? max(0, t.point.x * size.width - cardW - 8) : x, y: min(max(0, y), size.height - 220))
         .transition(.scale(scale: 0.9, anchor: .topLeading).combined(with: .opacity))
     }
@@ -333,7 +347,7 @@ struct CommentLayer: View {
                 }
             }
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.zRaised))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(figmaBlue.opacity(0.85), lineWidth: 1))
         }
     }
@@ -356,8 +370,9 @@ struct CommentLayer: View {
         }
         .padding(10)
         .frame(width: 220, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
-        .shadow(color: .black.opacity(0.14), radius: 12, y: 5)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.zRaised))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zRaisedLine, lineWidth: 0.5))
+        .raisedShadow()
         .offset(x: x + 220 > size.width ? t.point.x * size.width - 226 : x, y: max(0, y))
         .allowsHitTesting(false)
         .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading)))
@@ -418,5 +433,13 @@ struct CommentLayer: View {
             .padding(.bottom, 12)
             .transition(.opacity.combined(with: .offset(y: 10)))
         }
+    }
+}
+
+extension View {
+    /// 浮在盤面上的卡片陰影：一層大而柔、一層貼著輪廓；深色模式底很暗，陰影要更重才看得出浮起來
+    func raisedShadow(small: Bool = false) -> some View {
+        self.shadow(color: .black.opacity(small ? 0.3 : 0.28), radius: small ? 7 : 18, y: small ? 3 : 8)
+            .shadow(color: .black.opacity(0.14), radius: small ? 1 : 2, y: 1)
     }
 }

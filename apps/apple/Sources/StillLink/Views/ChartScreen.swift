@@ -131,11 +131,11 @@ struct ChartScreen: View {
                         // 標註層：畫筆、螢光筆、框線、文字（座標跟著盤面大小）
                         .overlay { AnnotationLayer(chartID: person.id, tool: annoTool, color: annoColor, size: annoSize) }
                         // 備註圖釘（像 Figma 留言）：圖釘隨時可點；選到備註工具時點盤面新增
-                        .overlay { CommentLayer(chartID: person.id, active: annoTool == .comment) }
+                        .overlay { CommentLayer(chartID: person.id, active: annoTool == .comment, tool: annoTool) }
                         // 游標在命盤上：換成目前工具的游標（選取＝一般箭頭）
                         .onContinuousHover { phase in
                             switch phase {
-                            case .active: ToolCursor.cursor(for: annoTool).set()
+                            case .active: (ToolCursor.overComment ? NSCursor.arrow : ToolCursor.cursor(for: annoTool)).set()
                             case .ended: NSCursor.arrow.set()
                             }
                         }

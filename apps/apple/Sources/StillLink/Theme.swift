@@ -15,6 +15,8 @@ extension Color {
     static let zCard = dynamic(0xFFFFFF, 0x262522)
     static let zSide = dynamic(0xF8F8F6, 0x161513)      // 側欄：Claude 式很淺的暖白
     static let zLine = dynamic(0xE7E5DF, 0x34332F)
+    static let zRaised = dynamic(0xFFFFFF, 0x35332F)    // 浮在盤面上的卡片（備註）：深色模式比 zCard 亮一階才分得出來
+    static let zRaisedLine = dynamic(0xE2DFD8, 0x4C4A45) // 浮起卡片的細框
     static let zGrid = dynamic(0xCFCCC4, 0x46443F)
     static let zText = dynamic(0x1C1B19, 0xECEAE4)      // 主文字：同 DS 黑
     static let zText2 = dynamic(0x5C5A54, 0xA6A39C)     // DS ui-primary
