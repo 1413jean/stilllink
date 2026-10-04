@@ -206,7 +206,7 @@ struct ToastHost: View {
                         .lineLimit(2)
                     if let action = item.action {
                         Button(action) { item.perform?(); dismiss() }
-                            .buttonStyle(.plain).font(Font.zCalloutStrong).foregroundStyle(Color.zAccent)
+                            .buttonStyle(.plain).font(Font.zCalloutStrong).foregroundStyle(Color.zToastAction)
                             .padding(.leading, 4)
                         Button(action: dismiss) {
                             Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.zBg.opacity(0.6))
