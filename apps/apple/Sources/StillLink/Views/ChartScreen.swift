@@ -487,6 +487,7 @@ struct TipsButton: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focusable(false)   // 彈窗打開時焦點會落在它身上，出現藍色框
             }
             .padding(16)
             .frame(width: 300)

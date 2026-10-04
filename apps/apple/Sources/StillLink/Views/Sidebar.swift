@@ -469,32 +469,13 @@ private struct SectionLabel: View {
 /// 左下角帳號列：點開是外觀、登入與設定
 private struct AccountBar: View {
     @EnvironmentObject var store: Store
+    @ObservedObject private var menu = AccountMenuState.shared
 
     var body: some View {
         VStack(spacing: 0) {
             Rectangle().fill(Color.zLine).frame(height: 0.5)
-            Menu {
-                Picker("外觀", selection: store.appearanceWithTransition) {
-                    ForEach(Appearance.allCases, id: \.self) { Label($0.label, systemImage: $0.icon).tag($0) }
-                }
-                .pickerStyle(.inline)
-                Divider()
-                // 選單項目的圖示：label 直接放 Image＋Text（Label 的圖示在 macOS 選單裡會被藏起來）
-                Button { NotificationCenter.default.post(name: .openSettings, object: nil) } label: {
-                    Image(systemName: "gearshape")
-                    Text("設定…")
-                }
-                .keyboardShortcut(",")
-                Divider()
-                Button { NotificationCenter.default.post(name: .openWhatsNew, object: nil) } label: {
-                    Image(systemName: "sparkles")
-                    Text("新功能…")
-                }
-                Button { BugReport.run(store: store) } label: {
-                    Image(systemName: "exclamationmark.bubble")
-                    Text("回報問題…")
-                }
-            } label: {
+            // 用系統原生選單（NSMenu）：SwiftUI 的 Menu 在新版 macOS 會把按鈕的圖示藏起來
+            Button { withAnimation(Motion.fast) { menu.open.toggle() } } label: {
                 HStack(spacing: 8) {
                     AvatarView(name: store.userAvatar, size: 20)
                     Text(store.userName).font(Font.zCallout).foregroundStyle(Color.zText).lineLimit(1)
@@ -505,13 +486,89 @@ private struct AccountBar: View {
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
             }
-            .menuStyle(.button)
             .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .labelStyle(.titleAndIcon)
-            .tint(Color.primary)   // 選單 icon 跟文字同色，不用主色
             .padding(.horizontal, 14)
             .frame(height: 44)
+            // 回報帳號列在視窗裡的位置：彈出面板從這裡往上展開
+            .background(GeometryReader { g in
+                Color.clear
+                    .onAppear { menu.anchor = g.frame(in: .global) }
+                    .onChange(of: g.frame(in: .global)) { _, f in menu.anchor = f }
+            })
         }
+    }
+}
+
+/// 左下角帳號選單的開關與位置（面板畫在最外層，才能蓋過整個視窗、點旁邊關閉）
+@MainActor
+final class AccountMenuState: ObservableObject {
+    static let shared = AccountMenuState()
+    @Published var open = false
+    @Published var anchor: CGRect = .zero
+    func close() { if open { withAnimation(Motion.fast) { open = false } } }
+}
+
+/// 左下角帳號選單：自己畫的彈出面板（系統選單在新版 macOS 會把每一項的圖示藏起來）
+struct AccountMenuPanel: View {
+    @EnvironmentObject var store: Store
+    var close: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("外觀").zText(.footnote).foregroundStyle(Color.zText3)
+                .padding(.horizontal, 10).padding(.top, 4).padding(.bottom, 4)
+            ForEach(Appearance.allCases, id: \.self) { a in
+                MenuRow(icon: a.icon, title: a.label, checked: store.appearance == a) {
+                    store.appearanceWithTransition.wrappedValue = a
+                }
+            }
+            divider
+            MenuRow(icon: "gearshape", title: "設定…", shortcut: "⌘,") {
+                close(); NotificationCenter.default.post(name: .openSettings, object: nil)
+            }
+            divider
+            MenuRow(icon: "sparkles", title: "新功能…") {
+                close(); NotificationCenter.default.post(name: .openWhatsNew, object: nil)
+            }
+            MenuRow(icon: "exclamationmark.bubble", title: "回報問題…") {
+                close(); BugReport.run(store: store)
+            }
+            // Esc 關閉
+            Button("", action: close).keyboardShortcut(.cancelAction).opacity(0).frame(width: 0, height: 0)
+        }
+        // 外觀跟右下角快捷選單一樣（zCard 底，hover 的 zHover 才看得出來）
+        .padding(6)
+        .frame(width: 236)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard).shadow(color: Color.zShadow, radius: 18, y: 6))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
+    }
+
+    private var divider: some View {
+        Rectangle().fill(Color.zLine).frame(height: 0.5).padding(.vertical, 4)
+    }
+}
+
+/// 選單的一列：跟快捷選單同一套（圖示＋文字，右邊打勾或快捷鍵；hover／按下底色用 QuickRowStyle）
+private struct MenuRow: View {
+    let icon: String
+    let title: String
+    var checked = false
+    var shortcut: String? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(Font.zIcon).foregroundStyle(Color.zText).frame(width: 18)
+                Text(title).font(Font.zBody).foregroundStyle(Color.zText)
+                Spacer(minLength: 8)
+                if checked { Image(systemName: "checkmark").font(Font.zCaption.weight(.semibold)).foregroundStyle(Color.zText) }
+                if let shortcut { Text(shortcut).font(Font.zCallout).foregroundStyle(Color.zText3) }
+            }
+            .padding(.horizontal, 10).frame(height: 34)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(QuickRowStyle())
+        .focusable(false)
     }
 }
