@@ -89,6 +89,9 @@ DESIGN.md                  設計規範
 | `ZIWEI_PAN_HOVER=1` | 運限表左右箭頭不用 hover 也顯示 |
 | `ZIWEI_REPORT=檔案路徑` | 把「回報問題」內容寫到檔案 |
 | `ZIWEI_WHATSNEW=1` | 打開「新功能」視窗 |
+| `ZIWEI_ACCOUNT_MENU=1` | 打開左下角帳號選單 |
+| `ZIWEI_REVERSE=甲,巳,酉,未,寅,亥` | 打開命盤反推，自動填（年干,紅鸞,左輔,三台,紫微,命宮）並反推 |
+| `ZIWEI_DOC_EDIT=段落編號` | 星曜筆記參考文件直接打開某一段的編輯 |
 | `ZIWEI_CURSOR_DUMP=資料夾` | 把各工具游標存成 PNG |
 | `ZIWEI_NOTES`、`ZIWEI_STAR_DETAIL` | 開星曜筆記頁 |
 
