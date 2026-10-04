@@ -100,7 +100,7 @@ DESIGN.md                  設計規範
 
 ## 6. 設計規範（摘要，細節看 DESIGN.md）
 
-- **Figma 是設計系統的來源。** 檔案「Stillink Design System」（Colors：Light／Dark 兩個 mode；Typography：iOS／macOS 兩個 mode）。改 token 時 Figma、`Theme.swift`、`DESIGN.md` 三處要一致。
+- **Figma 是設計系統的來源。** 檔案「Stillink-MacOS Design System」（fileKey `dbUmstG3eIGY2ipJPFwLEY`；元件如輸入框 `Input` 也在這裡）（Colors：Light／Dark 兩個 mode；Typography：iOS／macOS 兩個 mode）。改 token 時 Figma、`Theme.swift`、`DESIGN.md` 三處要一致。
 - **不寫死數字和系統色。** 文字用 `.zText(.樣式)` 或 `Font.z*`；命盤文字用 `ChartType.*(fs)`（跟著盤面縮放）；顏色用 `Color.z*`／`wm*`／`m*`／`f*`。
 - **淺色、深色都要做。** 浮在盤面上的卡片用 `zRaised`＋`zRaisedLine`＋`raisedShadow()`，深色模式才分得出層次。
 - **RWD**：視窗從最小寬度到很寬都要能用；窄的時候側欄先自動收起。可點的東西至少 28pt 高，觸控情境 ≥ 44pt。

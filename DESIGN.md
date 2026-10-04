@@ -101,7 +101,7 @@
 - 位置：在命盤頁對齊底部工具列的中心（`ToastAnchor`），浮在工具列上方；其他頁置中。
 - 外觀：膠囊形，背景模糊（`.hudWindow`）疊 64% 的 `zText`，0.5pt 白色細邊，兩層陰影；寬度跟著文字走，不固定。
 - 內距：左 18、右 22、上下 12；icon 和文字間距 10；文字 `zCalloutStrong`、`zBg` 色，最多兩行。
-- 動作按鈕（例如「復原」）用 `zToastAction`：提示條是反色，淺色模式（深底）用亮橘 `#F09A72`、深色模式（淺底）用深橘 `#B4502C`；後面接一個 ×，帶動作的提示停 5 秒。
+- 動作按鈕（例如「復原」）用 `zToastAction`：提示條是反色，淺色模式（深底）用亮橘 `#EDB096`（terracotta/300）、深色模式（淺底）用深橘 `#B04F2F`（terracotta/600），Figma 是 `✦/text/brand/on-inverse`；後面接一個 ×，帶動作的提示停 5 秒。
 - Icon 依訊息自動判斷：成功（「已…」）`checkmark.circle.fill`、提示說明 `info.circle.fill`、失敗／錯誤 `exclamationmark.triangle.fill`；顏色一律灰白（`zBg` 75%），不用彩色。
 
 ## 動態（`Motion.swift`，參考 GSAP 的原則）

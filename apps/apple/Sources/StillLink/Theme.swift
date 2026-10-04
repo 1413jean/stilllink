@@ -24,7 +24,7 @@ extension Color {
     static let zHover = dynamic(0xF1F0ED, 0x2C2B28)
     static let zSel = dynamic(0xEDEDEA, 0x33322E)       // 選取列：淺灰
     static let zAccent = dynamic(0xD36540, 0xE08458)   // 陶土橘：2.1.4 調深一點點（原 D96B43／EC9473 太亮、看不清楚）
-    static let zToastAction = dynamic(0xF09A72, 0xB4502C)   // 提示條上的按鈕：提示條是反色（淺色模式深底、深色模式淺底），橘色要跟著反過來挑才看得清楚
+    static let zToastAction = dynamic(0xEDB096, 0xB04F2F)   // 提示條上的按鈕：提示條是反色（淺色模式深底、深色模式淺底），橘色要跟著反過來挑才看得清楚
 
     // 命盤（照文墨天機）
     static let wmRed = dynamic(0xD0102A, 0xFF6B76)
