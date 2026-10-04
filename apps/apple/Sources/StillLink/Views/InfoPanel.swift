@@ -109,7 +109,7 @@ struct InfoPanel: View {
                         } else {
                             HStack(spacing: 8) {
                                 TextField("對方出生年，例如 1995", text: $hepanDraft)
-                                    .textFieldStyle(.plain).inputBox()
+                                    .textFieldStyle(.plain).inputBox(.medium)   // 卡片裡：框一樣大，字跟卡片其他字一樣小
                                     .onSubmit(applyHepan)
                                 Button("合盤", action: applyHepan).buttonStyle(ZPrimaryButton(small: true))
                                     .disabled(Int(hepanDraft.trimmingCharacters(in: .whitespaces)) == nil)

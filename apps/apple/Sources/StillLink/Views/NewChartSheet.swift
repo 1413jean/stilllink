@@ -404,12 +404,26 @@ private struct NumberField: View {
 
 extension View {
     /// 設計系統的輸入框：38 高、14pt、淺底細框
-    func inputBox() -> some View {
-        self.font(Font.zInput)
-            .padding(.horizontal, 12)
+    /// 輸入框外觀（全 App 共用一個元件，四種尺寸）：預設 .large 是表單用的
+    func inputBox(_ size: InputSize = .large) -> some View {
+        self.font(size.font)
+            .padding(.horizontal, size.padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 38)
-            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
+            .frame(height: size.height)
+            .background(RoundedRectangle(cornerRadius: size.radius).fill(Color.zCard))
+            .overlay(RoundedRectangle(cornerRadius: size.radius).stroke(Color.zLine))
     }
+}
+
+/// 輸入框尺寸：框的高度和裡面的字一起決定，跟旁邊的文字搭得起來
+enum InputSize {
+    case small    // 32 高、13pt（callout）：窄的地方
+    case medium   // 38 高、13pt（callout）：卡片裡（旁邊都是小字時）
+    case large    // 38 高、15pt（body）：表單（預設）
+    case xLarge   // 44 高、15pt（body）：主要的大輸入
+
+    var height: CGFloat { switch self { case .small: 32; case .medium, .large: 38; case .xLarge: 44 } }
+    var font: Font { switch self { case .small, .medium: Font.zBody; case .large, .xLarge: Font.zInput } }
+    var padding: CGFloat { self == .small ? 10 : 12 }
+    var radius: CGFloat { self == .small ? 8 : 9 }
 }

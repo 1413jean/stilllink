@@ -70,7 +70,14 @@
 - 四柱依五行上色（`ZW.Wuxing.color`）。
 
 ## 控制項（`Controls.swift`）
-- 輸入框 `inputBox()`、分段 `ZSegmented`、選單 `ZMenuField` 的高度一律 38。
+- 輸入框一律用 `inputBox(_ size:)`，同一個元件四種尺寸（框的高度和字一起決定）：
+  | 尺寸 | 高度 | 文字 | 用在 |
+  |---|---|---|---|
+  | `.small` | 32 | `callout` 13 | 窄的地方 |
+  | `.medium` | 38 | `callout` 13 | 卡片裡（例：右側面板的合盤） |
+  | `.large`（預設） | 38 | `body` 15 | 表單（新增命盤等） |
+  | `.xLarge` | 44 | `body` 15 | 主要的大輸入 |
+- 分段 `ZSegmented`、選單 `ZMenuField` 的高度是 38。
 - 按鈕有兩種，都是 40 高、圓角 10、字級 `zBodyStrong`：
   - `ZPrimaryButton`：強調色實心，用在主要動作。
   - `ZSecondaryButton`：卡片底色加細框，用在取消、完成這類次要動作。
