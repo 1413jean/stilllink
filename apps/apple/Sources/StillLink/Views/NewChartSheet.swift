@@ -55,9 +55,9 @@ struct NewChartSheet: View {
                         AvatarField(name: $avatar)
                     }
                     row("姓名", isSelfChart ? "你的名字" : "客人的名字或代稱") {
-                        TextField("例如：林小姐", text: $name).textFieldStyle(.plain)
+                        TextField("例如：林小姐", text: $name)
                             .focused($nameFocused)
-                            .inputBox()
+                            .zInput(focused: nameFocused)
                     }
                     row("性別", "影響大限順逆", last: isSelfChart) {
                         ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
@@ -67,11 +67,11 @@ struct NewChartSheet: View {
                     row("分組", "顯示在側欄的資料夾，可自己新增", last: true) {
                         if addingGroup {
                             HStack(spacing: 8) {
-                                TextField("新分組名稱，例如：VIP", text: $newGroup).textFieldStyle(.plain)
+                                TextField("新分組名稱，例如：VIP", text: $newGroup)
                                     .focused($groupFocused)
                                     .onSubmit(commitGroup)
                                     .onChange(of: groupFocused) { _, f in if !f && addingGroup { commitGroup() } }
-                                    .inputBox()
+                                    .zInput(focused: groupFocused)
                                 Button("完成", action: commitGroup).buttonStyle(ZPrimaryButton())
                             }
                             .transition(.opacity)
@@ -115,7 +115,7 @@ struct NewChartSheet: View {
                                 unit("日")
                                 Spacer(minLength: 0)
                             }
-                            .inputBox()
+                            .zInput()
                             if calendar == 1 {
                                 Toggle("閏月", isOn: $leap).toggleStyle(.checkbox).font(Font.zBody)
                             }
@@ -129,9 +129,8 @@ struct NewChartSheet: View {
                             Spacer(minLength: 0)
                             Text(ZW.hours[SolarTime.shichen(hh)] + "時").font(Font.zCallout).foregroundStyle(Color.zText3)
                         }
-                        .inputBox()
+                        .zInput()
                         .disabled(unknownTime)
-                        .opacity(unknownTime ? 0.4 : 1)
                     }
                     row("時間不確定", "不知道出生時間時，以午時排盤", last: true) {
                         HStack { Spacer(); Toggle("", isOn: $unknownTime).toggleStyle(.switch).labelsHidden() }
@@ -277,14 +276,10 @@ struct NewChartSheet: View {
 
     private func searchBox(_ hint: String, _ text: Binding<String>) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass").font(Font.zCaption).foregroundStyle(Color.zText3)
-            TextField(hint, text: text).textFieldStyle(.plain)
-            if !text.wrappedValue.isEmpty {
-                Button { text.wrappedValue = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3) }
-                    .buttonStyle(.plain)
-            }
+            TextField(hint, text: text)
+            ZClearButton(text: text)
         }
-        .inputBox()
+        .zInput(icon: "magnifyingglass")
     }
 
     private var groupOptions: [String] {
@@ -373,7 +368,7 @@ struct NewChartSheet: View {
     }
 }
 
-/// 數字輸入欄：無邊框，放在 inputBox 裡；只收數字，超出範圍不採用
+/// 數字輸入欄：無邊框，放在 zInput 框裡；只收數字，超出範圍不採用
 private struct NumberField: View {
     @Binding var value: Int
     let range: ClosedRange<Int>
@@ -400,30 +395,4 @@ private struct NumberField: View {
     }
 
     private func format(_ v: Int) -> String { pad ? String(format: "%02d", v) : String(v) }
-}
-
-extension View {
-    /// 設計系統的輸入框：38 高、14pt、淺底細框
-    /// 輸入框外觀（全 App 共用一個元件，四種尺寸）：預設 .large 是表單用的
-    func inputBox(_ size: InputSize = .large) -> some View {
-        self.font(size.font)
-            .padding(.horizontal, size.padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: size.height)
-            .background(RoundedRectangle(cornerRadius: size.radius).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: size.radius).stroke(Color.zLine))
-    }
-}
-
-/// 輸入框尺寸：框的高度和裡面的字一起決定，跟旁邊的文字搭得起來
-enum InputSize {
-    case small    // 32 高、13pt（callout）：窄的地方
-    case medium   // 38 高、13pt（callout）：卡片裡（旁邊都是小字時）
-    case large    // 38 高、15pt（body）：表單（預設）
-    case xLarge   // 44 高、15pt（body）：主要的大輸入
-
-    var height: CGFloat { switch self { case .small: 32; case .medium, .large: 38; case .xLarge: 44 } }
-    var font: Font { switch self { case .small, .medium: Font.zBody; case .large, .xLarge: Font.zInput } }
-    var padding: CGFloat { self == .small ? 10 : 12 }
-    var radius: CGFloat { self == .small ? 8 : 9 }
 }

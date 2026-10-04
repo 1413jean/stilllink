@@ -70,13 +70,18 @@
 - 四柱依五行上色（`ZW.Wuxing.color`）。
 
 ## 控制項（`Controls.swift`）
-- 輸入框一律用 `inputBox(_ size:)`，同一個元件四種尺寸（框的高度和字一起決定）：
+- 輸入框一律套 `.zInput(size, style:, icon:, focused:, multiline:)`（`Views/ZInput.swift`；Figma「❖ 輸入框 Input」是它的紀錄）。各處只決定尺寸、外觀、要不要圖示；focus 光圈、停用、多行由元件統一處理，不要自己畫框。
   | 尺寸 | 高度 | 文字 | 用在 |
   |---|---|---|---|
-  | `.small` | 32 | `callout` 13 | 窄的地方 |
-  | `.medium` | 38 | `callout` 13 | 卡片裡（例：右側面板的合盤） |
-  | `.large`（預設） | 38 | `body` 15 | 表單（新增命盤等） |
+  | `.small` | 32 | `callout` 13 | 側欄搜尋、設定搜尋、數字卦 |
+  | `.medium` | 38 | `callout` 13 | 卡片裡（合盤、備註）、星曜說明搜尋 |
+  | `.large`（預設） | 38 | `body` 15 | 表單（新增命盤、個人檔案）、星曜說明編輯 |
   | `.xLarge` | 44 | `body` 15 | 主要的大輸入 |
+  - 外觀 `.outline`（預設）：`zCard` 底＋`zLine` 細框；`.filled`：`zHover` 底、沒有框，用在側欄和清單上方的搜尋、逐項編輯。
+  - `focused` 傳進來時框線換成 `zAccent` 55%；`.disabled()` 時整個 50% 透明。
+  - 多行（`axis: .vertical`、`TextEditor`）設 `multiline: true`：高度跟著內容長，上下留白讓第一行跟單行對齊。
+  - 搜尋框：`icon: "magnifyingglass"`，尾端放 `ZClearButton(text:)`（有字才出現）。
+  - 例外：評論和 AI 解盤是「聊天輸入列」（框裡還有表情、送出、工具列），不套 `zInput`。
 - 分段 `ZSegmented`、選單 `ZMenuField` 的高度是 38。
 - 按鈕有兩種，都是 40 高、圓角 10、字級 `zBodyStrong`：
   - `ZPrimaryButton`：強調色實心，用在主要動作。

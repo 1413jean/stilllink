@@ -121,7 +121,7 @@ struct AddChartSheet: View {
                 Spacer()
                 Button("取消") { dismiss() }.buttonStyle(ZSecondaryButton(small: true))
             }
-            TextField("搜尋姓名", text: $query).textFieldStyle(.plain).inputBox()
+            HStack(spacing: 6) { TextField("搜尋姓名", text: $query); ZClearButton(text: $query) }.zInput(icon: "magnifyingglass")
             Button { entering = true } label: {
                 Label("臨時輸入生辰…（不存檔）", systemImage: "square.and.pencil")
                     .frame(maxWidth: .infinity, alignment: .leading)

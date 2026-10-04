@@ -88,11 +88,9 @@ struct QuickMenu: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("心裡想著問題，隨口報一個 0–9999 的數字").font(Font.zCaption).foregroundStyle(Color.zText3)
             TextField("例如：3721", text: $num)
-                .textFieldStyle(.plain).multilineTextAlignment(.center)
+                .multilineTextAlignment(.center)
                 .font(Font.zBody.monospacedDigit())
-                .frame(height: 32)
-                .background(RoundedRectangle(cornerRadius: 7).fill(Color.zBg))
-                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine))
+                .zInput(.small)
                 .onChange(of: num) { _, v in
                     let d = String(v.filter(\.isNumber).prefix(4))
                     if d != v { num = d }

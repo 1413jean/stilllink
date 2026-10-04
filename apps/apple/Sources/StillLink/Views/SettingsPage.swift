@@ -145,21 +145,11 @@ struct SettingsPage: View {
     /// 左欄：搜尋＋分組分類
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 1) {
-            HStack(spacing: 7) {
-                Image(systemName: "magnifyingglass").font(Font.zIcon).foregroundStyle(Color.zText3)
-                TextField("搜尋設定", text: $query).textFieldStyle(.plain).zText(.callout)
-                    .focused($searchFocused)
-                if !query.isEmpty {
-                    Button { query = "" } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3)
-                    }
-                    .buttonStyle(.plain)
-                }
+            HStack(spacing: 6) {
+                TextField("搜尋設定", text: $query).focused($searchFocused)
+                ZClearButton(text: $query)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 32)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.zHover))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(searchFocused ? Color.zAccent.opacity(0.5) : Color.zLine, lineWidth: searchFocused ? 1 : 0.5))
+            .zInput(.small, style: .filled, icon: "magnifyingglass", focused: searchFocused)
             .padding(.bottom, 6)
 
             ForEach(Section.groups, id: \.0) { group in
@@ -219,8 +209,7 @@ struct SettingsPage: View {
             }
             row("名字", "顯示在左下角，也是你自己命盤的名字") {
                 TextField("你的名字", text: $nameDraft)
-                    .textFieldStyle(.plain)
-                    .inputBox()
+                    .zInput()
                     .onAppear { nameDraft = store.userName }
                     .onSubmit(saveName)
             }

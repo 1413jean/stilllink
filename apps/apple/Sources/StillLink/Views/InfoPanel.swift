@@ -109,7 +109,7 @@ struct InfoPanel: View {
                         } else {
                             HStack(spacing: 8) {
                                 TextField("對方出生年，例如 1995", text: $hepanDraft)
-                                    .textFieldStyle(.plain).inputBox(.medium)   // 卡片裡：框一樣大，字跟卡片其他字一樣小
+                                    .zInput(.medium)   // 卡片裡：框一樣大，字跟卡片其他字一樣小
                                     .onSubmit(applyHepan)
                                 Button("合盤", action: applyHepan).buttonStyle(ZPrimaryButton(small: true))
                                     .disabled(Int(hepanDraft.trimmingCharacters(in: .whitespaces)) == nil)
@@ -142,13 +142,9 @@ struct InfoPanel: View {
                 card("備註") {
                     VStack(alignment: .leading, spacing: 10) {
                         TextField("記下客人的問題或你的觀察…", text: $draft, axis: .vertical)
-                            .textFieldStyle(.plain)
                             .lineLimit(2...5)
-                            .zText(.callout)
                             .focused($draftFocused)
-                            .padding(10)
-                            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
-                            .overlay(RoundedRectangle(cornerRadius: 9).stroke(draftFocused ? Color.zGrid : Color.zLine))
+                            .zInput(.medium, focused: draftFocused, multiline: true)
                             .onSubmit(addNote)
                         HStack {
                             Spacer()
