@@ -37,6 +37,25 @@ struct Person: Codable, Identifiable, Hashable {
     var chartKey: String { "\(solar)|\(hour)|\(gender.rawValue)" }
 }
 
+extension Person {
+    /// 排盤用的日期與時辰：一律照鐘錶時間（跟文墨天機一樣，不扣日光節約、不做經度校正）
+    /// 有出生地時另外算真太陽時，只拿來顯示（中宮鐘錶時間、真太陽時兩列都列）
+    func resolved() -> Person {
+        guard let clock else { return self }
+        let parts = clock.split(whereSeparator: { $0 == "-" || $0 == " " || $0 == ":" }).compactMap { Int($0) }
+        guard parts.count == 5 else { return self }
+        var q = self
+        q.solar = "\(parts[0])-\(parts[1])-\(parts[2])"
+        q.hour = SolarTime.shichen(parts[3])
+        q.trueSolar = nil
+        if let place, let tz = TimeZone(identifier: place.timeZoneID) {
+            let r = SolarTime.compute(year: parts[0], month: parts[1], day: parts[2], hour: parts[3], minute: parts[4], longitude: place.longitude, tz: tz)
+            q.trueSolar = String(format: "%d-%d-%d %02d:%02d", r.ymd.0, r.ymd.1, r.ymd.2, r.hm.0, r.hm.1)
+        }
+        return q
+    }
+}
+
 enum Appearance: String, Codable, CaseIterable {
     case light, dark, system
     var label: String { ["light": "淺色", "dark": "深色", "system": "跟隨系統"][rawValue]! }

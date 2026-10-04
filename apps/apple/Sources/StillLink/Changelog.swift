@@ -14,6 +14,18 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.1.4", date: "2026 年 10 月 4 日", major: true,
+            new: [
+                "排盤跟文墨天機對齊：出生時間一律照鐘錶時間排（不扣日光節約、不做經度校正）；有出生地時，中宮同時列出鐘錶時間和真太陽時",
+                "設定 → 排盤新增「辛年天魁天鉞」：預設魁寅鉞午（同文墨天機），也可以改回魁午鉞寅；大限、流年的魁鉞一起跟著",
+                "雜曜也可以 hover 出說明卡（紅鸞、天喜、咸池、天姚、天刑）",
+            ],
+            improved: [
+                "龍德跟文墨天機一樣排進雜曜",
+            ],
+            fixed: [
+                "滑鼠停在盤上任何地方都會跳出「向心自化祿」的提示文字",
+            ]),
         ReleaseNote(version: "2.1.3.1", date: "2026 年 10 月 3 日",
             improved: [
                 "左下角帳號選單精簡成外觀、設定、新功能、回報問題，每一項都有圖示",

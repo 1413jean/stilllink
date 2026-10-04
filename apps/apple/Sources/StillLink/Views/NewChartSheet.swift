@@ -314,19 +314,20 @@ struct NewChartSheet: View {
         }()
         let (h, mm) = unknownTime ? (12, 0) : (hh, mi)
         let clock = String(format: "%d-%d-%d %02d:%02d", sy, sm, sd, h, mm)
+        // 一律照鐘錶時間排盤（跟文墨天機一樣）；有出生地時另外算真太陽時，只拿來顯示
         guard let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else {
             return ("\(sy)-\(sm)-\(sd)", SolarTime.shichen(h), clock, nil)
         }
         let r = SolarTime.compute(year: sy, month: sm, day: sd, hour: h, minute: mm, longitude: place.longitude, tz: tz)
         let ts = String(format: "%d-%d-%d %02d:%02d", r.ymd.0, r.ymd.1, r.ymd.2, r.hm.0, r.hm.1)
-        return ("\(r.ymd.0)-\(r.ymd.1)-\(r.ymd.2)", r.shichen, clock, ts)
+        return ("\(sy)-\(sm)-\(sd)", SolarTime.shichen(h), clock, ts)
     }
 
     private var previewText: String {
         let r = resolved()
         let sc = ZW.hours[r.hour] + "時"
         if unknownTime { return "以午時排盤" }
-        if let ts = r.trueSolar { return "真太陽時 \(ts) · \(sc)" }
+        if let ts = r.trueSolar { return "\(r.clock) · \(sc)（真太陽時 \(ts)）" }
         return "\(r.clock) · \(sc)"
     }
 

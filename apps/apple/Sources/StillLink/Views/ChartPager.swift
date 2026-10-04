@@ -37,7 +37,8 @@ struct ChartPager: View {
                     // macOS 13：沒有整頁吸附 → 不用橫向捲動，所有頁疊在一起只顯示目前那頁，點頁籤切換（每頁狀態都保留）
                     ZStack {
                         ForEach(Array(pages.enumerated()), id: \.element.id) { i, p in
-                            ChartScreen(person: p, level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
+                            // 一律照鐘錶時間排盤（跟文墨天機一樣），舊命盤也重算；真太陽時只顯示
+                            ChartScreen(person: p.resolved(), level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
                                 .padding(.top, top)
                                 .frame(width: geo.size.width, height: geo.size.height)
                                 .opacity(i == current ? 1 : 0)

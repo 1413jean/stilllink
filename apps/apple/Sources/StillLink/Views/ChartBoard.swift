@@ -210,7 +210,6 @@ struct ChartBoard: View, Equatable {
                     .rotationEffect(.radians(Double(angle) + (mk.1 ? 0 : .pi)))
                     .frame(width: 14, height: 14)
                     .position(x: ax + dx * m * 0.5 + tx * off, y: ay + dy * m * 0.5 + ty * off)
-                    .help(mk.1 ? "離心自化\(mk.0.rawValue)" : "向心自化\(mk.0.rawValue)")
             }
         }
     }
@@ -511,9 +510,11 @@ extension PalaceCell {
             let adj = settings.showAdj ? p.adj : []
             ForEach(adj.filter { ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
                 VerticalText(s.name, size: ChartType.star(f), color: settings.tone(.misc).color)
+                    .starHoverArea(s.name, palace: p.name)
             }
             ForEach(adj.filter { !ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
                 VerticalText(s.name, size: adjF, color: settings.tone(.misc).color)
+                    .starHoverArea(s.name, palace: p.name)
             }
     }
 }
@@ -837,6 +838,29 @@ struct FlowLayout: Layout {
 }
 
 /// 滑鼠停在哪顆星（筆記 key、宮名、在盤面上的位置）
+/// 雜曜也能 hover 出說明卡（主星在 StarColumn 裡自己處理）
+private struct StarHoverArea: ViewModifier {
+    let key: String
+    let palace: String
+    @Environment(\.starHover) private var starHover
+    func body(content: Content) -> some View {
+        content.overlay {
+            if let starHover {
+                GeometryReader { g in
+                    Color.clear.contentShape(Rectangle())
+                        .onHover { inside in
+                            starHover(inside ? StarHoverInfo(key: key, palace: palace, rect: g.frame(in: .named("board"))) : nil)
+                        }
+                }
+            }
+        }
+    }
+}
+
+extension View {
+    func starHoverArea(_ key: String, palace: String) -> some View { modifier(StarHoverArea(key: key, palace: palace)) }
+}
+
 struct StarHoverInfo: Equatable {
     let key: String
     let palace: String

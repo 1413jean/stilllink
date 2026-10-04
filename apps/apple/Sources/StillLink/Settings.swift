@@ -16,6 +16,8 @@ struct ZSettings: Codable, Equatable {
     var xin = "巨陽曲昌"
     var ren = "梁紫輔武"
     var gui = "破巨陰貪"
+    // 辛干的天魁、天鉞：寅午（文墨天機，預設）或午寅（斗數全書「六辛逢馬虎」）
+    var xinKuiYueMode = "寅午"
 
     // 盤面顯示
     var showAdj = true          // 雜曜
@@ -76,7 +78,7 @@ struct ZSettings: Codable, Equatable {
     }
 
     /// 影響計算結果的設定（變了就要重算命盤）
-    var calcKey: String { "\(algorithm.rawValue)|\(yearDivide.rawValue)|\(dayDivide.rawValue)|\(leapSplit)|\(geng)|\(xin)|\(ren)|\(gui)" }
+    var calcKey: String { "\(algorithm.rawValue)|\(yearDivide.rawValue)|\(dayDivide.rawValue)|\(leapSplit)|\(geng)|\(xin)|\(ren)|\(gui)|\(xinKuiYueMode)" }
 
     /// 傳給 iztro 的設定（iztro 的四化表要用簡體星名）
     var iztroConfig: [String: Any] {
@@ -87,7 +89,7 @@ struct ZSettings: Codable, Equatable {
         var m: [String: [String]] = [:]
         for (stem, stars) in stemMutagen { m[stem] = stars.map { cn[$0] ?? $0 } }
         return ["mutagens": m, "algorithm": algorithm.rawValue, "yearDivide": yearDivide.rawValue,
-                "dayDivide": dayDivide.rawValue]
+                "dayDivide": dayDivide.rawValue, "xinKuiYueSwap": xinKuiYueMode == "寅午"]
     }
 }
 

@@ -266,6 +266,9 @@ struct SettingsPage: View {
             row("晚子時", "23:00–24:00 出生的日柱") {
                 SettingSegment(options: [(.forward, "視為次日"), (.current, "視為當日")], selection: s.dayDivide)
             }
+            row("辛年天魁天鉞", "年干（或大限、流年的干）是辛時，天魁、天鉞放哪兩宮；文墨天機是魁寅鉞午") {
+                SettingSegment(options: [("寅午", "魁寅鉞午"), ("午寅", "魁午鉞寅")], selection: s.xinKuiYueMode)
+            }
             row("閏月", "本命盤遇到閏月時", last: true) {
                 SettingSegment(options: [(true, "月中分界"), (false, "視為本月")], selection: s.leapSplit)
             }
