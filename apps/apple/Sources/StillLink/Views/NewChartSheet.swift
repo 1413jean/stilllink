@@ -55,9 +55,9 @@ struct NewChartSheet: View {
                         AvatarField(name: $avatar)
                     }
                     row("姓名", isSelfChart ? "你的名字" : "客人的名字或代稱") {
-                        TextField("例如：林小姐", text: $name).textFieldStyle(.plain)
+                        TextField("例如：林小姐", text: $name)
                             .focused($nameFocused)
-                            .inputBox()
+                            .zInput()
                     }
                     row("性別", "影響大限順逆", last: isSelfChart) {
                         ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
@@ -67,11 +67,11 @@ struct NewChartSheet: View {
                     row("分組", "顯示在側欄的資料夾，可自己新增", last: true) {
                         if addingGroup {
                             HStack(spacing: 8) {
-                                TextField("新分組名稱，例如：VIP", text: $newGroup).textFieldStyle(.plain)
+                                TextField("新分組名稱，例如：VIP", text: $newGroup)
                                     .focused($groupFocused)
                                     .onSubmit(commitGroup)
                                     .onChange(of: groupFocused) { f in if !f && addingGroup { commitGroup() } }
-                                    .inputBox()
+                                    .zInput()
                                 Button("完成", action: commitGroup).buttonStyle(ZPrimaryButton())
                             }
                             .transition(.opacity)
@@ -115,7 +115,7 @@ struct NewChartSheet: View {
                                 unit("日")
                                 Spacer(minLength: 0)
                             }
-                            .inputBox()
+                            .zInput()
                             if calendar == 1 {
                                 Toggle("閏月", isOn: $leap).toggleStyle(.checkbox).font(Font.zBody)
                             }
@@ -129,9 +129,8 @@ struct NewChartSheet: View {
                             Spacer(minLength: 0)
                             Text(ZW.hours[SolarTime.shichen(hh)] + "時").font(Font.zCallout).foregroundStyle(Color.zText3)
                         }
-                        .inputBox()
+                        .zInput()
                         .disabled(unknownTime)
-                        .opacity(unknownTime ? 0.4 : 1)
                     }
                     row("時間不確定", "不知道出生時間時，以午時排盤", last: true) {
                         HStack { Spacer(); Toggle("", isOn: $unknownTime).toggleStyle(.switch).labelsHidden() }
@@ -277,14 +276,10 @@ struct NewChartSheet: View {
 
     private func searchBox(_ hint: String, _ text: Binding<String>) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: "magnifyingglass").font(Font.zCaption).foregroundStyle(Color.zText3)
-            TextField(hint, text: text).textFieldStyle(.plain)
-            if !text.wrappedValue.isEmpty {
-                Button { text.wrappedValue = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3) }
-                    .buttonStyle(.plain)
-            }
+            TextField(hint, text: text)
+            ZClearButton(text: text)
         }
-        .inputBox()
+        .zInput(icon: "magnifyingglass")
     }
 
     private var groupOptions: [String] {
@@ -373,7 +368,7 @@ struct NewChartSheet: View {
     }
 }
 
-/// 數字輸入欄：無邊框，放在 inputBox 裡；只收數字，超出範圍不採用
+/// 數字輸入欄：無邊框，放在 zInput 框裡；只收數字，超出範圍不採用
 private struct NumberField: View {
     @Binding var value: Int
     let range: ClosedRange<Int>
@@ -400,16 +395,4 @@ private struct NumberField: View {
     }
 
     private func format(_ v: Int) -> String { pad ? String(format: "%02d", v) : String(v) }
-}
-
-extension View {
-    /// 設計系統的輸入框：38 高、14pt、淺底細框
-    func inputBox() -> some View {
-        self.font(Font.zInput)
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 38)
-            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: 9).stroke(Color.zLine))
-    }
 }

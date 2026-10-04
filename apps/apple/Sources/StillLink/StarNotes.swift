@@ -29,7 +29,7 @@ final class StarNotes: ObservableObject {
         ("雜曜", ["紅鸞", "天喜", "天姚", "天刑", "咸池"]),
         ("四化", ["化祿", "化權", "化科", "化忌"]),
         ("十年天干四化", ["十干四化表"] + ZW.stems.map { $0 + "干四化" } + ["化忌解方"]),
-        ("實戰小應用", ["紫占"]),
+        ("實戰小應用", ["紫占", "命盤反推"]),
         ("長生十二宮", ["長生十二宮", "長生", "沐浴", "冠帶", "臨官", "帝旺", "衰", "病", "死", "墓", "絕", "胎", "養"]),
         ("附錄", ["附錄一 命宮主星職業", "附錄二 官祿宮工作模式", "附錄三 財帛宮現金處理", "附錄四 田宅宮居家風格",
                 "附錄五 遷移宮打扮風格", "附錄六 疾厄宮疾病參考", "附錄七 化忌可拜神明", "附錄八 天生沒長好", "其他備註"]),
@@ -251,7 +251,8 @@ struct StarDetailView: View {
 /// 盤面上滑鼠移到星曜：深色小卡顯示重點（像留言框）
 struct StarHoverCard: View {
     let key: String
-    let palaceName: String
+    let palaceName: String       // 拿來找「落在這一宮」說明的宮名
+    var label: String? = nil     // 卡片上顯示的宮名（運限時例如「大官祿」）
 
     var body: some View {
         let n = StarNotes.shared.note(key)
@@ -263,7 +264,7 @@ struct StarHoverCard: View {
                 if !tl.isEmpty { Text(tl).font(Font.zCallout).foregroundStyle(Color.white.opacity(0.6)) }
             }
             if !t.isEmpty {
-                Text("落\(palaceName)：\(t)").font(Font.zCallout).foregroundStyle(Color.white.opacity(0.85))
+                Text("落\(label ?? palaceName)：\(t)").font(Font.zCallout).foregroundStyle(Color.white.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -328,12 +329,10 @@ struct StarNotesPage: View {
     private var list: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText3)
-                TextField("搜尋星曜", text: $search).textFieldStyle(.plain).font(Font.zBody)
+                TextField("搜尋星曜", text: $search)
+                ZClearButton(text: $search)
             }
-            .padding(.horizontal, 12).frame(height: 40)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.zLine))
+            .zInput(.medium, icon: "magnifyingglass")
             .padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 8)
             ScrollViewReader { proxy in
             // 目錄：點了跳到那一類
@@ -434,13 +433,11 @@ struct StarNotesPage: View {
 
     private func field(_ b: Binding<String>, minH: CGFloat) -> some View {
         TextEditor(text: b)
-            .font(Font.zRead)
             .scrollContentBackground(.hidden)
             .frame(minHeight: minH)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(6)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.zCard))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.zLine))
+            .padding(.horizontal, -5)   // TextEditor 自己左右有約 5pt 內距，抵掉才跟其他輸入框的字對齊
+            .zInput(multiline: true)
     }
 
     private func pick(_ k: String) {
@@ -712,14 +709,9 @@ private struct DocSectionEditor: View {
 
     private func input(_ placeholder: String, _ b: Binding<String>, font: ZType = .body) -> some View {
         TextField(placeholder, text: b, axis: .vertical)
-            .textFieldStyle(.plain)
-            .zText(font)
-            .foregroundStyle(Color.zText)
+            .zText(font)   // 標題、標籤這幾格字比較大／粗，蓋過輸入框預設的字
             .lineLimit(1...12)
-            .padding(.horizontal, 9).padding(.vertical, 6)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 7).fill(Color.zHover))
-            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine, lineWidth: 0.5))
+            .zInput(style: .filled, multiline: true)
     }
 
     private func addButton(_ t: String, _ action: @escaping () -> Void) -> some View {

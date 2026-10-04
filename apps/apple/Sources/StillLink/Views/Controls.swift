@@ -1,6 +1,6 @@
 import SwiftUI
 
-// 設計系統控制項：高度一律 38，與 inputBox 一致
+// 設計系統控制項：高度一律 38，與輸入框 zInput 一致
 
 /// 分段選擇：淺底軌道，選中的是白色膠囊
 struct ZSegmented<T: Hashable>: View {
@@ -50,7 +50,7 @@ struct ZMenuField: View {
                 Spacer()
                 Image(systemName: "chevron.up.chevron.down").font(Font.zCaption).foregroundStyle(Color.zText3)
             }
-            .inputBox()
+            .zInput()
             .contentShape(Rectangle())
         }
         .menuStyle(.button)

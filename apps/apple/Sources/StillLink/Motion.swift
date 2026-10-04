@@ -136,7 +136,11 @@ struct BackdropBlur: NSViewRepresentable {
 extension Notification.Name { static let toast = Notification.Name("zw.toast") }
 
 enum Toast {
-    static func show(_ text: String) { NotificationCenter.default.post(name: .toast, object: text) }
+    static func show(_ text: String) { NotificationCenter.default.post(name: .toast, object: ToastItem(text: text)) }
+    /// 帶一個動作（例：「復原」）：多一個 ×，停留比較久
+    static func show(_ text: String, action: String, perform: @escaping () -> Void) {
+        NotificationCenter.default.post(name: .toast, object: ToastItem(text: text, action: action, perform: perform))
+    }
 }
 
 /// 提示條要對齊的水平中心（視窗座標）：命盤頁會回報底部工具列的中心，其他頁用整個畫面的中間
@@ -144,20 +148,38 @@ enum Toast {
 final class ToastAnchor: ObservableObject {
     static let shared = ToastAnchor()
     @Published var centerX: CGFloat?
+    @Published var top: CGFloat?      // 工具列上緣（視窗座標）：提示條停在它上面一點
+    var owner: UUID?                  // 是哪一個命盤頁回報的（切換命盤時，舊頁關掉只清自己的，不會清掉新頁剛報的位置）
 }
 
-/// 畫面底部的提示條，2 秒後自動消失
+/// 一則提示：文字＋（可選）動作按鈕
+final class ToastItem {
+    let text: String
+    let action: String?
+    let perform: (() -> Void)?
+    init(text: String, action: String? = nil, perform: (() -> Void)? = nil) {
+        self.text = text; self.action = action; self.perform = perform
+    }
+}
+
+/// 畫面底部的提示條（全 App 共用同一個）：2 秒後自動消失；帶動作按鈕的停 5 秒
 struct ToastHost: View {
-    @State private var text: String?
+    @State private var item: ToastItem?
     @State private var token = 0
     @ObservedObject private var anchor = ToastAnchor.shared
     var body: some View {
         GeometryReader { g in
             let frame = g.frame(in: .global)
-            let x = anchor.centerX.map { $0 - frame.minX } ?? frame.width / 2
-            bar.position(x: x, y: frame.height - 104)   // 在底部工具列正上方
+            // 工具列位置不在視窗裡（例如畫面外的那一頁回報的）就不用
+            let x = anchor.centerX.flatMap { frame.minX...frame.maxX ~= $0 ? $0 : nil }
+            let top = anchor.top.flatMap { (frame.minY + 40)...frame.maxY ~= $0 ? $0 : nil }
+            let dx = x.map { $0 - frame.midX } ?? 0
+            // 命盤頁：停在底部工具列上面一點（工具列被 AI 對話框推高時也跟著上去）；其他頁離底部 28
+            let gap = top.map { max(12, frame.maxY - $0 + 10) } ?? 28
+            ZStack(alignment: .bottom) { bar.offset(x: dx) }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, gap)
         }
-        .allowsHitTesting(false)
     }
 
     /// 依訊息內容配 icon：失敗／錯誤用驚嘆號，提示說明用 i，其他（已複製、已儲存…）用打勾
@@ -172,7 +194,8 @@ struct ToastHost: View {
 
     private var bar: some View {
         ZStack {
-            if let text {
+            if let item {
+                let text = item.text
                 HStack(spacing: 10) {
                     Image(systemName: Self.icon(for: text))
                         .font(.system(size: 15, weight: .semibold))
@@ -181,8 +204,18 @@ struct ToastHost: View {
                         .font(Font.zCalloutStrong)
                         .foregroundStyle(Color.zBg)
                         .lineLimit(2)
+                    if let action = item.action {
+                        Button(action) { item.perform?(); dismiss() }
+                            .buttonStyle(.plain).font(Font.zCalloutStrong).foregroundStyle(Color.zToastAction)
+                            .padding(.leading, 4)
+                        Button(action: dismiss) {
+                            Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.zBg.opacity(0.6))
+                                .frame(width: 20, height: 20).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .padding(.leading, 18).padding(.trailing, 22).padding(.vertical, 12)
+                .padding(.leading, 18).padding(.trailing, item.action == nil ? 22 : 14).padding(.vertical, 12)
                 // 背景模糊＋半透明深色，後面的盤面隱約透出來
                 .background(
                     ZStack {
@@ -199,13 +232,15 @@ struct ToastHost: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .toast)) { n in
-            guard let t = n.object as? String else { return }
+            guard let t = n.object as? ToastItem else { return }
             token += 1
             let mine = token
-            withAnimation(Motion.enter) { text = t }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                if mine == token { withAnimation(Motion.exit) { text = nil } }
+            withAnimation(Motion.enter) { item = t }
+            DispatchQueue.main.asyncAfter(deadline: .now() + (t.action == nil ? 2 : 5)) {
+                if mine == token { withAnimation(Motion.exit) { item = nil } }
             }
         }
     }
+
+    private func dismiss() { token += 1; withAnimation(Motion.exit) { item = nil } }
 }

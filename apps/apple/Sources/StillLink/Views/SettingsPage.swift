@@ -145,21 +145,11 @@ struct SettingsPage: View {
     /// 左欄：搜尋＋分組分類
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 1) {
-            HStack(spacing: 7) {
-                Image(systemName: "magnifyingglass").font(Font.zIcon).foregroundStyle(Color.zText3)
-                TextField("搜尋設定", text: $query).textFieldStyle(.plain).zText(.callout)
-                    .focused($searchFocused)
-                if !query.isEmpty {
-                    Button { query = "" } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3)
-                    }
-                    .buttonStyle(.plain)
-                }
+            HStack(spacing: 6) {
+                TextField("搜尋設定", text: $query).focused($searchFocused)
+                ZClearButton(text: $query)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 32)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.zHover))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(searchFocused ? Color.zAccent.opacity(0.5) : Color.zLine, lineWidth: searchFocused ? 1 : 0.5))
+            .zInput(.small, style: .filled, icon: "magnifyingglass")
             .padding(.bottom, 6)
 
             ForEach(Section.groups, id: \.0) { group in
@@ -219,8 +209,7 @@ struct SettingsPage: View {
             }
             row("名字", "顯示在左下角，也是你自己命盤的名字") {
                 TextField("你的名字", text: $nameDraft)
-                    .textFieldStyle(.plain)
-                    .inputBox()
+                    .zInput()
                     .onAppear { nameDraft = store.userName }
                     .onSubmit(saveName)
             }
@@ -282,6 +271,7 @@ struct SettingsPage: View {
             toggle("顯示雜曜", "天姚、紅鸞等小星", s.showAdj)
             toggle("顯示神煞", "博士、將前、歲前十二神", s.showShensha)
             toggle("顯示長生十二神", "長生、沐浴、冠帶…養，寫在每宮天干地支上面", s.showChangsheng)
+            toggle("星曜說明照目前運限", "選到大限、流年、流月…時，滑鼠停在星曜上的說明用那一層的宮位（例：落大官祿）；關掉則一律用本命宮位", s.hoverByScope)
             toggle("顯示流曜", "選到大限、流年時，宮內加上大祿、大羊、年鸞、年喜…這些流曜", s.showFlowStars, last: true)
             Text("星曜顏色").zText(.calloutStrong).foregroundStyle(Color.zText).padding(.top, 18).hiddenWhenSearching()
             note("盤面上四類星曜各用一種顏色，一眼分出主星、輔星、凶星、雜曜。")

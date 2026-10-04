@@ -53,11 +53,10 @@ struct CommentLayer: View {
     @State private var hoverMsg: UUID?
     @State private var hoverPin: UUID?         // 滑鼠停著的圖釘（顯示預覽）
     @State private var dragging: (id: UUID, offset: CGSize)?   // 正在拖的圖釘
-    @State private var undo: (thread: CommentThread, label: String)?
     @FocusState private var focused: Bool
 
     private let pin: CGFloat = 28
-    private let cardW: CGFloat = 300
+    private let cardW: CGFloat = 360   // 字放大後 300 太擠
     /// 備註的強調色：用 App 主色（原本照 Figma 用藍色，Jean 要改主色系）
     private let figmaBlue = Color.zAccent
     private var bubble: UnevenRoundedRectangle {
@@ -119,7 +118,6 @@ struct CommentLayer: View {
                 }
             }
             .coordinateSpace(name: "comments")
-            .overlay(alignment: .bottom) { undoBar }
         }
         .onChange(of: active) { a in if !a { draft = nil } }
         // 驗證用：ZIWEI_OPEN_COMMENT 直接打開第一則備註
@@ -239,20 +237,20 @@ struct CommentLayer: View {
                 Button { withAnimation(Motion.fast) { open = nil; editing = nil } } label: { iconLabel("xmark") }
                     .buttonStyle(PressStyle()).help("關閉")
             }
-            .padding(.leading, 16).padding(.trailing, 10).padding(.vertical, 10)
+            .padding(.leading, 22).padding(.trailing, 12).padding(.vertical, 14)
             Rectangle().fill(Color.zLine).frame(height: 0.5)
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 24) {
                 ForEach(t.messages) { m in
                     if editing == m.id { editBox(t, m) } else { message(t, m) }
                 }
             }
-            .padding(.horizontal, 16).padding(.vertical, 14)
+            .padding(.horizontal, 22).padding(.vertical, 18)
             // 回覆
             HStack(spacing: 10) {
                 AvatarView(name: app.userAvatar, size: 26)
                 HStack(spacing: 6) {
                     TextField("回覆", text: $reply, axis: .vertical)
-                        .textFieldStyle(.plain).zText(.callout).lineLimit(1...4)
+                        .textFieldStyle(.plain).zText(.body).lineLimit(1...4)
                         .onSubmit { sendReply(t) }
                     Button { sendReply(t) } label: {
                         Image(systemName: "arrow.up").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.white)
@@ -265,7 +263,7 @@ struct CommentLayer: View {
                 .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 7)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.zHover))
             }
-            .padding(.horizontal, 16).padding(.bottom, 16)
+            .padding(.horizontal, 22).padding(.bottom, 20)
         }
         .frame(width: cardW)
         .background(RoundedRectangle(cornerRadius: 14).fill(Color.zRaised))
@@ -273,7 +271,8 @@ struct CommentLayer: View {
         .raisedShadow()
         .onHover { ToolCursor.setOverComment($0, tool: tool) }
         .offset(x: x + cardW > size.width ? max(0, t.point.x * size.width - cardW - 8) : x, y: min(max(0, y), size.height - 220))
-        .transition(.scale(scale: 0.9, anchor: .topLeading).combined(with: .opacity))
+        // 不用縮放：卡片用 offset 定位，縮放的中心會在盤面左上角，刪除時卡片會往左上飛走
+        .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 6)), removal: .opacity))
     }
 
     private func iconLabel(_ name: String) -> some View {
@@ -283,9 +282,9 @@ struct CommentLayer: View {
 
     /// 一則留言：頭貼、名字、時間；滑過右邊出現 ⋯（編輯、刪除）
     private func message(_ t: CommentThread, _ m: CommentThread.Message) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
             AvatarView(name: app.userAvatar, size: 26)
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Text(app.userName).zText(.calloutStrong).foregroundStyle(Color.zText)
                     Text(m.date, style: .relative).zText(.footnote).foregroundStyle(Color.zText3)
@@ -355,27 +354,27 @@ struct CommentLayer: View {
     /// 滑鼠停在圖釘上：小預覽卡（像 Figma）
     private func preview(_ t: CommentThread, size: CGSize) -> some View {
         let x = t.point.x * size.width + pin + 6, y = t.point.y * size.height - pin
-        return HStack(alignment: .top, spacing: 8) {
+        return HStack(alignment: .top, spacing: 10) {
             AvatarView(name: app.userAvatar, size: 22)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
-                    Text(app.userName).zText(.footnoteStrong).foregroundStyle(Color.zText)
-                    Text(t.messages.first?.date ?? Date(), style: .relative).zText(.caption1).foregroundStyle(Color.zText3)
+                    Text(app.userName).zText(.calloutStrong).foregroundStyle(Color.zText)
+                    Text(t.messages.first?.date ?? Date(), style: .relative).zText(.footnote).foregroundStyle(Color.zText3)
                 }
-                Text(t.messages.first?.text ?? "").zText(.footnote).foregroundStyle(Color.zText).lineLimit(2)
+                Text(t.messages.first?.text ?? "").zText(.callout).foregroundStyle(Color.zText).lineLimit(3)
                 if t.messages.count > 1 {
-                    Text("\(t.messages.count - 1) 則回覆").zText(.caption1).foregroundStyle(figmaBlue)
+                    Text("\(t.messages.count - 1) 則回覆").zText(.footnote).foregroundStyle(figmaBlue)
                 }
             }
         }
-        .padding(10)
-        .frame(width: 220, alignment: .leading)
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .frame(width: 260, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zRaised))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zRaisedLine, lineWidth: 0.5))
         .raisedShadow()
-        .offset(x: x + 220 > size.width ? t.point.x * size.width - 226 : x, y: max(0, y))
+        .offset(x: x + 260 > size.width ? t.point.x * size.width - 266 : x, y: max(0, y))
         .allowsHitTesting(false)
-        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading)))
+        .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 4)), removal: .opacity))
     }
 
     private func sendReply(_ t: CommentThread) {
@@ -401,37 +400,13 @@ struct CommentLayer: View {
 
     // MARK: 復原提示（像 Figma 的「Comment resolved · Undo」）
 
+    /// 「已標成已解決／已刪除」＋復原：用全 App 共用的提示條
     private func showUndo(_ t: CommentThread, _ label: String) {
-        withAnimation(Motion.enter) { undo = (t, label) }
-        let id = t.id
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-            if undo?.thread.id == id { withAnimation(Motion.exit) { undo = nil } }
-        }
-    }
-
-    @ViewBuilder
-    private var undoBar: some View {
-        if let u = undo {
-            HStack(spacing: 14) {
-                Text(u.label).zText(.calloutStrong)
-                Button("復原") {
-                    store.update(chartID) { list in
-                        if let i = list.firstIndex(where: { $0.id == u.thread.id }) { list[i] = u.thread } else { list.append(u.thread) }
-                    }
-                    withAnimation(Motion.exit) { undo = nil }
-                }
-                .buttonStyle(.plain).zText(.calloutStrong).foregroundStyle(figmaBlue)
-                Button { withAnimation(Motion.exit) { undo = nil } } label: {
-                    Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.zBg.opacity(0.7))
-                }
-                .buttonStyle(.plain)
+        let id = chartID
+        Toast.show(label, action: "復原") {
+            CommentStore.shared.update(id) { list in
+                if let i = list.firstIndex(where: { $0.id == t.id }) { list[i] = t } else { list.append(t) }
             }
-            .foregroundStyle(Color.zBg)
-            .padding(.horizontal, 16).frame(height: 36)
-            .background(Capsule().fill(Color.zText))
-            .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
-            .padding(.bottom, 12)
-            .transition(.opacity.combined(with: .offset(y: 10)))
         }
     }
 }

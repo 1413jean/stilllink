@@ -38,7 +38,7 @@ struct ChartPager: View {
                     ZStack {
                         ForEach(Array(pages.enumerated()), id: \.element.id) { i, p in
                             // 一律照鐘錶時間排盤（跟文墨天機一樣），舊命盤也重算；真太陽時只顯示
-                            ChartScreen(person: p.resolved(), level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
+                            ChartScreen(person: p.resolved(), level: i == 0 ? level : nil, chrome: false, isCurrent: i == current, onAdd: { picking = true })
                                 .padding(.top, top)
                                 .frame(width: geo.size.width, height: geo.size.height)
                                 .opacity(i == current ? 1 : 0)
@@ -133,7 +133,7 @@ struct AddChartSheet: View {
                 Spacer()
                 Button("取消") { dismiss() }.buttonStyle(ZSecondaryButton(small: true))
             }
-            TextField("搜尋姓名", text: $query).textFieldStyle(.plain).inputBox()
+            HStack(spacing: 6) { TextField("搜尋姓名", text: $query); ZClearButton(text: $query) }.zInput(icon: "magnifyingglass")
             Button { entering = true } label: {
                 Label("臨時輸入生辰…（不存檔）", systemImage: "square.and.pencil")
                     .frame(maxWidth: .infinity, alignment: .leading)

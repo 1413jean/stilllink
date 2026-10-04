@@ -1,7 +1,7 @@
 # StillLink 製作規範（給 AI 協作者：Codex、Claude 等）
 
 StillLink 是原生 SwiftUI 的紫微斗數 Mac app（macOS 14+，另有 macOS 13 分支）。盤面照「文墨天機」，外框照 Claude／Codex 桌面版。
-專案負責人是 Jean（UX/UI 設計師）。回覆和程式註解一律用**繁體中文**，講結果、別太長。
+專案負責人是 Jean（UX/UI 設計師）。回覆和程式註解一律用**繁體中文**；回覆先講結果，長度照問題需要就好。
 
 相關文件：
 - `README.md`：功能、建置指令、分支對照
@@ -14,9 +14,9 @@ StillLink 是原生 SwiftUI 的紫微斗數 Mac app（macOS 14+，另有 macOS 1
 1. **不碰正式資料。** 使用者資料在 `~/Library/Application Support/StillLink`（測試版是 `StillLink Beta`）。測試一律設 `ZIWEI_DATA_DIR=<暫存資料夾>`，把 `people.json` 複製過去再用。
 2. **Sparkle 私鑰不進 repo。** 私鑰在鑰匙圈（account `stilllink`），`build.sh` 只放公鑰。
 3. **不要自己發佈。** 只有 Jean 說「發佈／上版」才出正式版。平常改完只裝測試版給 Jean 看。
-4. **不要用 WebView 做介面。** iztro 只在 JavaScriptCore 裡算資料，畫面全部是 SwiftUI。
-5. **星曜筆記頁只開在測試版。** `StarNotes.enabled`（＝`AppInfo.isBeta`）擋住的功能（筆記頁、右側筆記卡）正式版要保持隱藏。例外：盤面上的星曜 hover 小卡從 2.1.3 起正式版也有。
-6. **不 force push、不改 main/release 的歷史。**
+4. **不要用 WebView 做介面。** Jean 試過兩次 WebView 版本，都「不是我要的結果」，所以整個改成原生 SwiftUI。iztro 只在 JavaScriptCore 裡算資料（沒有畫面，不算 WebView），畫面全部是 SwiftUI。
+5. **星曜筆記頁只開在測試版。** `StarNotes.enabled`（＝`AppInfo.isBeta`）擋住的功能（筆記頁、右側筆記卡）正式版要保持隱藏。例外：盤面上的星曜 hover 小卡正式版也有。命盤反推（快捷選單）也只開在測試版：反推別人的生辰牽涉個資，正式版不放。
+6. **不 force push、不改 release／macos13 的歷史。**
 
 ## 2. 專案結構
 
@@ -89,14 +89,18 @@ DESIGN.md                  設計規範
 | `ZIWEI_PAN_HOVER=1` | 運限表左右箭頭不用 hover 也顯示 |
 | `ZIWEI_REPORT=檔案路徑` | 把「回報問題」內容寫到檔案 |
 | `ZIWEI_WHATSNEW=1` | 打開「新功能」視窗 |
+| `ZIWEI_ACCOUNT_MENU=1` | 打開左下角帳號選單 |
+| `ZIWEI_REVERSE=甲,巳,酉,未,寅,亥` | 打開命盤反推，自動填（年干,紅鸞,左輔,三台,紫微,命宮）並反推 |
+| `ZIWEI_DOC_EDIT=段落編號` | 星曜筆記參考文件直接打開某一段的編輯 |
 | `ZIWEI_CURSOR_DUMP=資料夾` | 把各工具游標存成 PNG |
+| `ZIWEI_BENCH=檔案` ＋ `ZIWEI_REDRAW_BENCH=1` | 量整張盤重畫 10 次的時間寫到檔案（改盤面後確認沒變慢；目前約 80ms） |
 | `ZIWEI_NOTES`、`ZIWEI_STAR_DETAIL` | 開星曜筆記頁 |
 
 要測新畫面就照這個模式自己加一個 `ZIWEI_*`，並補進這張表。
 
 ## 6. 設計規範（摘要，細節看 DESIGN.md）
 
-- **Figma 是設計系統的來源。** 檔案「Stillink Design System」（Colors：Light／Dark 兩個 mode；Typography：iOS／macOS 兩個 mode）。改 token 時 Figma、`Theme.swift`、`DESIGN.md` 三處要一致。
+- **Figma 是設計系統的來源。** 檔案「Stillink-MacOS Design System」（fileKey `dbUmstG3eIGY2ipJPFwLEY`；元件如輸入框 `Input` 也在這裡；元件以 App 程式碼為準，Figma 是紀錄）（Colors：Light／Dark 兩個 mode；Typography：iOS／macOS 兩個 mode）。改 token 時 Figma、`Theme.swift`、`DESIGN.md` 三處要一致。
 - **不寫死數字和系統色。** 文字用 `.zText(.樣式)` 或 `Font.z*`；命盤文字用 `ChartType.*(fs)`（跟著盤面縮放）；顏色用 `Color.z*`／`wm*`／`m*`／`f*`。
 - **淺色、深色都要做。** 浮在盤面上的卡片用 `zRaised`＋`zRaisedLine`＋`raisedShadow()`，深色模式才分得出層次。
 - **RWD**：視窗從最小寬度到很寬都要能用；窄的時候側欄先自動收起。可點的東西至少 28pt 高，觸控情境 ≥ 44pt。
@@ -107,10 +111,11 @@ DESIGN.md                  設計規範
 
 ## 7. 寫程式的習慣
 
-- 照周圍程式碼的風格寫：註解密度、命名、繁中註解寫「為什麼」。
+- 程式註解用繁中，寫「為什麼」而不是「做了什麼」。
 - SwiftUI 的 `.position()` 會讓 view 撐滿父層：`onHover`、手勢、`contextMenu` 要掛在 `.position()` **前面**，不然會攔到整片範圍。
 - 要攔滾動事件時用 `NSEvent.addLocalMonitorForEvents(.scrollWheel)`，比對視窗座標，`onDisappear` 記得移除。
 - `ZSettings` 新增欄位：給預設值即可，`ZSettings.stored()` 會把舊資料疊在預設值上。
+- 盤面每宮會重畫很多次：不要在每顆星上掛 `GeometryReader`，也不要用 `ViewThatFits` 試排多種版本（曾讓重畫慢到 230ms）；要量尺寸用 `TextMeasure` 算。
 - 不要大改不相關的檔案；一次 commit 做一件事。
 
 ## 8. 發佈（只有 Jean 說要發才做）

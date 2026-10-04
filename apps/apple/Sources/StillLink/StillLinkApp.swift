@@ -2,9 +2,9 @@ import SwiftUI
 import AppKit
 
 enum Route: Hashable {
-    case home, person(UUID), new, newSelf, edit(UUID), settings, pillars, starNotes(String?), temp(Person, Int)
+    case home, person(UUID), new, newSelf, edit(UUID), settings, pillars, reverse, starNotes(String?), temp(Person, Int)
     /// 新增、編輯、設定這類「頁面」（返回時不回到它們）
-    var isPage: Bool { switch self { case .new, .newSelf, .edit, .settings, .pillars, .starNotes: true; default: false } }
+    var isPage: Bool { switch self { case .new, .newSelf, .edit, .settings, .pillars, .reverse, .starNotes: true; default: false } }
 }
 
 @main
@@ -45,6 +45,7 @@ extension Notification.Name {
     static let openSettings = Notification.Name("zw.openSettings")
     static let openWhatsNew = Notification.Name("zw.openWhatsNew")
     static let openPillars = Notification.Name("zw.openPillars")
+    static let openReverse = Notification.Name("zw.openReverse")
     /// 右側面板拉得夠寬（true）或縮回來（false）：側欄跟著自動收起／打開
     static let infoPanelWide = Notification.Name("zw.infoPanelWide")
     static let openTemp = Notification.Name("zw.openTemp")
@@ -103,124 +104,7 @@ struct RootView: View {
     @State private var sidebarAutoHidden = false   // 右側面板拉寬時自動收起側欄（拉回來再打開）
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columns) {
-            Sidebar(route: $route, onNew: { newGroup = nil; go(.new) })
-                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
-        } detail: {
-            Group {
-                switch route {
-                case .person(let id):
-                    if let p = store.people.first(where: { $0.id == id }) {
-                        ChartPager(primary: p).id(id)
-                    } else {
-                        NowChart()
-                    }
-                case .new:
-                    NewChartSheet(defaultGroup: newGroup, onClose: { goBack() }) { p in route = .person(p.id) }
-                        .id(newGroup ?? "")
-                case .edit(let id):
-                    NewChartSheet(editing: store.people.first { $0.id == id }, onClose: { goBack() }) { p in route = .person(p.id) }
-                        .id(id)
-                case .newSelf:
-                    NewChartSheet(asSelf: true, onClose: { goBack() }) { p in route = .person(p.id) }
-                case .settings:
-                    SettingsPage(initial: settingsSection, onClose: { goBack() })
-                        .id(settingsSection)
-                case .pillars:
-                    PillarSearchPage(onClose: { goBack() })
-                case .starNotes(let k):
-                    StarNotesPage(initial: k, onClose: { goBack() }).id(k ?? "")
-                case .temp(let p, let lv):
-                    ChartPager(primary: p, level: lv).id(p.id)
-                default:
-                    NowChart()
-                }
-            }
-            // 視窗最小寬度：側欄收起後，命盤區最少保留這麼寬（再窄右側面板會暫時藏起來）
-            .frame(minWidth: 640)
-            // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
-            .animation(nil, value: route)
-            .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }
-        }
-        .toolbarBackground(.hidden, for: .windowToolbar)
-        // 左下角帳號選單：從帳號列往上展開，點旁邊或按 Esc 關閉
-        .overlay {
-            if accountMenu.open {
-                GeometryReader { g in
-                    let f = g.frame(in: .global)
-                    ZStack(alignment: .bottomLeading) {
-                        Color.black.opacity(0.001).onTapGesture { accountMenu.close() }
-                        AccountMenuPanel(close: { accountMenu.close() })
-                            .padding(.leading, max(8, accountMenu.anchor.minX - f.minX + 6))
-                            .padding(.bottom, max(8, f.maxY - accountMenu.anchor.minY + 4))
-                            .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .bottomLeading)))
-                    }
-                }
-                .ignoresSafeArea()
-            }
-        }
-        // 設定窗：蓋在整個視窗上，點旁邊、按 ×、按 Esc 關閉；關掉馬上看到盤面的變化
-        .overlay {
-            if showSettings {
-                ZStack {
-                    Color.black.opacity(0.32).ignoresSafeArea()
-                        .onTapGesture { closeSettings() }
-                    GeometryReader { g in
-                        SettingsPage(initial: settingsSection, onClose: closeSettings)
-                            .id(settingsToken)
-                            .frame(width: min(1000, g.size.width - 48), height: min(780, g.size.height - 48))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
-                            .raisedShadow()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
-            }
-        }
-        // 「新功能」視窗：跟設定窗同一種浮窗
-        .overlay {
-            if showWhatsNew {
-                ZStack {
-                    Color.black.opacity(0.32).ignoresSafeArea()
-                        .onTapGesture { closeWhatsNew() }
-                    GeometryReader { g in
-                        WhatsNewView(onClose: closeWhatsNew)
-                            .frame(width: min(680, g.size.width - 48), height: min(780, g.size.height - 48))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
-                            .raisedShadow()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
-            }
-        }
-        .overlay(alignment: .bottom) { ToastHost() }
-        .environment(\.zSettings, store.settings)
-        .toolbar {
-            // 重大更新：右上角出現「新功能」，點開看過就消失
-            ToolbarItem(placement: .primaryAction) {
-                if remindWhatsNew {
-                    Button { openWhatsNew() } label: {
-                        Label("新功能", systemImage: "sparkles").labelStyle(.titleAndIcon)
-                            .zText(.subheadlineStrong).foregroundStyle(Color.zAccent)
-                            .padding(.horizontal, 12).frame(height: 26)
-                            .background(Capsule().fill(Color.zAccent.opacity(0.12)))
-                            .contentShape(Capsule())
-                            .padding(.horizontal, 6)   // 跟工具列玻璃膠囊的邊緣留空，不要貼邊
-                    }
-                    .buttonStyle(.plain)
-                    .help("看這次更新了什麼")
-                }
-            }
-            ToolbarItemGroup(placement: .navigation) {
-                Button { step(-1) } label: { Image(systemName: "arrow.left") }
-                    .disabled(cursor == 0).help("上一頁 ⌘[").keyboardShortcut("[", modifiers: .command)
-                Button { step(1) } label: { Image(systemName: "arrow.right") }
-                    .disabled(cursor >= history.count - 1).help("下一頁 ⌘]").keyboardShortcut("]", modifiers: .command)
-            }
-        }
+        main
         .onChange(of: route) { r in
             guard let r else { return }
             if stepping { stepping = false; return }
@@ -247,6 +131,7 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .newSelfChart)) { _ in closeSettings(); go(.newSelf) }
         .onReceive(NotificationCenter.default.publisher(for: .openSelf)) { _ in closeSettings(); if let me = store.me { route = .person(me.id) } }
         .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
+        .onReceive(NotificationCenter.default.publisher(for: .openReverse)) { _ in if AppInfo.isBeta { closeSettings(); go(.reverse) } }
         .onReceive(NotificationCenter.default.publisher(for: .infoPanelWide)) { n in
             let wide = (n.object as? Bool) ?? false
             withAnimation(Motion.base) {
@@ -259,6 +144,134 @@ struct RootView: View {
             if let r = n.object as? TempRequest { route = .temp(r.person, r.level) }
         }
         .onAppear(perform: applyDebugEnv)
+    }
+
+    /// 主畫面：側欄＋內容＋浮層＋工具列（從 body 拆出來，太長編譯器會算不過來）
+    private var main: some View {
+        NavigationSplitView(columnVisibility: $columns) {
+            Sidebar(route: $route, onNew: { newGroup = nil; go(.new) })
+                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 340)
+        } detail: {
+            Group {
+                switch route {
+                case .person(let id):
+                    if let p = store.people.first(where: { $0.id == id }) {
+                        ChartPager(primary: p).id(id)
+                    } else {
+                        NowChart()
+                    }
+                case .new:
+                    NewChartSheet(defaultGroup: newGroup, onClose: { goBack() }) { p in route = .person(p.id) }
+                        .id(newGroup ?? "")
+                case .edit(let id):
+                    NewChartSheet(editing: store.people.first { $0.id == id }, onClose: { goBack() }) { p in route = .person(p.id) }
+                        .id(id)
+                case .newSelf:
+                    NewChartSheet(asSelf: true, onClose: { goBack() }) { p in route = .person(p.id) }
+                case .settings:
+                    SettingsPage(initial: settingsSection, onClose: { goBack() })
+                        .id(settingsSection)
+                case .reverse:
+                    ReverseChartPage(onClose: { goBack() })
+                case .pillars:
+                    PillarSearchPage(onClose: { goBack() })
+                case .starNotes(let k):
+                    StarNotesPage(initial: k, onClose: { goBack() }).id(k ?? "")
+                case .temp(let p, let lv):
+                    ChartPager(primary: p, level: lv).id(p.id)
+                default:
+                    NowChart()
+                }
+            }
+            // 視窗最小寬度：側欄收起後，命盤區最少保留這麼寬（再窄右側面板會暫時藏起來）
+            .frame(minWidth: 640)
+            // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
+            .animation(nil, value: route)   // macOS 13 沒有 transaction(value:)
+            .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }
+        }
+        .toolbarBackground(.hidden, for: .windowToolbar)
+        // 浮層：帳號選單、設定窗、新功能（拆出去，body 太長編譯器會算不過來）
+        .overlay { modalLayers }
+        .overlay(alignment: .bottom) { ToastHost() }
+        .environment(\.zSettings, store.settings)
+        .toolbar {
+            // 重大更新：右上角出現「新功能」，點開看過就消失
+            ToolbarItem(placement: .primaryAction) {
+                if remindWhatsNew {
+                    Button { openWhatsNew() } label: {
+                        Label("新功能", systemImage: "sparkles").labelStyle(.titleAndIcon)
+                            .zText(.subheadlineStrong).foregroundStyle(Color.zAccent)
+                            .padding(.horizontal, 12).frame(height: 26)
+                            .background(Capsule().fill(Color.zAccent.opacity(0.12)))
+                            .contentShape(Capsule())
+                            .padding(.horizontal, 6)   // 跟工具列玻璃膠囊的邊緣留空，不要貼邊
+                    }
+                    .buttonStyle(.plain)
+                    .help("看這次更新了什麼")
+                }
+            }
+            ToolbarItemGroup(placement: .navigation) {
+                Button { step(-1) } label: { Image(systemName: "arrow.left") }
+                    .disabled(cursor == 0).help("上一頁 ⌘[").keyboardShortcut("[", modifiers: .command)
+                Button { step(1) } label: { Image(systemName: "arrow.right") }
+                    .disabled(cursor >= history.count - 1).help("下一頁 ⌘]").keyboardShortcut("]", modifiers: .command)
+            }
+        }
+    }
+
+    /// 蓋在整個視窗上的浮層：左下角帳號選單、設定窗、「新功能」視窗
+    @ViewBuilder
+    private var modalLayers: some View {
+        ZStack {
+            if accountMenu.open {
+                GeometryReader { g in
+                    let f = g.frame(in: .global)
+                    ZStack(alignment: .bottomLeading) {
+                        Color.black.opacity(0.001).onTapGesture { accountMenu.close() }
+                        AccountMenuPanel(close: { accountMenu.close() })
+                            .padding(.leading, max(8, accountMenu.anchor.minX - f.minX + 6))
+                            .padding(.bottom, max(8, f.maxY - accountMenu.anchor.minY + 4))
+                            .transition(.opacity.combined(with: .offset(y: 6)))   // 用內距定位，不用縮放（縮放中心會跑到視窗角落）
+                    }
+                }
+                .ignoresSafeArea()
+            }
+        
+
+            if showSettings {
+                ZStack {
+                    Color.black.opacity(0.32).ignoresSafeArea()
+                        .onTapGesture { closeSettings() }
+                    GeometryReader { g in
+                        SettingsPage(initial: settingsSection, onClose: closeSettings)
+                            .id(settingsToken)
+                            .frame(width: min(1000, g.size.width - 48), height: min(780, g.size.height - 48))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
+                            .raisedShadow()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        
+
+            if showWhatsNew {
+                ZStack {
+                    Color.black.opacity(0.32).ignoresSafeArea()
+                        .onTapGesture { closeWhatsNew() }
+                    GeometryReader { g in
+                        WhatsNewView(onClose: closeWhatsNew)
+                            .frame(width: min(680, g.size.width - 48), height: min(780, g.size.height - 48))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
+                            .raisedShadow()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+                }
     }
 
     private func openWhatsNew() {
@@ -301,9 +314,15 @@ struct RootView: View {
         if let p = env["ZIWEI_REPORT"] {   // 驗證用：把問題回報內容寫到檔案
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { try? BugReport.report(store: store).write(toFile: p, atomically: true, encoding: .utf8) }
         }
+        if env["ZIWEI_REVERSE"] != nil { go(.reverse) }   // 驗證用：打開命盤反推
         if env["ZIWEI_ACCOUNT_MENU"] != nil { DispatchQueue.main.asyncAfter(deadline: .now() + 2) { accountMenu.open = true } }   // 驗證用：打開帳號選單
         if env["ZIWEI_WHATSNEW"] != nil { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { openWhatsNew() } }   // 驗證用：打開「新功能」
-        if let t = env["ZIWEI_TOAST"] { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { Toast.show(t) } }   // 驗證用：跳一個提示條
+        if let t = env["ZIWEI_TOAST"] {   // ZIWEI_TOAST=文字 或 文字|按鈕（帶動作）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                let f = t.split(separator: "|").map(String.init)
+                if f.count == 2 { Toast.show(f[0], action: f[1]) {} } else { Toast.show(t) }
+            }
+        }   // 驗證用：跳一個提示條
         if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
             if let s = SettingsPage.Section.find(v) {

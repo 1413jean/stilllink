@@ -76,21 +76,13 @@ struct Sidebar: View {
                     }
                     NavRow(icon: "plus", title: "新增命盤", shortcut: "⌘N", selected: route == .new, action: onNew)
                     if searching {
-                        HStack(spacing: 8) {
-                            Image(systemName: "magnifyingglass").font(Font.zCallout).foregroundStyle(Color.zText2).frame(width: 16)
+                        HStack(spacing: 6) {
                             TextField("搜尋姓名", text: $search)
-                                .textFieldStyle(.plain)
-                                .font(Font.zBody)
                                 .focused($searchFocused)
                                 .onExitCommand { searching = false; search = "" }
-                            Button { searching = false; search = "" } label: {
-                                Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3)
-                            }
-                            .buttonStyle(.plain)
+                            ZClearButton(text: $search, always: true) { searching = false }
                         }
-                        .padding(.horizontal, 10)
-                        .frame(height: 30)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.zSel))
+                        .zInput(.small, style: .filled, icon: "magnifyingglass")
                     }
 
                     let pinned = store.sorted(store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID })

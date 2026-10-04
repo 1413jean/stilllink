@@ -64,13 +64,25 @@
 - 四化：祿 `mLu` 綠、權 `mQuan` 紫、科 `mKe` 藍、忌 `mJi` 紅。
   - 點選宮位時，那一宮宮干化出的四化會墊在被化到的星曜底色上。
   - 盤上不用框線。
-- 生年四化是 `wmRed` 實心方塊；運限四化用 `scopeColors` 實心方塊：大限綠、流年藍、流月琥珀、流日洋紅、流時灰。
+- 生年四化方塊用 `fBirth`；運限四化方塊用 `fScopes`：大限綠、流年藍、流月琥珀、流日洋紅、流時灰（`f*` 是色塊底色，深色模式較沉、白字讀得清楚）。運限宮名的文字用 `scopeColors`。
 - 中宮的層級開關「本・限・年・月・日・時」（最多同時三層）＋「小限」：每一層在星曜下方有固定位置，沒有四化的層留空白；方塊 3 個以內是 1.22 倍字級，超過 3 個縮成 1.06 倍。
 - 宮名用「交友宮」（不用僕役），在 `bridge.js` 統一轉換。
 - 四柱依五行上色（`ZW.Wuxing.color`）。
 
 ## 控制項（`Controls.swift`）
-- 輸入框 `inputBox()`、分段 `ZSegmented`、選單 `ZMenuField` 的高度一律 38。
+- 輸入框一律套 `.zInput(size, style:, icon:, multiline:)`（`Views/ZInput.swift`；Figma「❖ 輸入框 Input」是它的紀錄）。各處只決定尺寸、外觀、要不要圖示；點進去的主色粗框、停用、多行由元件統一處理，不要自己畫框。
+  | 尺寸 | 高度 | 文字 | 用在 |
+  |---|---|---|---|
+  | `.small` | 32 | `callout` 13 | 側欄搜尋、設定搜尋、數字卦 |
+  | `.medium` | 38 | `callout` 13 | 卡片裡（合盤、備註）、星曜說明搜尋 |
+  | `.large`（預設） | 38 | `body` 15 | 表單（新增命盤、個人檔案）、星曜說明編輯 |
+  | `.xLarge` | 44 | `body` 15 | 主要的大輸入 |
+  - 外觀 `.outline`（預設）：`zCard` 底＋`zLine` 細框；`.filled`：`zHover` 底、沒有框，用在側欄和清單上方的搜尋、逐項編輯。
+  - 點進去（裡面的輸入欄拿到 focus）框線換成 `zAccent` 2pt 實線，元件自己偵測，呼叫端不用傳；`.disabled()` 時整個 50% 透明。
+  - 多行（`axis: .vertical`、`TextEditor`）設 `multiline: true`：高度跟著內容長，上下留白讓第一行跟單行對齊。
+  - 搜尋框：`icon: "magnifyingglass"`，尾端放 `ZClearButton(text:)`（有字才出現）。
+  - 例外：評論和 AI 解盤是「聊天輸入列」（框裡還有表情、送出、工具列），不套 `zInput`。
+- 分段 `ZSegmented`、選單 `ZMenuField` 的高度是 38。
 - 按鈕有兩種，都是 40 高、圓角 10、字級 `zBodyStrong`：
   - `ZPrimaryButton`：強調色實心，用在主要動作。
   - `ZSecondaryButton`：卡片底色加細框，用在取消、完成這類次要動作。
@@ -85,7 +97,7 @@
   - 右邊每一段用 `title3` 段落標題；每列左邊標題（`callout`）＋說明（`subheadline`、`zText3`），右邊控制項靠右、寬度貼合內容（`SettingSegment`、`SettingIconSegment`、`SettingMenu`、Toggle）。
   - 搜尋：比對每列的標題和說明；打到段落或分類名稱就整段顯示；搜尋結果的段落標題前面加「分類 ›」。新增設定列一律用 `row()`／`toggle()`，才會被搜尋到。
 - 左邊是自訂側欄，依序是新增命盤、搜尋、釘選，下面的分組做成可收合的資料夾；左下角是帳號列。
-- 中間是命盤，大小接近文墨天機的比例，上限 700，下面接運限表。捲動區佔滿整個寬度，捲軸貼在視窗最右邊。
+- 中間是命盤，大小接近文墨天機的比例，寬度上限 920（`boardMaxWidth`），下面接運限表。捲動區佔滿整個寬度，捲軸貼在視窗最右邊。
 - 底部浮著 AI 解盤輸入框，目前停用。
 - 右上角固定浮著資訊卡：命主資料、備註、照片附件。
 
@@ -94,6 +106,7 @@
 - 位置：在命盤頁對齊底部工具列的中心（`ToastAnchor`），浮在工具列上方；其他頁置中。
 - 外觀：膠囊形，背景模糊（`.hudWindow`）疊 64% 的 `zText`，0.5pt 白色細邊，兩層陰影；寬度跟著文字走，不固定。
 - 內距：左 18、右 22、上下 12；icon 和文字間距 10；文字 `zCalloutStrong`、`zBg` 色，最多兩行。
+- 動作按鈕（例如「復原」）用 `zToastAction`：提示條是反色，淺色模式（深底）用亮橘 `#EDB096`（terracotta/300）、深色模式（淺底）用深橘 `#B04F2F`（terracotta/600），Figma 是 `✦/text/brand/on-inverse`；後面接一個 ×，帶動作的提示停 5 秒。
 - Icon 依訊息自動判斷：成功（「已…」）`checkmark.circle.fill`、提示說明 `info.circle.fill`、失敗／錯誤 `exclamationmark.triangle.fill`；顏色一律灰白（`zBg` 75%），不用彩色。
 
 ## 動態（`Motion.swift`，參考 GSAP 的原則）

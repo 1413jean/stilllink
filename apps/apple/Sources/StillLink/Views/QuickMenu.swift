@@ -18,6 +18,10 @@ struct QuickMenu: View {
                 VStack(alignment: .leading, spacing: 2) {
                     item("plus.circle", "新建命盤", 0) { close(); NotificationCenter.default.post(name: .newChart, object: nil) }
                     item("square.grid.2x2", "四柱反查", 1) { close(); NotificationCenter.default.post(name: .openPillars, object: nil) }
+                    // 命盤反推只開在測試版（反推別人的生辰牽涉個資，正式版先不放）
+                    if AppInfo.isBeta {
+                        item("arrow.uturn.backward.circle", "命盤反推", 1) { close(); NotificationCenter.default.post(name: .openReverse, object: nil) }
+                    }
                     item("sparkles", "紫占排盤", 2, chevron: sub == .zizhan) { toggle(.zizhan) }
                     if sub == .zizhan {
                         subItem("clock", "當前時刻起盤（男）") { go(.now(.male)) }
@@ -84,11 +88,9 @@ struct QuickMenu: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("心裡想著問題，隨口報一個 0–9999 的數字").font(Font.zCaption).foregroundStyle(Color.zText3)
             TextField("例如：3721", text: $num)
-                .textFieldStyle(.plain).multilineTextAlignment(.center)
+                .multilineTextAlignment(.center)
                 .font(Font.zBody.monospacedDigit())
-                .frame(height: 32)
-                .background(RoundedRectangle(cornerRadius: 7).fill(Color.zBg))
-                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.zLine))
+                .zInput(.small)
                 .onChange(of: num) { v in
                     let d = String(v.filter(\.isNumber).prefix(4))
                     if d != v { num = d }

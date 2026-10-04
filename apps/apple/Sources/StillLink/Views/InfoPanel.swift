@@ -109,7 +109,7 @@ struct InfoPanel: View {
                         } else {
                             HStack(spacing: 8) {
                                 TextField("對方出生年，例如 1995", text: $hepanDraft)
-                                    .textFieldStyle(.plain).inputBox()
+                                    .zInput(.medium)   // 卡片裡：框一樣大，字跟卡片其他字一樣小
                                     .onSubmit(applyHepan)
                                 Button("合盤", action: applyHepan).buttonStyle(ZPrimaryButton(small: true))
                                     .disabled(Int(hepanDraft.trimmingCharacters(in: .whitespaces)) == nil)
@@ -142,13 +142,9 @@ struct InfoPanel: View {
                 card("備註") {
                     VStack(alignment: .leading, spacing: 10) {
                         TextField("記下客人的問題或你的觀察…", text: $draft, axis: .vertical)
-                            .textFieldStyle(.plain)
                             .lineLimit(2...5)
-                            .font(Font.zCallout)
                             .focused($draftFocused)
-                            .padding(10)
-                            .background(RoundedRectangle(cornerRadius: 9).fill(Color.zBg))
-                            .overlay(RoundedRectangle(cornerRadius: 9).stroke(draftFocused ? Color.zGrid : Color.zLine))
+                            .zInput(.medium, multiline: true)
                             .onSubmit(addNote)
                         HStack {
                             Spacer()
@@ -159,11 +155,11 @@ struct InfoPanel: View {
                         VStack(alignment: .leading, spacing: 0) {
                             ForEach(current.notes.reversed()) { n in
                                 NoteRow(note: n) { deleteNote(n.id) }
-                                    .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: -6)),
-                                                            removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))))
+                                    .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: -6)), removal: .opacity))
                             }
                         }
                         .animation(Motion.base, value: current.notes.map(\.id))
+                        .clipped()   // 刪除時下面的備註往上補位，動畫中不要畫到卡片外面
                     }
                 }
 
@@ -307,11 +303,11 @@ private struct NoteRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(note.text).font(Font.zCallout).foregroundStyle(Color.zText).textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(note.text).zText(.callout).foregroundStyle(Color.zText).textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(note.at.formatted(date: .abbreviated, time: .shortened))
-                    .font(Font.zMicro).foregroundStyle(Color.zText3)
+                    .zText(.footnote).foregroundStyle(Color.zText3)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button(action: onDelete) {
@@ -322,7 +318,8 @@ private struct NoteRow: View {
             .help("刪除這則備註")
             .opacity(hover ? 1 : 0)
         }
-        .padding(.top, 8)
+        // 上下都留白：文字不會貼著下一則的分隔線
+        .padding(.vertical, 12)
         .overlay(alignment: .top) { Rectangle().fill(Color.zLine).frame(height: 0.5) }
         .contentShape(Rectangle())
         .onHover { hover = $0 }

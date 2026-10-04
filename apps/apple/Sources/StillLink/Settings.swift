@@ -35,6 +35,7 @@ struct ZSettings: Codable, Equatable {
     var showTransfer = true     // 轉宮宮名（點選宮位當太極，顯示 X之Y）
     var showCompass = true      // 方位
     var hiddenPanels: [String] = []   // 右側面板隱藏的卡片（PanelCard 的 rawValue）
+    var hoverByScope = true     // hover 星曜的說明照目前選的運限宮位（大官祿、年財帛…）；關掉一律用本命宮位
     var showComposer = false    // 命盤下方的 AI 對話框（AI 還沒推出，預設隱藏）
 
     // 介面

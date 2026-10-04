@@ -68,9 +68,15 @@ struct ChartScreen: View {
     @State private var sharpZoom: CGFloat = 1
 
     /// level 沒指定時照設定「打開命盤時預設顯示大限」（預設關閉＝本命）
-    init(person: Person, level: Int? = nil, chrome: Bool = true, onAdd: (() -> Void)? = nil) {
+    /// 多張盤左右並排時，只有正在看的那一頁回報工具列位置給提示條（不然會被畫面外那頁蓋掉，高度跑掉）
+    var isCurrent = true
+    @State private var toolbarFrame: CGRect?
+    @State private var anchorID = UUID()
+
+    init(person: Person, level: Int? = nil, chrome: Bool = true, isCurrent: Bool = true, onAdd: (() -> Void)? = nil) {
         self.person = person
         self.chrome = chrome
+        self.isCurrent = isCurrent
         self.onAdd = onAdd
         // 驗證用：ZIWEI_LEVEL=2 直接開到流年
         let lv = ProcessInfo.processInfo.environment["ZIWEI_LEVEL"].flatMap(Int.init) ?? level ?? ZSettings.stored().openLevel
@@ -176,8 +182,8 @@ struct ChartScreen: View {
                     // 回報工具列的水平中心，提示條（snackbar）對齊它
                     .background(GeometryReader { tg in
                         Color.clear
-                            .onAppear { ToastAnchor.shared.centerX = tg.frame(in: .global).midX }
-                            .onChange(of: tg.frame(in: .global).midX) { v in ToastAnchor.shared.centerX = v }
+                            .onAppear { reportToolbar(tg.frame(in: .global)) }
+                            .onChange(of: tg.frame(in: .global)) { f in reportToolbar(f) }
                     })
                     .frame(width: usable)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -278,9 +284,15 @@ struct ChartScreen: View {
                 return nil
             }
         }
+        .onChange(of: isCurrent) { now in if now, let f = toolbarFrame { reportToolbar(f) } }
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
-            ToastAnchor.shared.centerX = nil
+            // 只清自己報的：切換命盤時新頁會先報位置，舊頁才關掉
+            if ToastAnchor.shared.owner == anchorID {
+                ToastAnchor.shared.owner = nil
+                ToastAnchor.shared.centerX = nil
+                ToastAnchor.shared.top = nil
+            }
         }
         // 驗證用：ZIWEI_CURSOR_DUMP=資料夾 把各工具游標存成 PNG
         .task {
@@ -324,6 +336,15 @@ struct ChartScreen: View {
     }
 
     private struct TaskKey: Equatable { let person: String; let pick: Pick }
+
+    /// 工具列位置：記下來；是目前這一頁才回報給提示條
+    private func reportToolbar(_ f: CGRect) {
+        toolbarFrame = f
+        guard isCurrent else { return }
+        ToastAnchor.shared.owner = anchorID
+        ToastAnchor.shared.centerX = f.midX
+        ToastAnchor.shared.top = f.minY
+    }
 
     static func title(_ p: Person) -> String { p.id == NowChart.id ? "此刻 · \(p.clock ?? "")" : p.name }
 }
