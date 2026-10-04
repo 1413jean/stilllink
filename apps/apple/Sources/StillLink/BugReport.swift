@@ -6,13 +6,14 @@ import AppKit
 enum BugReport {
     static let supportEmail = "support@jeanui.com"
 
-    static func run(store: Store) {
+    /// 改用郵件寄送（回報彈窗送不出去時的退路）：`message` 是使用者在彈窗裡已經寫好的內容
+    static func run(store: Store, message: String = "") {
         let text = report(store: store)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
 
         let subject = "StillLink 問題回報（\(AppInfo.version)）"
-        let body = "請描述遇到的問題（可以把截圖直接拖進這封信）：\n\n\n\n" + text
+        let body = (message.isEmpty ? "請描述遇到的問題（可以把截圖直接拖進這封信）：\n\n\n" : message + "\n") + "\n" + text
         var c = URLComponents()
         c.scheme = "mailto"; c.path = supportEmail
         c.queryItems = [URLQueryItem(name: "subject", value: subject), URLQueryItem(name: "body", value: body)]

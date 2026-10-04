@@ -523,7 +523,7 @@ struct AccountMenuPanel: View {
                 close(); NotificationCenter.default.post(name: .openWhatsNew, object: nil)
             }
             MenuRow(icon: "exclamationmark.bubble", title: "回報問題…") {
-                close(); BugReport.run(store: store)
+                close(); ReportState.shared.show()
             }
             // Esc 關閉
             Button("", action: close).keyboardShortcut(.cancelAction).opacity(0).frame(width: 0, height: 0)
