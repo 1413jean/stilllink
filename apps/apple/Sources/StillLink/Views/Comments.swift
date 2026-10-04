@@ -271,7 +271,8 @@ struct CommentLayer: View {
         .raisedShadow()
         .onHover { ToolCursor.setOverComment($0, tool: tool) }
         .offset(x: x + cardW > size.width ? max(0, t.point.x * size.width - cardW - 8) : x, y: min(max(0, y), size.height - 220))
-        .transition(.scale(scale: 0.9, anchor: .topLeading).combined(with: .opacity))
+        // 不用縮放：卡片用 offset 定位，縮放的中心會在盤面左上角，刪除時卡片會往左上飛走
+        .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 6)), removal: .opacity))
     }
 
     private func iconLabel(_ name: String) -> some View {
@@ -373,7 +374,7 @@ struct CommentLayer: View {
         .raisedShadow()
         .offset(x: x + 260 > size.width ? t.point.x * size.width - 266 : x, y: max(0, y))
         .allowsHitTesting(false)
-        .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading)))
+        .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 4)), removal: .opacity))
     }
 
     private func sendReply(_ t: CommentThread) {

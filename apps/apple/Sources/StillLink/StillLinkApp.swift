@@ -231,7 +231,7 @@ struct RootView: View {
                         AccountMenuPanel(close: { accountMenu.close() })
                             .padding(.leading, max(8, accountMenu.anchor.minX - f.minX + 6))
                             .padding(.bottom, max(8, f.maxY - accountMenu.anchor.minY + 4))
-                            .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .bottomLeading)))
+                            .transition(.opacity.combined(with: .offset(y: 6)))   // 用內距定位，不用縮放（縮放中心會跑到視窗角落）
                     }
                 }
                 .ignoresSafeArea()
