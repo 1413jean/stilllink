@@ -2,7 +2,8 @@ import AppKit
 import Sparkle
 
 /// App 內更新：Sparkle 負責檢查、下載、驗證簽名、安裝；介面不用它的彈窗，
-/// 有新版時只在工具列出現「更新」按鈕，按下去就下載；下載好跳系統彈窗問要不要現在重新開啟。
+/// 不在背景自動檢查：使用者在「關於」按「檢查更新」才查；有新版時工具列出現「更新」按鈕，按下去就下載；
+/// 下載好跳系統彈窗問要不要現在重新開啟。
 @MainActor
 final class AppUpdater: NSObject, ObservableObject {
     static let shared = AppUpdater()
@@ -33,11 +34,13 @@ final class AppUpdater: NSObject, ObservableObject {
     private var expected: UInt64 = 0
     private var received: UInt64 = 0
 
-    /// 開 App 時啟動：之後 Sparkle 會自己定期在背景檢查
+    /// 開 App 時啟動 Sparkle，但不排背景檢查（舊版存下的「自動檢查」也一併關掉）
     func start() {
         guard updater == nil, Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil else { return }
         let u = SPUUpdater(hostBundle: .main, applicationBundle: .main, userDriver: self, delegate: nil)
         do { try u.start(); updater = u } catch { state = .failed("更新功能無法啟動") }
+        u.automaticallyChecksForUpdates = false
+        u.automaticallyDownloadsUpdates = false
         // 驗證用：ZIWEI_AUTO_UPDATE=check → 馬上檢查；=install → 找到新版就自動按「更新」
         if ProcessInfo.processInfo.environment["ZIWEI_AUTO_UPDATE"] != nil { u.checkForUpdatesInBackground() }
     }
@@ -71,9 +74,9 @@ final class AppUpdater: NSObject, ObservableObject {
 }
 
 extension AppUpdater: SPUUserDriver {
-    // 第一次啟動不問「要不要自動檢查」，直接開（不傳送系統資訊）
+    // 第一次啟動不問「要不要自動檢查」：一律不自動檢查（更新由使用者自己按），也不傳送系統資訊
     func show(_ request: SPUUpdatePermissionRequest, reply: @escaping (SUUpdatePermissionResponse) -> Void) {
-        reply(SUUpdatePermissionResponse(automaticUpdateChecks: true, sendSystemProfile: false))
+        reply(SUUpdatePermissionResponse(automaticUpdateChecks: false, sendSystemProfile: false))
     }
 
     func showUserInitiatedUpdateCheck(cancellation: @escaping () -> Void) { state = .checking }
