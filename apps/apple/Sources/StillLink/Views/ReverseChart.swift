@@ -6,18 +6,20 @@ import SwiftUI
 /// 公式只用來縮小範圍，最後每個候選都真的排一次盤比對（閏月、晚子時這類例外才不會漏）
 struct ReverseChartPage: View {
     var onClose: () -> Void
-    @State private var stem = Self.unknown
-    @State private var hongluan = Self.unknown
-    @State private var zuofu = Self.unknown
-    @State private var santai = Self.unknown
-    @State private var ming = Self.unknown
-    @State private var ziwei = Self.unknown
-    @State private var range = "1920–2030"
-    @State private var gender: Gender = .male
-    @State private var results: [Match] = []
+    // 填寫內容和結果存在頁面外：點結果去看盤、再按上一步回來時都還在
+    @ObservedObject private var f = ReverseForm.shared
     @State private var searching = false
-    @State private var searched = false
-    @State private var note = ""
+    private var stem: String { get { f.stem } nonmutating set { f.stem = newValue } }
+    private var hongluan: String { get { f.hongluan } nonmutating set { f.hongluan = newValue } }
+    private var zuofu: String { get { f.zuofu } nonmutating set { f.zuofu = newValue } }
+    private var santai: String { get { f.santai } nonmutating set { f.santai = newValue } }
+    private var ming: String { get { f.ming } nonmutating set { f.ming = newValue } }
+    private var ziwei: String { get { f.ziwei } nonmutating set { f.ziwei = newValue } }
+    private var range: String { get { f.range } nonmutating set { f.range = newValue } }
+    private var gender: Gender { get { f.gender } nonmutating set { f.gender = newValue } }
+    private var results: [Match] { get { f.results } nonmutating set { f.results = newValue } }
+    private var searched: Bool { get { f.searched } nonmutating set { f.searched = newValue } }
+    private var note: String { get { f.note } nonmutating set { f.note = newValue } }
 
     static let unknown = "不確定"
     private static let ranges = ["1900–1960", "1920–2030", "1950–2030", "1900–2100"]
@@ -41,14 +43,14 @@ struct ReverseChartPage: View {
                 Text("命盤反推").font(.zTitle).foregroundStyle(Color.zText).padding(.bottom, 4)
                 Text("只有一張盤、沒有出生資料時，照星曜位置倒推出生年月日時。條件給越多，結果越少；不確定的選「不確定」。")
                     .font(Font.zCallout).foregroundStyle(Color.zText3).padding(.bottom, 12)
-                row("生年化祿", "哪一顆星帶生年化祿 → 年干") { ZMenuField(options: stemOptions, selection: $stem) }
-                row("紅鸞在", "卯宮逆數到紅鸞 → 年支") { ZMenuField(options: palaceOptions, selection: $hongluan) }
-                row("左輔在", "辰宮順數到左輔 → 農曆月") { ZMenuField(options: palaceOptions, selection: $zuofu) }
-                row("三台在", "左輔順數到三台 → 農曆日") { ZMenuField(options: palaceOptions, selection: $santai) }
-                row("紫微在", "配合五行局確認是哪一天") { ZMenuField(options: palaceOptions, selection: $ziwei) }
-                row("命宮在", "寅宮順數月份、再逆數到命宮 → 時辰") { ZMenuField(options: palaceOptions, selection: $ming) }
-                row("年份範圍", "同樣的干支每 60 年會重複一次") { ZMenuField(options: Self.ranges, selection: $range) }
-                row("性別", "只影響打開後的盤，不影響反推", last: true) { ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender) }
+                row("生年化祿", "哪一顆星帶生年化祿 → 年干") { ZMenuField(options: stemOptions, selection: $f.stem) }
+                row("紅鸞在", "卯宮逆數到紅鸞 → 年支") { ZMenuField(options: palaceOptions, selection: $f.hongluan) }
+                row("左輔在", "辰宮順數到左輔 → 農曆月") { ZMenuField(options: palaceOptions, selection: $f.zuofu) }
+                row("三台在", "左輔順數到三台 → 農曆日") { ZMenuField(options: palaceOptions, selection: $f.santai) }
+                row("紫微在", "配合五行局確認是哪一天") { ZMenuField(options: palaceOptions, selection: $f.ziwei) }
+                row("命宮在", "寅宮順數月份、再逆數到命宮 → 時辰") { ZMenuField(options: palaceOptions, selection: $f.ming) }
+                row("年份範圍", "同樣的干支每 60 年會重複一次") { ZMenuField(options: Self.ranges, selection: $f.range) }
+                row("性別", "只影響打開後的盤，不影響反推", last: true) { ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $f.gender) }
                 HStack {
                     Spacer()
                     Button { Task { await search() } } label: {
@@ -188,4 +190,21 @@ struct ReverseChartPage: View {
         let p = TempChart.make(r.solar.0, r.solar.1, r.solar.2, h24, r.hour == 0 ? 30 : 0, gender, name: "反推 · \(ZW.yearGanzhi(r.lunar.y))年\(ZW.lunarMonths[r.lunar.m - 1])\(ZW.lunarDays[r.lunar.d - 1])")
         NotificationCenter.default.post(name: .openTemp, object: TempRequest(person: p, level: 0))
     }
+}
+
+/// 命盤反推的填寫內容與結果（App 開著的期間都保留）
+@MainActor
+final class ReverseForm: ObservableObject {
+    static let shared = ReverseForm()
+    @Published var stem = ReverseChartPage.unknown
+    @Published var hongluan = ReverseChartPage.unknown
+    @Published var zuofu = ReverseChartPage.unknown
+    @Published var santai = ReverseChartPage.unknown
+    @Published var ming = ReverseChartPage.unknown
+    @Published var ziwei = ReverseChartPage.unknown
+    @Published var range = "1920–2030"
+    @Published var gender: Gender = .male
+    @Published var results: [ReverseChartPage.Match] = []
+    @Published var searched = false
+    @Published var note = ""
 }
