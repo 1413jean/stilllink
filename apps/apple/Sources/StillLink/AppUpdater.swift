@@ -2,7 +2,7 @@ import AppKit
 import Sparkle
 
 /// App 內更新：Sparkle 負責檢查、下載、驗證簽名、安裝；介面不用它的彈窗，
-/// 有新版時只在工具列出現「更新」按鈕，按下去就下載、安裝並重新打開。
+/// 有新版時只在工具列出現「更新」按鈕，按下去就下載；下載好跳系統彈窗問要不要現在重新開啟。
 @MainActor
 final class AppUpdater: NSObject, ObservableObject {
     static let shared = AppUpdater()
@@ -14,6 +14,7 @@ final class AppUpdater: NSObject, ObservableObject {
         case available(String)        // 有新版（顯示用版本號）
         case downloading(Double?)     // 下載中（0～1，未知時 nil）
         case installing
+        case readyToRelaunch          // 下載好了，使用者選了「稍後」：工具列留一顆「重新開啟」
         case failed(String)
     }
 
@@ -27,6 +28,8 @@ final class AppUpdater: NSObject, ObservableObject {
     }
     private var updater: SPUUpdater?
     private var choice: ((SPUUserUpdateChoice) -> Void)?
+    private var relaunchReply: ((SPUUserUpdateChoice) -> Void)?
+    private var pendingVersion = ""
     private var expected: UInt64 = 0
     private var received: UInt64 = 0
 
@@ -53,6 +56,14 @@ final class AppUpdater: NSObject, ObservableObject {
         reply(.install)
     }
 
+    /// 工具列「重新開啟」：安裝下載好的更新並重開
+    func relaunchNow() {
+        guard let reply = relaunchReply else { return }
+        relaunchReply = nil
+        state = .installing
+        reply(.install)
+    }
+
     var isAvailable: Bool { if case .available = state { return true } else { return false } }
     var isBusy: Bool {
         switch state { case .downloading, .installing: return true; default: return false }
@@ -75,8 +86,10 @@ extension AppUpdater: SPUUserDriver {
             return
         }
         choice = reply
+        pendingVersion = appcastItem.displayVersionString
         state = .available(appcastItem.displayVersionString)
-        if ProcessInfo.processInfo.environment["ZIWEI_AUTO_UPDATE"] == "install" { install() }
+        // install＝自動按更新並自動重開；download＝自動按更新，但下載好照常跳彈窗問要不要重開
+        if ["install", "download"].contains(ProcessInfo.processInfo.environment["ZIWEI_AUTO_UPDATE"] ?? "") { install() }
     }
 
     func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {}
@@ -101,10 +114,18 @@ extension AppUpdater: SPUUserDriver {
     func showDownloadDidStartExtractingUpdate() { state = .installing }
     func showExtractionReceivedProgress(_ progress: Double) { state = .installing }
 
-    // 下載、驗證完：直接安裝並重新打開
+    // 下載、驗證完：跳系統彈窗問要不要現在重新開啟；選「稍後」就留在工具列，關 App 時 Sparkle 也會自動裝好
     func showReady(toInstallAndRelaunch reply: @escaping (SPUUserUpdateChoice) -> Void) {
-        state = .installing
-        reply(.install)
+        relaunchReply = reply
+        state = .readyToRelaunch
+        if ProcessInfo.processInfo.environment["ZIWEI_AUTO_UPDATE"] == "install" { relaunchNow(); return }
+        let alert = NSAlert()
+        alert.messageText = pendingVersion.isEmpty ? "StillLink 更新好了" : "StillLink \(pendingVersion) 更新好了"
+        alert.informativeText = "要現在重新開啟嗎？重新開啟後就會換成新版本。\n選「稍後」的話，下次關閉 StillLink 時會自動完成更新。"
+        alert.addButton(withTitle: "立即重新開啟")
+        alert.addButton(withTitle: "稍後")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn { relaunchNow() }
     }
 
     func showInstallingUpdate(withApplicationTerminated applicationTerminated: Bool, retryTerminatingApplication: @escaping () -> Void) {
@@ -121,7 +142,7 @@ extension AppUpdater: SPUUserDriver {
     func dismissUpdateInstallation() {
         // 使用者還沒按「更新」時保留按鈕；其他情況（裝完、取消、檢查結束）回到原狀
         switch state {
-        case .available, .upToDate, .failed: break
+        case .available, .upToDate, .failed, .readyToRelaunch: break
         default: state = .idle
         }
     }
@@ -150,6 +171,17 @@ struct UpdateToolbarButton: View {
             chip { Text(p.map { "更新中 \(Int($0 * 100))%" } ?? "更新中…").monospacedDigit() }
         case .installing:
             chip { Text("安裝中…") }
+        case .readyToRelaunch:
+            Button { updater.relaunchNow() } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.clockwise.circle.fill")
+                    Text("重新開啟")
+                }
+                .font(Font.zCaptionStrong)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.zAccent)
+            .help("更新已下載好，重新開啟就會換成新版本")
         default:
             EmptyView()
         }
