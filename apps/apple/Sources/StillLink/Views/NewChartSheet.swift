@@ -314,29 +314,20 @@ struct NewChartSheet: View {
         }()
         let (h, mm) = unknownTime ? (12, 0) : (hh, mi)
         let clock = String(format: "%d-%d-%d %02d:%02d", sy, sm, sd, h, mm)
-        // 照鐘錶時間（預設，跟文墨天機一樣）：不扣日光節約、不做經度校正
-        guard store.settings.timeMode == .trueSolar, let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else {
+        // 一律照鐘錶時間排盤（跟文墨天機一樣）；有出生地時另外算真太陽時，只拿來顯示
+        guard let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else {
             return ("\(sy)-\(sm)-\(sd)", SolarTime.shichen(h), clock, nil)
         }
         let r = SolarTime.compute(year: sy, month: sm, day: sd, hour: h, minute: mm, longitude: place.longitude, tz: tz)
         let ts = String(format: "%d-%d-%d %02d:%02d", r.ymd.0, r.ymd.1, r.ymd.2, r.hm.0, r.hm.1)
-        return ("\(r.ymd.0)-\(r.ymd.1)-\(r.ymd.2)", r.shichen, clock, ts)
-    }
-
-    /// 出生時間碰到出生地的日光節約（例：台灣 1945–1961、1974–1975、1979 夏天）
-    private var dstApplied: Bool {
-        guard store.settings.timeMode == .trueSolar, let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else { return false }
-        let (sy, sm, sd): (Int, Int, Int) = calendar == 0 ? (y, m, d) : (Lunar.toSolar(y, m, d, leap: leap) ?? (y, m, d))
-        var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
-        guard let date = cal.date(from: DateComponents(year: sy, month: sm, day: sd, hour: hh, minute: mi)) else { return false }
-        return tz.isDaylightSavingTime(for: date)
+        return ("\(sy)-\(sm)-\(sd)", SolarTime.shichen(h), clock, ts)
     }
 
     private var previewText: String {
         let r = resolved()
         let sc = ZW.hours[r.hour] + "時"
         if unknownTime { return "以午時排盤" }
-        if let ts = r.trueSolar { return "真太陽時 \(ts) · \(sc)" + (dstApplied ? "（已自動扣除日光節約 1 小時，不用自己減）" : "") }
+        if let ts = r.trueSolar { return "\(r.clock) · \(sc)（真太陽時 \(ts)）" }
         return "\(r.clock) · \(sc)"
     }
 

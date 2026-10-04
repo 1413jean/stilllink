@@ -266,9 +266,6 @@ struct SettingsPage: View {
             row("晚子時", "23:00–24:00 出生的日柱") {
                 SettingSegment(options: [(.forward, "視為次日"), (.current, "視為當日")], selection: s.dayDivide)
             }
-            row("出生時間", "照鐘錶時間＝跟文墨天機一樣，不扣日光節約；真太陽時＝扣日光節約，再依出生地經度校正") {
-                SettingSegment(options: [(.clock, "照鐘錶時間"), (.trueSolar, "真太陽時")], selection: s.timeMode)
-            }
             row("辛年天魁天鉞", "年干（或大限、流年的干）是辛時，天魁、天鉞放哪兩宮；文墨天機是魁寅鉞午") {
                 SettingSegment(options: [("寅午", "魁寅鉞午"), ("午寅", "魁午鉞寅")], selection: s.xinKuiYueMode)
             }

@@ -47,7 +47,9 @@ function zwChart(solar, t, gender) {
     palaces: a.palaces.map(function (p) {
       return {
         name: __pn(p.name), stem: p.heavenlyStem, branch: p.earthlyBranch, isBody: p.isBodyPalace,
-        major: p.majorStars.map(__star), minor: p.minorStars.map(st), adj: p.adjectiveStars.map(__star),
+        major: p.majorStars.map(__star), minor: p.minorStars.map(st),
+        // 龍德：iztro 只放在歲前十二神，文墨天機也排進雜曜（天德 iztro 本來就有）
+        adj: p.adjectiveStars.map(__star).concat(p.suiqian12 === '龍德' ? [{ name: '龍德', type: 'adjective', brightness: '', mutagen: '' }] : []),
         changsheng: p.changsheng12, boshi: p.boshi12, jiangqian: p.jiangqian12, suiqian: p.suiqian12,
         range: p.decadal.range, ages: p.ages,
       };

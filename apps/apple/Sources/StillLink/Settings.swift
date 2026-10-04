@@ -18,9 +18,6 @@ struct ZSettings: Codable, Equatable {
     var gui = "破巨陰貪"
     // 辛干的天魁、天鉞：寅午（文墨天機，預設）或午寅（斗數全書「六辛逢馬虎」）
     var xinKuiYueMode = "寅午"
-    // 出生時間怎麼換算：照鐘錶時間（跟文墨天機一樣，預設）／真太陽時（扣日光節約＋出生地經度、均時差）
-    enum TimeMode: String, Codable, CaseIterable { case clock, trueSolar }
-    var timeMode: TimeMode = .clock
 
     // 盤面顯示
     var showAdj = true          // 雜曜
