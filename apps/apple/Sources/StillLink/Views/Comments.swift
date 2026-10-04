@@ -53,7 +53,6 @@ struct CommentLayer: View {
     @State private var hoverMsg: UUID?
     @State private var hoverPin: UUID?         // 滑鼠停著的圖釘（顯示預覽）
     @State private var dragging: (id: UUID, offset: CGSize)?   // 正在拖的圖釘
-    @State private var undo: (thread: CommentThread, label: String)?
     @FocusState private var focused: Bool
 
     private let pin: CGFloat = 28
@@ -119,7 +118,6 @@ struct CommentLayer: View {
                 }
             }
             .coordinateSpace(name: "comments")
-            .overlay(alignment: .bottom) { undoBar }
         }
         .onChange(of: active) { a in if !a { draft = nil } }
         // 驗證用：ZIWEI_OPEN_COMMENT 直接打開第一則備註
@@ -401,37 +399,13 @@ struct CommentLayer: View {
 
     // MARK: 復原提示（像 Figma 的「Comment resolved · Undo」）
 
+    /// 「已標成已解決／已刪除」＋復原：用全 App 共用的提示條
     private func showUndo(_ t: CommentThread, _ label: String) {
-        withAnimation(Motion.enter) { undo = (t, label) }
-        let id = t.id
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-            if undo?.thread.id == id { withAnimation(Motion.exit) { undo = nil } }
-        }
-    }
-
-    @ViewBuilder
-    private var undoBar: some View {
-        if let u = undo {
-            HStack(spacing: 14) {
-                Text(u.label).zText(.calloutStrong)
-                Button("復原") {
-                    store.update(chartID) { list in
-                        if let i = list.firstIndex(where: { $0.id == u.thread.id }) { list[i] = u.thread } else { list.append(u.thread) }
-                    }
-                    withAnimation(Motion.exit) { undo = nil }
-                }
-                .buttonStyle(.plain).zText(.calloutStrong).foregroundStyle(figmaBlue)
-                Button { withAnimation(Motion.exit) { undo = nil } } label: {
-                    Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.zBg.opacity(0.7))
-                }
-                .buttonStyle(.plain)
+        let id = chartID
+        Toast.show(label, action: "復原") {
+            CommentStore.shared.update(id) { list in
+                if let i = list.firstIndex(where: { $0.id == t.id }) { list[i] = t } else { list.append(t) }
             }
-            .foregroundStyle(Color.zBg)
-            .padding(.horizontal, 16).frame(height: 36)
-            .background(Capsule().fill(Color.zText))
-            .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
-            .padding(.bottom, 12)
-            .transition(.opacity.combined(with: .offset(y: 10)))
         }
     }
 }

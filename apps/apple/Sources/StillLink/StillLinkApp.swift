@@ -317,7 +317,12 @@ struct RootView: View {
         if env["ZIWEI_REVERSE"] != nil { go(.reverse) }   // 驗證用：打開命盤反推
         if env["ZIWEI_ACCOUNT_MENU"] != nil { DispatchQueue.main.asyncAfter(deadline: .now() + 2) { accountMenu.open = true } }   // 驗證用：打開帳號選單
         if env["ZIWEI_WHATSNEW"] != nil { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { openWhatsNew() } }   // 驗證用：打開「新功能」
-        if let t = env["ZIWEI_TOAST"] { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { Toast.show(t) } }   // 驗證用：跳一個提示條
+        if let t = env["ZIWEI_TOAST"] {   // ZIWEI_TOAST=文字 或 文字|按鈕（帶動作）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                let f = t.split(separator: "|").map(String.init)
+                if f.count == 2 { Toast.show(f[0], action: f[1]) {} } else { Toast.show(t) }
+            }
+        }   // 驗證用：跳一個提示條
         if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }
         if let v = env["ZIWEI_SETTINGS"] {   // ZIWEI_SETTINGS=display 可直接開到某一節
             if let s = SettingsPage.Section.find(v) {

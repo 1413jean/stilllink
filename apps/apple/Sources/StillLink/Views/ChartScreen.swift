@@ -176,8 +176,8 @@ struct ChartScreen: View {
                     // 回報工具列的水平中心，提示條（snackbar）對齊它
                     .background(GeometryReader { tg in
                         Color.clear
-                            .onAppear { ToastAnchor.shared.centerX = tg.frame(in: .global).midX }
-                            .onChange(of: tg.frame(in: .global).midX) { _, v in ToastAnchor.shared.centerX = v }
+                            .onAppear { let f = tg.frame(in: .global); ToastAnchor.shared.centerX = f.midX; ToastAnchor.shared.top = f.minY }
+                            .onChange(of: tg.frame(in: .global)) { _, f in ToastAnchor.shared.centerX = f.midX; ToastAnchor.shared.top = f.minY }
                     })
                     .frame(width: usable)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -281,6 +281,7 @@ struct ChartScreen: View {
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
             ToastAnchor.shared.centerX = nil
+            ToastAnchor.shared.top = nil
         }
         // 驗證用：ZIWEI_CURSOR_DUMP=資料夾 把各工具游標存成 PNG
         .task {
