@@ -134,7 +134,7 @@ struct NewChartSheet: View {
                         .opacity(unknownTime ? 0.4 : 1)
                     }
                     row("時間不確定", "不知道出生時間時，以午時排盤", last: true) {
-                        HStack { Spacer(); Toggle("", isOn: $unknownTime).toggleStyle(.switch).labelsHidden() }
+                        HStack { Spacer(); Toggle("", isOn: $unknownTime).toggleStyle(.switch).labelsHidden().tint(Color.zAccentDeep) }
                     }
 
                     sectionTitle("出生地")

@@ -24,6 +24,7 @@ extension Color {
     static let zHover = dynamic(0xF1F0ED, 0x2C2B28)
     static let zSel = dynamic(0xEDEDEA, 0x33322E)       // 選取列：淺灰
     static let zAccent = dynamic(0xD96B43, 0xEC9473)   // 陶土橘（比原本 C2603F 亮一階）
+    static let zAccentDeep = dynamic(0xD06038, 0xC8603A)   // 開關等大面積填色：深色模式不要用太淺的主色
 
     // 命盤（照文墨天機）
     static let wmRed = dynamic(0xD0102A, 0xFF6B76)
