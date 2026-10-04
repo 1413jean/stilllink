@@ -124,7 +124,8 @@ struct ChartBoard: View, Equatable {
             appeared = true; sel = focusIndex; onSelect(focusIndex)
             // 驗證用：ZIWEI_PICK=宮位編號 直接當成使用者點了那一宮
             if let v = ProcessInfo.processInfo.environment["ZIWEI_PICK"].flatMap(Int.init) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { userPicked = true; sel = v; onSelect(v) }
+                let wait = ProcessInfo.processInfo.environment["ZIWEI_PICK_DELAY"].flatMap(Double.init) ?? 1.2   // 錄動畫時延後點，先開始錄
+                DispatchQueue.main.asyncAfter(deadline: .now() + wait) { userPicked = true; sel = v; onSelect(v) }
             }
         }
         .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { _, v in
@@ -134,7 +135,7 @@ struct ChartBoard: View, Equatable {
                   !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0).isEmpty else { return }
             withAnimation(.easeIn(duration: 0.09)) { squeeze = 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.5)) { squeeze = 0 }
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.28)) { squeeze = 0 }   // 阻尼低：碰到後往外彈過頭再晃回來
             }
         }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
@@ -977,18 +978,16 @@ enum TextMeasure {
     }
 }
 
-/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 5pt 再彈回；被夾的宮位本身不動
+/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 6pt 再彈回；被夾的宮位本身不動
 private struct ClampSqueeze: ViewModifier {
     let on: Bool
     let index: Int
     let selected: Int
     let amount: CGFloat
+    // 每一格都套同一個 offset（不是鄰宮就是 0）：用 if 分支的話，格子變成鄰宮那一刻會被當成新 view 重建，動畫就被吃掉
     func body(content: Content) -> some View {
-        if on && (index == (selected + 11) % 12 || index == (selected + 1) % 12) {
-            let d = ClampOverlay.side(selected: selected, neighbor: index)
-            content.offset(x: -d.dx * 5 * amount, y: -d.dy * 5 * amount)
-        } else {
-            content
-        }
+        let isNeighbor = on && (index == (selected + 11) % 12 || index == (selected + 1) % 12)
+        let d = isNeighbor ? ClampOverlay.side(selected: selected, neighbor: index) : (dx: 0, dy: 0)
+        return content.offset(x: -d.dx * 6 * amount, y: -d.dy * 6 * amount)
     }
 }

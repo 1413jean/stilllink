@@ -19,7 +19,7 @@ extension ZW {
         ("天魁", "天鉞", "魁鉞夾", "天魁、天鉞相夾，容易遇到長輩、上司提攜。", true),
         ("火星", "鈴星", "火鈴夾", "火星、鈴星相夾，情緒來得快、一點就燃；事情也可能突然爆開，一下子被很多人看見。", false),
         ("地空", "地劫", "空劫夾", "地空、地劫相夾，想法跳脫、不走尋常路，但也容易落空、白忙一場。", false),
-        ("擎羊", "陀羅", "羊陀夾", "擎羊、陀羅相夾，像被壓住、拖住；這一宮本身有凶星或化忌時才算數。", false),
+        ("擎羊", "陀羅", "羊陀夾", "擎羊、陀羅相夾，像被壓住、拖住；這一宮本身有凶星或化忌時才算數（有祿存的宮位不算：祿存是加強主星，羊陀本來就排在它兩旁）。", false),
     ]
 
     /// 四化夾：兩邊各有一個四化（祿存也算祿）
@@ -78,7 +78,8 @@ extension ZW {
         var out: [Clamp] = []
         for (x, y, name, meaning, good) in clampStarPairs {
             guard let n = check(x, y, sets: { Set($0.map(\.name)) }) else { continue }
-            if name == "羊陀夾" && !centerBad { continue }
+            // 羊陀永遠排在祿存兩旁：有祿存的宮位不算被夾（祿存是加強主星）；其他宮位要有凶星或化忌才算
+            if name == "羊陀夾" && (!centerBad || me.contains { $0.name == "祿存" }) { continue }
             out.append(Clamp(name: name, meaning: meaning, good: good, borrow: n))
         }
         for (x, y, name, meaning, good) in clampMutagenPairs {
