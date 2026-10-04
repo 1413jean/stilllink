@@ -16,7 +16,7 @@ enum Changelog {
     static let notes: [ReleaseNote] = [
         ReleaseNote(version: "2.1.5", date: "2026 年 10 月 4 日",
             new: [
-                "星曜說明卡可以照目前運限顯示宮位：看大限、流年時 hover 星曜，會寫「大官祿」這類運限宮名（設定 → 運限可關）",
+                "星曜說明卡可以照目前運限顯示宮位：看大限、流年時 hover 星曜，會寫「大官祿」這類運限宮名（設定 → 盤面可關）",
             ],
             improved: [
                 "盤面切換、捲動運限時重畫快了將近三倍",
