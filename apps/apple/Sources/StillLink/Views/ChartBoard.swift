@@ -96,7 +96,7 @@ struct ChartBoard: View, Equatable {
                 if settings.showClamp && !cleared {
                     let clamps = ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0)
                     if !clamps.isEmpty {
-                        ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size)
+                        ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs)
                             .id("\(selected)-\(level)-\(clamps.map(\.name).joined())")
                     }
                 }

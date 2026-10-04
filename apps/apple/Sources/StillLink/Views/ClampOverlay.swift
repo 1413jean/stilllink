@@ -7,12 +7,14 @@ struct ClampOverlay: View {
     let selected: Int
     let m: CGFloat, cw: CGFloat, ch: CGFloat
     let boardSize: CGSize
+    let fs: CGFloat                     // 盤面基準字級：鏈結大小跟著盤面縮放
 
     // 動態參數：鏈結從鄰宮往交界滑的距離（宮格寬高的比例）、徽章大小、進場前的旋轉角度
     static let travel: CGFloat = 0.28
-    static let badge: CGFloat = 30
+    static let badgeScale: CGFloat = 1.5   // 徽章直徑＝盤面字級 × 這個倍數（一般大小約 20pt）
     static let spin: Double = -70
 
+    private var badge: CGFloat { max(16, fs * Self.badgeScale) }
     @State private var shown = false
     @State private var locked = false   // 滑到定位後的「扣上」彈一下
     @State private var pulse = false
@@ -61,7 +63,7 @@ struct ClampOverlay: View {
 
     /// 交界上的鏈結徽章：圓形底＋鏈結圖示；左右鄰宮用橫的鏈、上下鄰宮用直的鏈
     private func link(_ d: (dx: CGFloat, dy: CGFloat), in s: CGRect, index k: Int) -> some View {
-        let size = Self.badge
+        let size = badge
         // 交界中點
         let cx = d.dx < 0 ? s.minX : d.dx > 0 ? s.maxX : s.midX
         let cy = d.dy < 0 ? s.minY : d.dy > 0 ? s.maxY : s.midY
@@ -70,13 +72,13 @@ struct ClampOverlay: View {
         let angle: Double = d.dx != 0 ? 45 : -45     // SF 的 link 是斜的：轉成橫的或直的
         let pop: CGFloat = locked ? (hover == k ? 1.12 : 1) : 0.86
         return Image(systemName: "link")
-            .font(.system(size: size * 0.5, weight: .bold))
+            .font(.system(size: size * 0.52, weight: .semibold))
             .foregroundStyle(color)
             .rotationEffect(.degrees(angle + (shown || Motion.reduce ? 0 : Self.spin)))
             .frame(width: size, height: size)
             .background(Circle().fill(Color.zCard))
-            .overlay(Circle().stroke(color.opacity(0.55), lineWidth: 1.5))
-            .shadow(color: Color.black.opacity(0.18), radius: 4, y: 1)
+            .overlay(Circle().stroke(color.opacity(0.55), lineWidth: 1))
+            .shadow(color: Color.black.opacity(0.15), radius: 3, y: 1)
             .scaleEffect(Motion.reduce ? 1 : pop)
             .contentShape(Circle())
             .onHover { inside in withAnimation(Motion.fast) { hover = inside ? k : (hover == k ? nil : hover) } }
@@ -111,9 +113,9 @@ struct ClampOverlay: View {
         let cx = d.dx < 0 ? s.minX : d.dx > 0 ? s.maxX : s.midX
         let cy = d.dy < 0 ? s.minY : d.dy > 0 ? s.maxY : s.midY
         let h = CGFloat(clamps.count) * 52 + 10
-        var x = cx + Self.badge / 2 + 6
-        if x + 240 > boardSize.width - 4 { x = cx - Self.badge / 2 - 246 }
-        let y = min(max(4, cy + Self.badge / 2 + 4), boardSize.height - h - 4)
+        var x = cx + badge / 2 + 6
+        if x + 240 > boardSize.width - 4 { x = cx - badge / 2 - 246 }
+        let y = min(max(4, cy + badge / 2 + 4), boardSize.height - h - 4)
         return CGSize(width: max(4, x), height: y)
     }
 }
