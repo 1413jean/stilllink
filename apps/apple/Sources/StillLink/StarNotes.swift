@@ -251,7 +251,8 @@ struct StarDetailView: View {
 /// 盤面上滑鼠移到星曜：深色小卡顯示重點（像留言框）
 struct StarHoverCard: View {
     let key: String
-    let palaceName: String
+    let palaceName: String       // 拿來找「落在這一宮」說明的宮名
+    var label: String? = nil     // 卡片上顯示的宮名（運限時例如「大官祿」）
 
     var body: some View {
         let n = StarNotes.shared.note(key)
@@ -263,7 +264,7 @@ struct StarHoverCard: View {
                 if !tl.isEmpty { Text(tl).font(Font.zCallout).foregroundStyle(Color.white.opacity(0.6)) }
             }
             if !t.isEmpty {
-                Text("落\(palaceName)：\(t)").font(Font.zCallout).foregroundStyle(Color.white.opacity(0.85))
+                Text("落\(label ?? palaceName)：\(t)").font(Font.zCallout).foregroundStyle(Color.white.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

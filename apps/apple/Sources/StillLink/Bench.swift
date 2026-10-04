@@ -16,6 +16,27 @@ enum Bench {
             exit(0)
         }
         guard let path = ProcessInfo.processInfo.environment["ZIWEI_BENCH"] else { return }
+        // 盤面重畫自測：ZIWEI_REDRAW_BENCH=1 → 反覆切換「三方四正連線」，量整張盤重新排版＋繪製花多久
+        if ProcessInfo.processInfo.environment["ZIWEI_REDRAW_BENCH"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                MainActor.assumeIsolated {
+                    guard let store = Store.current, let win = NSApp.windows.first(where: { $0.isVisible }), let view = win.contentView else { return }
+                    var times: [Double] = []
+                    for _ in 0..<10 {
+                        let t = Date()
+                        store.settings.showSanfang.toggle()
+                        RunLoop.main.run(until: Date().addingTimeInterval(0.001))
+                        view.layoutSubtreeIfNeeded(); view.displayIfNeeded()
+                        times.append(Date().timeIntervalSince(t) * 1000)
+                    }
+                    let sorted = times.sorted()
+                    let line = String(format: "redraw x10  median %.0fms  min %.0fms  max %.0fms", sorted[5], sorted[0], sorted[9])
+                    try? line.write(toFile: path, atomically: true, encoding: .utf8)
+                    exit(0)
+                }
+            }
+            return
+        }
         // 切換外觀自測：ZIWEI_THEME_BENCH=1 → 量快照與換色重畫各花多久
         if ProcessInfo.processInfo.environment["ZIWEI_THEME_BENCH"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 4) {

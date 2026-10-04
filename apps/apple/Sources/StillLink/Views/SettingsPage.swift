@@ -282,6 +282,7 @@ struct SettingsPage: View {
             toggle("顯示雜曜", "天姚、紅鸞等小星", s.showAdj)
             toggle("顯示神煞", "博士、將前、歲前十二神", s.showShensha)
             toggle("顯示長生十二神", "長生、沐浴、冠帶…養，寫在每宮天干地支上面", s.showChangsheng)
+            toggle("星曜說明照目前運限", "選到大限、流年、流月…時，滑鼠停在星曜上的說明用那一層的宮位（例：落大官祿）；關掉則一律用本命宮位", s.hoverByScope)
             toggle("顯示流曜", "選到大限、流年時，宮內加上大祿、大羊、年鸞、年喜…這些流曜", s.showFlowStars, last: true)
             Text("星曜顏色").zText(.calloutStrong).foregroundStyle(Color.zText).padding(.top, 18).hiddenWhenSearching()
             note("盤面上四類星曜各用一種顏色，一眼分出主星、輔星、凶星、雜曜。")

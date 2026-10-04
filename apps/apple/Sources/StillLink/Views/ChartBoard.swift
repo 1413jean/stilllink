@@ -35,6 +35,7 @@ struct ChartBoard: View, Equatable {
     @EnvironmentObject private var store: Store
     @State private var hoverStar: StarHoverInfo?
     @State private var hoverTask: Task<Void, Never>?
+    @State private var hoverKey: (String, String)?   // 目前滑鼠停的星與宮（同一顆星上移動不重設計時）
     @State private var lastTap: (Int, Date)?   // 上一次點的宮位與時間（判斷點兩下）
     @State private var cleared = false      // 再點一次已選的宮位＝取消選取（不顯示三方四正、飛化）
     @Environment(\.zSettings) private var settings
@@ -100,7 +101,8 @@ struct ChartBoard: View, Equatable {
                     .offset(x: m + cw, y: m + ch)
                 // 滑鼠停在星曜上：深色小卡顯示這顆星落在這一宮的重點（正式版也有；筆記頁本身只開在測試版）
                 if let h = hoverStar {
-                    StarHoverCard(key: h.key, palaceName: h.palace)
+                    let shown = hoverPalace(h.palace)
+                    StarHoverCard(key: h.key, palaceName: shown.name, label: shown.label)
                         .offset(x: min(h.rect.maxX + 6, geo.size.width - 246), y: max(4, h.rect.minY))
                         .transition(.opacity)
                 }
@@ -155,13 +157,27 @@ struct ChartBoard: View, Equatable {
         withAnimation(Motion.fast) { pickedLayers = cur }
     }
 
+    /// hover 說明要用的宮位：設定開著且選到運限時，用那一層在這一宮的宮名（例：本命田宅 → 大官祿）
+    private func hoverPalace(_ natal: String) -> (name: String, label: String) {
+        guard settings.hoverByScope, level >= 1, let names = scopeNames,
+              let i = model.chart.palaces.firstIndex(where: { $0.name == natal }), names.indices.contains(i) else { return (natal, natal) }
+        let name = names[i]
+        return (name, ZW.scopeTags[level - 1] + name)
+    }
+
     /// 目前層級的宮名：本命用本命宮名；選了大限、流年…用那一層的宮名
     private var scopeNames: [String]? { level == 0 ? nil : model.horo.scope(level).palaceNames }
 
     /// 停 0.35 秒才出現，滑過去不會一直閃
     private func setHover(_ info: StarHoverInfo?) {
+        // 滑鼠在同一顆星上移動：維持原本的計時，不重設
+        if let info, info.key == hoverKey?.0, info.palace == hoverKey?.1 { return }
         hoverTask?.cancel()
-        guard let info, StarNotes.shared.hasNote(info.key) else { withAnimation(Motion.fast) { hoverStar = nil }; return }
+        hoverKey = info.map { ($0.key, $0.palace) }
+        guard let info, StarNotes.shared.hasNote(info.key) else {
+            if hoverStar != nil { withAnimation(Motion.fast) { hoverStar = nil } }
+            return
+        }
         hoverTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
@@ -225,9 +241,12 @@ struct VerticalText: View {
     init(_ text: String, size: CGFloat, color: Color = .zText, weight: Font.Weight = .regular) {
         self.text = text; self.size = size; self.color = color; self.weight = weight
     }
+    /// 直排用的字串：每個字一行
+    static func join(_ t: String) -> String { t.map(String.init).joined(separator: "\n") }
+
     /// 一個 Text 換行排直（不用每個字一個 Text，盤面上上百個字時差很多）
     var body: some View {
-        Text(text.map(String.init).joined(separator: "\n"))
+        Text(Self.join(text))
             .font(ChartType.font(size, weight))
             .foregroundStyle(color)
             .multilineTextAlignment(.center)
@@ -303,14 +322,7 @@ private struct PalaceCell: View {
             HStack(alignment: .top, spacing: 3) {
                 // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
                 // 先試「主星和雜曜同一排」：放不下就先縮雜曜、再一起縮；真的縮到底還放不下才換第二排
-                ViewThatFits(in: [.horizontal, .vertical]) {
-                    ForEach(Array([(1.0, 1.0), (1.0, 0.9), (1.0, 0.82), (0.94, 0.76), (0.88, 0.72), (0.82, 0.68)].enumerated()), id: \.offset) { _, k in
-                        starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1, wrap: false)
-                    }
-                    ForEach(Array([(1.0, 1.0), (0.92, 0.84), (0.84, 0.78), (0.76, 0.72), (0.68, 0.66)].enumerated()), id: \.offset) { _, k in
-                        starFlow(p: p, horo: horo, minor: minor, f: fs * k.0, adjF: ChartType.adj(fs) * k.1, wrap: true)
-                    }
-                }
+                fittedStars(p: p, horo: horo, minor: minor)
                 .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
                 // 流曜（大祿、年鸞…）與合祿／合羊／合陀：放右上角，跟本命星曜分開；每排 4 個，由右往左
@@ -336,17 +348,17 @@ private struct PalaceCell: View {
                     if minor {
                         tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
                     }
-                    if let taijiLabel {
-                        Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
-                            .lineLimit(1).fixedSize()
-                    }
-                    // 小限疊盤關著時：小限命宮在流月上面標一個橫的小框「小限」
+                    // 小限疊盤關著時：小限命宮標一個橫的小框「小限」，放在轉宮名上面
                     if level >= 2 && !settings.showMinorOverlay && horo.age.index == index {
                         Text("小限").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText2)
                             .padding(.horizontal, 3).padding(.vertical, 1)
                             .overlay(RoundedRectangle(cornerRadius: 2).stroke(Color.zText3, lineWidth: 0.8))
                             .fixedSize()
                             .padding(.bottom, 2)
+                    }
+                    if let taijiLabel {
+                        Text(taijiLabel).font(ChartType.font(ChartType.tag(fs) + 1)).foregroundStyle(Color.mQuan)
+                            .lineLimit(1).fixedSize()
                     }
                     // 流月（同文墨天機，例：冬月庚）：寫在神煞欄最上面
                     if let monthLabel { Text(monthLabel).foregroundStyle(Color.wmEarth) }
@@ -481,6 +493,69 @@ extension PalaceCell {
         return out
     }
 
+    /// 星曜區：選第一個塞得下的字級組合（先試同一排、先縮雜曜再一起縮，縮到底才換行）
+    /// 不用 ViewThatFits：它會把 11 種組合都實際排一次版，整盤重畫要 200ms 以上（點宮位、換流年會頓）。
+    /// 改成量好每一項的寬高、用算的挑出組合，只排一次版。
+    func fittedStars(p: Palace, horo: Horoscope, minor: Bool) -> some View {
+        GeometryReader { g in
+            let c = fitChoice(p, horo: horo, minor: minor, w: g.size.width, h: g.size.height)
+            starFlow(p: p, horo: horo, minor: minor, f: fs * c.0, adjF: ChartType.adj(fs) * c.1, wrap: c.2)
+        }
+    }
+
+    private static let fitCandidates: [(CGFloat, CGFloat, Bool)] =
+        [(1.0, 1.0), (1.0, 0.9), (1.0, 0.82), (0.94, 0.76), (0.88, 0.72), (0.82, 0.68)].map { ($0.0, $0.1, false) } +
+        [(1.0, 1.0), (0.92, 0.84), (0.84, 0.78), (0.76, 0.72), (0.68, 0.66)].map { ($0.0, $0.1, true) }
+
+    private func fitChoice(_ p: Palace, horo: Horoscope, minor: Bool, w: CGFloat, h: CGFloat) -> (CGFloat, CGFloat, Bool) {
+        for c in Self.fitCandidates {
+            let items = itemSizes(p, horo: horo, minor: minor, f: fs * c.0, adjF: ChartType.adj(fs) * c.1)
+            if Self.fits(items, w: w, h: h, wrap: c.2) { return c }
+        }
+        return Self.fitCandidates.last!
+    }
+
+    /// 每一項（星曜欄、重要雜曜、雜曜）排出來的寬高：跟 StarColumn／VerticalText 的版面一致
+    private func itemSizes(_ p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat) -> [CGSize] {
+        let showMinorMutagen = minor && settings.showMinorMutagen
+        var out: [CGSize] = []
+        for star in p.stars {
+            // 方塊數：每一層固定一格（最後面的空格不算），再加小限、合盤
+            var n = 0
+            for (i, lv) in layers.enumerated() {
+                let m: Mutagen? = lv == 0 ? Mutagen(rawValue: star.mutagen) : ZW.mutagen(in: horo.scope(lv).mutagen, star: star.name)
+                if m != nil { n = i + 1 }
+            }
+            if showMinorMutagen, ZW.mutagen(in: horo.age.mutagen, star: star.name) != nil { n += 1 }
+            if hepan?.mutagen(star: star.name) != nil { n += 1 }
+            let size: CGFloat = n > 3 ? 1.06 : 1.22
+            let name = TextMeasure.size(VerticalText.join(star.name), ChartType.star(f), bold: star.type == "major")
+            let bright = TextMeasure.size(star.brightness.isEmpty ? " " : star.brightness, ChartType.meta(f))
+            let boxes = n > 0 ? CGFloat(n) * f * size + CGFloat(n - 1) : 0
+            out.append(CGSize(width: max(f * 1.18, n > 0 ? f * size : 0), height: name.height + 2 + 0.5 + bright.height + 0.5 + boxes))
+        }
+        let adj = settings.showAdj ? p.adj : []
+        for s in adj where ZW.keyAdjective.contains(s.name) { out.append(TextMeasure.size(VerticalText.join(s.name), ChartType.star(f))) }
+        for s in adj where !ZW.keyAdjective.contains(s.name) { out.append(TextMeasure.size(VerticalText.join(s.name), adjF)) }
+        return out
+    }
+
+    /// 同一排：總寬（間距 1）放得下、最高的一欄放得下；換行：照 FlowLayout 的擺法（行距 4）算總高
+    private static func fits(_ items: [CGSize], w: CGFloat, h: CGFloat, wrap: Bool) -> Bool {
+        let tol: CGFloat = 0.5
+        if !wrap {
+            let width = items.reduce(0) { $0 + $1.width } + CGFloat(max(0, items.count - 1))
+            return width <= w + tol && (items.map(\.height).max() ?? 0) <= h + tol
+        }
+        var x: CGFloat = 0, y: CGFloat = 0, lineH: CGFloat = 0
+        for it in items {
+            if x > 0 && x + it.width > w + tol { x = 0; y += lineH + 4; lineH = 0 }
+            if it.width > w + tol { return false }
+            x += it.width + 1; lineH = max(lineH, it.height)
+        }
+        return y + lineH <= h + tol
+    }
+
     @ViewBuilder
     func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat, wrap: Bool) -> some View {
         if wrap {
@@ -542,16 +617,7 @@ private struct StarColumn: View {
                 .frame(width: fs * 1.18)
                 .background(fly?.fill ?? .clear)
                 // 滑鼠停在星名上：回報位置給盤面顯示小卡
-                .overlay {
-                    if let starHover {
-                        GeometryReader { g in
-                            Color.clear.contentShape(Rectangle())
-                                .onHover { inside in
-                                    starHover(inside ? StarHoverInfo(key: star.name, palace: palaceName, rect: g.frame(in: .named("board"))) : nil)
-                                }
-                        }
-                    }
-                }
+                .starHoverArea(star.name, palace: palaceName)
             Text(star.brightness.isEmpty ? " " : star.brightness)
                 .font(ChartType.font(ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
@@ -844,15 +910,17 @@ private struct StarHoverArea: ViewModifier {
     let palace: String
     @Environment(\.starHover) private var starHover
     func body(content: Content) -> some View {
-        content.overlay {
-            if let starHover {
-                GeometryReader { g in
-                    Color.clear.contentShape(Rectangle())
-                        .onHover { inside in
-                            starHover(inside ? StarHoverInfo(key: key, palace: palace, rect: g.frame(in: .named("board"))) : nil)
-                        }
+        if let starHover {
+            content
+                .contentShape(Rectangle())
+                .onContinuousHover(coordinateSpace: .named("board")) { phase in
+                    switch phase {
+                    case .active(let p): starHover(StarHoverInfo(key: key, palace: palace, rect: CGRect(x: p.x, y: p.y - 8, width: 0, height: 16)))
+                    case .ended: starHover(nil)
+                    }
                 }
-            }
+        } else {
+            content
         }
     }
 }
@@ -872,5 +940,21 @@ extension EnvironmentValues {
     var starHover: ((StarHoverInfo?) -> Void)? {
         get { self[StarHoverKey.self] }
         set { self[StarHoverKey.self] = newValue }
+    }
+}
+
+/// 文字實際排出來的大小：用 CoreText 量（跟 SwiftUI 的 Text 一樣會自動用蘋方補中文字），量過的有快取
+enum TextMeasure {
+    nonisolated(unsafe) private static var cache: [String: CGSize] = [:]
+    static func size(_ s: String, _ pt: CGFloat, bold: Bool = false) -> CGSize {
+        let key = "\(s)|\(pt)|\(bold)"
+        if let v = cache[key] { return v }
+        // 跟 ChartType.font 一樣的粗細（粗體實際用 medium）
+        let font = NSFont.systemFont(ofSize: pt, weight: bold ? .medium : .regular)
+        let r = (s as NSString).boundingRect(with: CGSize(width: 10_000, height: 10_000),
+                                             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font])
+        let v = CGSize(width: ceil(r.width), height: ceil(r.height))
+        cache[key] = v
+        return v
     }
 }

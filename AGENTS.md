@@ -93,6 +93,7 @@ DESIGN.md                  設計規範
 | `ZIWEI_REVERSE=甲,巳,酉,未,寅,亥` | 打開命盤反推，自動填（年干,紅鸞,左輔,三台,紫微,命宮）並反推 |
 | `ZIWEI_DOC_EDIT=段落編號` | 星曜筆記參考文件直接打開某一段的編輯 |
 | `ZIWEI_CURSOR_DUMP=資料夾` | 把各工具游標存成 PNG |
+| `ZIWEI_BENCH=檔案` ＋ `ZIWEI_REDRAW_BENCH=1` | 量整張盤重畫 10 次的時間寫到檔案（改盤面後確認沒變慢；目前約 80ms） |
 | `ZIWEI_NOTES`、`ZIWEI_STAR_DETAIL` | 開星曜筆記頁 |
 
 要測新畫面就照這個模式自己加一個 `ZIWEI_*`，並補進這張表。
@@ -114,6 +115,7 @@ DESIGN.md                  設計規範
 - SwiftUI 的 `.position()` 會讓 view 撐滿父層：`onHover`、手勢、`contextMenu` 要掛在 `.position()` **前面**，不然會攔到整片範圍。
 - 要攔滾動事件時用 `NSEvent.addLocalMonitorForEvents(.scrollWheel)`，比對視窗座標，`onDisappear` 記得移除。
 - `ZSettings` 新增欄位：給預設值即可，`ZSettings.stored()` 會把舊資料疊在預設值上。
+- 盤面每宮會重畫很多次：不要在每顆星上掛 `GeometryReader`，也不要用 `ViewThatFits` 試排多種版本（曾讓重畫慢到 230ms）；要量尺寸用 `TextMeasure` 算。
 - 不要大改不相關的檔案；一次 commit 做一件事。
 
 ## 8. 發佈（只有 Jean 說要發才做）

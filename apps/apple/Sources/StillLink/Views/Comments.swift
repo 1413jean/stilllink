@@ -250,7 +250,7 @@ struct CommentLayer: View {
                 AvatarView(name: app.userAvatar, size: 26)
                 HStack(spacing: 6) {
                     TextField("回覆", text: $reply, axis: .vertical)
-                        .textFieldStyle(.plain).zText(.callout).lineLimit(1...4)
+                        .textFieldStyle(.plain).zText(.body).lineLimit(1...4)
                         .onSubmit { sendReply(t) }
                     Button { sendReply(t) } label: {
                         Image(systemName: "arrow.up").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.white)
@@ -357,21 +357,21 @@ struct CommentLayer: View {
             AvatarView(name: app.userAvatar, size: 22)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(app.userName).zText(.footnoteStrong).foregroundStyle(Color.zText)
-                    Text(t.messages.first?.date ?? Date(), style: .relative).zText(.caption1).foregroundStyle(Color.zText3)
+                    Text(app.userName).zText(.calloutStrong).foregroundStyle(Color.zText)
+                    Text(t.messages.first?.date ?? Date(), style: .relative).zText(.footnote).foregroundStyle(Color.zText3)
                 }
-                Text(t.messages.first?.text ?? "").zText(.footnote).foregroundStyle(Color.zText).lineLimit(2)
+                Text(t.messages.first?.text ?? "").zText(.callout).foregroundStyle(Color.zText).lineLimit(3)
                 if t.messages.count > 1 {
-                    Text("\(t.messages.count - 1) 則回覆").zText(.caption1).foregroundStyle(figmaBlue)
+                    Text("\(t.messages.count - 1) 則回覆").zText(.footnote).foregroundStyle(figmaBlue)
                 }
             }
         }
         .padding(10)
-        .frame(width: 220, alignment: .leading)
+        .frame(width: 260, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zRaised))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zRaisedLine, lineWidth: 0.5))
         .raisedShadow()
-        .offset(x: x + 220 > size.width ? t.point.x * size.width - 226 : x, y: max(0, y))
+        .offset(x: x + 260 > size.width ? t.point.x * size.width - 266 : x, y: max(0, y))
         .allowsHitTesting(false)
         .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topLeading)))
     }
