@@ -493,7 +493,7 @@ private struct AccountBar: View {
             .background(GeometryReader { g in
                 Color.clear
                     .onAppear { menu.anchor = g.frame(in: .global) }
-                    .onChange(of: g.frame(in: .global)) { _, f in menu.anchor = f }
+                    .onChange(of: g.frame(in: .global)) { f in menu.anchor = f }
             })
         }
     }
