@@ -14,6 +14,16 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.2.1", date: "2026 年 10 月 4 日", major: true,
+            new: [
+                "星曜筆記開放給所有人：左側選單的「星曜筆記」可以查每顆星、四化、夾宮等說明，也能自己改寫；點宮位時右側會整理這一宮與三方四正的重點，被夾時也會寫出是哪一種夾",
+            ],
+            improved: [
+                "星曜說明卡改回實心深色，不再有背景模糊",
+            ],
+            fixed: [
+                "打開選單、設定、回報彈窗時，後面的列和按鈕不會再跟著亮起",
+            ]),
         ReleaseNote(version: "2.2.0", date: "2026 年 10 月 4 日", major: true,
             new: [
                 "夾宮提示：點選的宮位被左右兩宮夾住時（左右夾、昌曲夾、羊陀夾、雙忌夾…），三宮會用一條淡淡的線框起來，吉綠凶紅；鄰宮是空宮時借對宮的星曜與四化一起看（設定 → 盤面可關）",
