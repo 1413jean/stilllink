@@ -14,6 +14,10 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.3.1", date: "2026 年 10 月 4 日",
+            improved: [
+                "夾宮提示可以選樣式：設定 → 盤面「夾宮提示樣式」，「雙箭頭」是交界線上的箭頭加鄰宮撞進來，「框線」是三宮用一條淡淡的線框起來",
+            ]),
         ReleaseNote(version: "2.3.0", date: "2026 年 10 月 4 日", major: true,
             new: [
                 "夾宮提示換新樣式：點選被夾的宮位時，它跟左右鄰宮的交界線上會出現指向它的雙箭頭，兩個鄰宮還會撞進來夾一下（吉綠、凶紅）",

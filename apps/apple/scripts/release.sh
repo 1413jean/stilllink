@@ -78,7 +78,16 @@ cp "build/StillLink-$VER.dmg" build/appcast.xml "$OUT/"
 # 3. macOS 13：合併 release，onChange 改單參數，編譯、推上去、打包
 step "合併 macos13"
 git checkout -q macos13
-git merge --no-edit -q origin/release > "$OUT/merge.log" 2>&1 || { echo "✗ macos13 合併衝突（停在 macos13，解完衝突再手動繼續）"; git diff --name-only --diff-filter=U; exit 1; }
+if ! git merge --no-edit -q origin/release > "$OUT/merge.log" 2>&1; then
+  # macos13 跟 release 的差別幾乎只有相容寫法：衝突的檔案一律採用 release 那邊，下面再自動改 onChange、編譯檢查
+  # （如果 macos13 有別的相容改動被蓋掉，編譯會失敗並停下來）
+  C=$(git diff --name-only --diff-filter=U)
+  echo "  合併衝突，採用 release 版本：$(echo $C | tr '\n' ' ')"
+  for f in $C; do git checkout --theirs -- "../../$f" 2>/dev/null || git checkout --theirs -- "$f"; git add -- "../../$f" 2>/dev/null || git add -- "$f"; done
+  git commit -qm "merge release $VER 進 macos13（衝突採用 release 版本）
+
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
+fi
 python3 - <<'EOF'
 import re, glob
 for f in glob.glob("Sources/StillLink/**/*.swift", recursive=True):
@@ -107,10 +116,11 @@ step "建 GitHub Release"
 URL=$(gh release create "v$VER" --repo $REPO --target release --title "StillLink $VER" --notes-file "$OUT/notes.md" \
   "$OUT/StillLink-$VER.dmg" "$OUT/appcast.xml" "$OUT/StillLink-$VER-macOS13.dmg" "$OUT/appcast-macOS13.xml" 2>&1 | tail -1)
 
-# 5. 回 beta，換掉本機正式版
-step "換掉本機正式版"
+# 5. 回 beta，換掉本機正式版和測試版
+step "換掉本機正式版＋測試版"
 git checkout -q beta
-./build.sh release install > "$OUT/install.log" 2>&1 || fail "本機安裝失敗" install
+./build.sh release install > "$OUT/install.log" 2>&1 || fail "本機正式版安裝失敗" install
+./build.sh beta install > "$OUT/install-beta.log" 2>&1 || fail "本機測試版安裝失敗" install-beta
 
 # 6. 確認 App 內更新抓得到（兩份 appcast 都要是新版本）
 A=$(curl -sL "https://github.com/$REPO/releases/latest/download/appcast.xml" | grep -o "<sparkle:shortVersionString>[^<]*" | sed 's/.*>//')

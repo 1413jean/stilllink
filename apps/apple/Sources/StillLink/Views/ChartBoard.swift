@@ -97,8 +97,14 @@ struct ChartBoard: View, Equatable {
                 }
                 // 夾宮提示：選到的宮位被左右鄰宮夾時，交界線上各壓一個指向它的雙箭頭；換宮位就重播
                 if !clamps.isEmpty {
-                    ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs)
-                        .id("\(selected)-\(level)-\(clamps.map(\.name).joined())")
+                    Group {
+                        if settings.clampStyle == .frame {
+                            ClampFrameOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs)
+                        } else {
+                            ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs)
+                        }
+                    }
+                    .id("\(selected)-\(level)-\(settings.clampStyle)-\(clamps.map(\.name).joined())")
                 }
                 CenterInfo(person: person, model: model, selected: selected, cleared: cleared, locked: locked, taiji: taiji,
                            fs: fs, level: level, layers: layers, onToggleLayer: toggleLayer,
@@ -131,7 +137,7 @@ struct ChartBoard: View, Equatable {
         .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { v in
             onSelect(v < 0 ? nil : v)
             // 選到被夾的宮位：鄰宮撞一下（加速衝進來、碰到就彈回去）
-            guard v >= 0, settings.showClamp, !Motion.reduce,
+            guard v >= 0, settings.showClamp, settings.clampStyle == .arrows, !Motion.reduce,
                   !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0).isEmpty else { return }
             withAnimation(.easeIn(duration: 0.09)) { squeeze = 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
