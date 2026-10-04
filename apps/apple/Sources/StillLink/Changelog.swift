@@ -14,7 +14,7 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
-        ReleaseNote(version: "2.1.5.4", date: "2026 年 10 月 4 日", major: true,
+        ReleaseNote(version: "2.2.0", date: "2026 年 10 月 4 日", major: true,
             new: [
                 "夾宮提示：點選的宮位被左右兩宮夾住時（左右夾、昌曲夾、羊陀夾、雙忌夾…），三宮會用一條淡淡的線框起來，吉綠凶紅；鄰宮是空宮時借對宮的星曜與四化一起看（設定 → 盤面可關）",
             ],
