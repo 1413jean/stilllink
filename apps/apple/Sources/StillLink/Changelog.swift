@@ -14,6 +14,10 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.1.5.3", date: "2026 年 10 月 4 日",
+            improved: [
+                "更新下載好後會先問你要不要現在重新開啟；選「稍後」不會打斷你，工具列會留一顆「重新開啟」，下次關閉 App 時也會自動完成更新",
+            ]),
         ReleaseNote(version: "2.1.5.2", date: "2026 年 10 月 4 日",
             improved: [
                 "「回報問題」改成在 App 裡直接寫、按送出就寄給我們，不用再打開郵件 App；可以留下 email 收到回覆",

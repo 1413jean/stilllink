@@ -395,6 +395,10 @@ struct SettingsPage: View {
                         Button { updater.install() } label: { Label("立即更新", systemImage: "arrow.down.circle") }
                             .buttonStyle(ZPrimaryButton(small: true))
                     }
+                    if updater.state == .readyToRelaunch {
+                        Button { updater.relaunchNow() } label: { Label("重新開啟", systemImage: "arrow.clockwise.circle") }
+                            .buttonStyle(ZPrimaryButton(small: true))
+                    }
                     Button { updater.checkNow() } label: {
                         if updater.state == .checking { ProgressView().controlSize(.small).frame(width: 60) } else { Text("檢查更新") }
                     }
@@ -437,6 +441,7 @@ struct SettingsPage: View {
         case .available(let v): "有新版本：\(v)"
         case .downloading(let p): p.map { "下載中 \(Int($0 * 100))%" } ?? "下載中…"
         case .installing: "安裝中，完成後會自動重新打開"
+        case .readyToRelaunch: "更新已下載好，重新開啟就會換成新版本"
         case .failed(let why): "無法檢查：\(why)"
         }
     }
