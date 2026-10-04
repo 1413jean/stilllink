@@ -124,17 +124,24 @@ DESIGN.md                  設計規範
 
 ## 8. 發佈（只有 Jean 說要發才做）
 
-以下以 `X.Y.Z` 代表新版本號，在 `apps/apple` 底下執行：
+**一行指令發版**（在 `apps/apple` 底下，要在 `beta` 分支、改動都 commit 了）：
 
-1. 更新 `Sources/StillLink/Changelog.swift`：最上面那筆的版本號、日期、內容改成這一版（重大更新設 `major: true`，使用者右上角會出現「新功能」）
-2. `echo X.Y.Z > VERSION`，commit「版本 X.Y.Z」，push `beta`，再 `git push origin beta:release`
-3. `./build.sh release dmg` → 產出 `build/StillLink-X.Y.Z.dmg` 和 `build/appcast.xml`（用鑰匙圈私鑰簽）。把這兩個檔**另外存一份**（下一步會被覆蓋）
-4. `git checkout macos13 && git merge --no-edit origin/release`，修相容問題（第 3 節），`./build.sh beta` 編過，commit＋push `macos13`
-5. 在 `macos13` 上 `./build.sh release dmg` → `build/StillLink-X.Y.Z-macOS13.dmg`、`build/appcast-macOS13.xml`
-6. 寫更新說明，可以直接用 Changelog 那筆的內容（繁中，分「盤面／工具／介面」這類小標，講使用者看得到的改變）
-7. `gh release create vX.Y.Z --repo 1413jean/stilllink --target release --title "StillLink X.Y.Z" --notes-file notes.md` 附上四個檔：兩個 DMG、`appcast.xml`、`appcast-macOS13.xml`
-8. `git checkout beta`，`./build.sh release install` 換掉 Jean 的正式版
-9. 確認 App 內更新抓得到：
-   `curl -sL https://github.com/1413jean/stilllink/releases/latest/download/appcast.xml | grep shortVersionString`（macOS 13 那份同理），兩份都要是新版本
+1. 寫一份更新說明 `notes.md`（繁中，講使用者看得到的改變；只寫有的段落）：
+   ```
+   ## 新功能
+   - …
+   ## 改進
+   - …
+   ## 修正
+   - …
+   ```
+2. `scripts/release.sh X.Y.Z notes.md`（重大更新加 `--major`，使用者右上角會出現「新功能」；加 `--check` 只印出會寫進 Changelog 的內容）
+
+腳本會依序做完：Changelog＋`VERSION` → push `beta`、`beta:release` → 正式版 DMG → 合併 `macos13`（自動把 `onChange` 改單參數）→ macOS 13 版 DMG → `gh release create`（兩個 DMG＋`appcast.xml`＋`appcast-macOS13.xml`）→ `./build.sh release install` 換掉 Jean 的正式版 → curl 確認兩份 appcast 都是新版本。
+過程只印每一步的結果，詳細輸出在 `build/release-X.Y.Z/*.log`；最後一行 `✓ 發佈完成` 才算成功。
+
+**卡住時**：
+- macos13 合併衝突，或出現 macOS 14 才有的 API（例如 `transaction(value:)`）→ 腳本會停在 `macos13` 並印出錯誤。修好、commit、push `macos13` 後，照腳本第 3 步之後的指令手動做完（`./build.sh release dmg` → `gh release create` → 回 `beta` → `./build.sh release install` → curl 確認）。
+- 版本號：小修正加第三位（2.2.0 → 2.2.1），有新功能加第二位（2.2.x → 2.3.0）。
 
 App 內更新（Sparkle）讀的是「最新 Release」裡的 `appcast.xml`／`appcast-macOS13.xml`，少附一個檔就會有一群人收不到更新。
