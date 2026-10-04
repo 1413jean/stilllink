@@ -43,6 +43,12 @@ let boardAspect: CGFloat = 1.12   // 高比寬多一點：四化方塊疊三層�
 
 struct ChartScreen: View {
     @EnvironmentObject var store: Store
+
+    /// 右側星曜筆記的夾宮段落：跟盤面框線同一套判斷（設定關掉夾宮提示就不列）
+    private var clampsForPanel: [Clamp] {
+        guard store.settings.showClamp, let m = model, let i = selPalace else { return [] }
+        return ZW.clamps(m.chart, horo: m.horo, center: i, level: store.settings.clampByScope ? shownLevel : 0)
+    }
     let person: Person
     /// false：標題和工具列交給外層（ChartPager 多頁時統一管理）
     var chrome = true
@@ -209,6 +215,7 @@ struct ChartScreen: View {
                     ScrollView(showsIndicators: false) {
                         InfoPanel(person: person, chart: model?.chart, hepanYear: $hepanYear, selectedPalace: selPalace, width: CGFloat(panelW),
                                   notesBirth: max(0, shownLevel - 2) == 0, notesScopes: activeScopes,
+                                  notesClamps: clampsForPanel,
                                   notesNames: shownLevel >= 1 ? model?.horo.scope(shownLevel).palaceNames : nil,
                                   notesPrefix: shownLevel >= 1 ? ZW.scopeTags[shownLevel - 1] : "")
                             .padding(.top, 12)

@@ -101,6 +101,7 @@ struct StarNotesCard: View {
     let index: Int
     var includeBirth = true                    // 生年四化有沒有在顯示範圍（跟盤面一樣最多三層）
     var scopes: [(String, [String])] = []      // 目前顯示的運限四化：（大限、流年…, 祿權科忌四顆星）
+    var clamps: [Clamp] = []                   // 這一宮被什麼夾（盤面上框起來的那三宮）
 
     /// 對宮、三合：輔星（含祿存天馬）、凶星一律看，其他星有四化才看（星名 → 四化標籤「生年祿・流年忌」，沒四化就是空字串）
     private func mutagenTags(_ p: Palace) -> [String: String] {
@@ -132,8 +133,29 @@ struct StarNotesCard: View {
                     PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]),
                                 title: palaceTitle(i), key: StarNotes.palaceKey(names?[i] ?? chart.palaces[i].name), onOpen: onOpen)
                 }
+                if label == "本宮" && !clamps.isEmpty { clampSection }
             }
         }
+    }
+}
+
+extension StarNotesCard {
+    /// 夾宮：排在本宮後面；每一條左邊一條色線（吉綠、凶紅），跟盤面框線同色
+    var clampSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("夾宮").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
+            ForEach(clamps, id: \.self) { c in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(c.name).font(Font.zBodyStrong).foregroundStyle(Color.zText)
+                    Text(c.meaning).zText(.callout).foregroundStyle(Color.zText2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.leading, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .leading) { Rectangle().fill(c.good ? Color.mLu : Color.mJi).frame(width: 2) }
+            }
+        }
+        .textSelection(.enabled)
     }
 }
 

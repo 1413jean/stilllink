@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 夾宮提示：選到被夾的宮位時，一條線把「左鄰宮＋被選宮位＋右鄰宮」整個圈起來（角落宮位是 L 形）
 /// 一條淡淡的框線把三宮框起來，框線帶一點點波紋、慢慢沿著框流動；進場時沿著外框畫一圈
-/// 顏色刻意淡：只是一點點提示，不搶盤面。滑鼠停在線上才跳出說明卡（停在星曜上就只出星曜說明）
+/// 顏色刻意淡：只是一點點提示，不搶盤面。夾宮的文字說明寫在右側星曜筆記裡，盤面上不跳卡片
 /// 只有這一層的 Canvas 在重畫（每秒 24 格），不會牽動整張盤；「減少動態效果」時兩股線靜止
 struct ClampOverlay: View {
     let clamps: [Clamp]
@@ -12,7 +12,7 @@ struct ClampOverlay: View {
     let fs: CGFloat
 
     // 動態參數
-    static let drawIn: Double = 0.6          // 進場畫一圈的秒數
+    static let drawIn: Double = 0.3          // 進場畫一圈的秒數
     static let amplitude: CGFloat = 1.1      // 波紋高度（pt）：一點點就好
     static let wavelength: CGFloat = 26      // 一個波的長度（pt）
     static let flow: Double = 18             // 流動速度（pt／秒）
@@ -21,7 +21,6 @@ struct ClampOverlay: View {
     static let strength: Double = 0.55       // 整體濃淡（越小越淡）
 
     @State private var start = Date()
-    @State private var hoverAt: CGPoint?
 
     private var color: Color { clamps.contains { !$0.good } ? Color.mJi : Color.mLu }
 
@@ -47,29 +46,10 @@ struct ClampOverlay: View {
             }
             .allowsHitTesting(false)
 
-            // 滑鼠感應：只有線本身附近 8pt（滑到星曜上不會誤觸，星曜照樣出星曜說明）
-            OutlineBand(points: outline, width: 8)
-                .fill(Color.white.opacity(0.001))
-                .onContinuousHover { phase in
-                    switch phase {
-                    case .active(let p): hoverAt = p
-                    case .ended: withAnimation(Motion.fast) { hoverAt = nil }
-                    }
-                }
-
-            if let p = hoverAt {
-                card.offset(cardOrigin(near: p))
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
-            }
         }
         .frame(width: boardSize.width, height: boardSize.height, alignment: .topLeading)
-        .onAppear {
-            start = Date()
-            if ProcessInfo.processInfo.environment["ZIWEI_CLAMP_HOVER"] != nil, let p = outline.first {   // 驗證用：直接顯示說明卡
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { hoverAt = CGPoint(x: p.x + cw * 0.5, y: p.y) }
-            }
-        }
+        .allowsHitTesting(false)
+        .onAppear { start = Date() }
     }
 
     /// 三格的外框（宮位依地支前後相鄰，一定連在一起：一直線或 L 形），順時針頂點
@@ -114,45 +94,5 @@ struct ClampOverlay: View {
         for q in samples.prefix(count).dropFirst() { p.addLine(to: q) }
         if upTo >= 1 { p.closeSubpath() }
         return p
-    }
-
-    /// 說明卡（樣式同星曜說明卡）
-    private var card: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(clamps, id: \.self) { c in
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Circle().fill(c.good ? Color.mLu : Color.mJi).frame(width: 7, height: 7)
-                        Text(c.name).font(Font.zBodyStrong).foregroundStyle(Color.white)
-                    }
-                    Text(c.meaning).font(Font.zCallout).foregroundStyle(Color.white.opacity(0.85))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-        .padding(.horizontal, 12).padding(.vertical, 9)
-        .frame(width: 240, alignment: .leading)
-        .hoverCardBackground()
-    }
-
-    /// 說明卡跳在滑鼠右下方；放不下就往左、往上，不超出盤面
-    private func cardOrigin(near p: CGPoint) -> CGSize {
-        let h = CGFloat(clamps.count) * 60 + 10
-        var x = p.x + 14, y = p.y + 14
-        if x + 240 > boardSize.width - 4 { x = p.x - 254 }
-        if y + h > boardSize.height - 4 { y = p.y - h - 10 }
-        return CGSize(width: max(4, x), height: max(4, y))
-    }
-}
-
-/// 沿著外框的一圈帶狀區域（滑鼠感應用）
-private struct OutlineBand: Shape {
-    let points: [CGPoint]
-    let width: CGFloat
-    func path(in _: CGRect) -> Path {
-        var p = Path()
-        p.addLines(points)
-        p.closeSubpath()
-        return p.strokedPath(StrokeStyle(lineWidth: width, lineJoin: .miter))
     }
 }

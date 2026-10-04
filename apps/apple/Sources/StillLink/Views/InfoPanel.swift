@@ -30,6 +30,7 @@ struct InfoPanel: View {
     var width: CGFloat = infoPanelWidth
     var notesBirth = true                         // 星曜筆記：生年四化在顯示範圍內
     var notesScopes: [(String, [String])] = []    // 星曜筆記：目前顯示的運限四化
+    var notesClamps: [Clamp] = []                 // 星曜筆記：選到的宮位被什麼夾
     var notesNames: [String]? = nil                // 星曜筆記：目前層級的宮名（nil＝本命）
     var notesPrefix = ""                           // 星曜筆記：層級前綴（大、年…）
     @State private var hepanDraft = ""
@@ -92,7 +93,7 @@ struct InfoPanel: View {
                 if StarNotes.enabled, let chart, let i = selectedPalace, i < chart.palaces.count {
                     card("星曜筆記 · \(notesNames.map { notesPrefix + $0[i] } ?? chart.palaces[i].name)三方四正",
                          action: ("book.closed", { NotificationCenter.default.post(name: .openStarNotes, object: nil) })) {
-                        StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes, names: notesNames, prefix: notesPrefix,
+                        StarNotesCard(chart: chart, index: i, includeBirth: notesBirth, scopes: notesScopes, clamps: notesClamps, names: notesNames, prefix: notesPrefix,
                                       onOpen: { k, p in withAnimation(Motion.base) { starDetail = (k, p) } }).id(i)
                     }
                 }
