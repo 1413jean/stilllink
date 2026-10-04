@@ -18,7 +18,10 @@ struct QuickMenu: View {
                 VStack(alignment: .leading, spacing: 2) {
                     item("plus.circle", "新建命盤", 0) { close(); NotificationCenter.default.post(name: .newChart, object: nil) }
                     item("square.grid.2x2", "四柱反查", 1) { close(); NotificationCenter.default.post(name: .openPillars, object: nil) }
-                    item("arrow.uturn.backward.circle", "命盤反推", 1) { close(); NotificationCenter.default.post(name: .openReverse, object: nil) }
+                    // 命盤反推只開在測試版（反推別人的生辰牽涉個資，正式版先不放）
+                    if AppInfo.isBeta {
+                        item("arrow.uturn.backward.circle", "命盤反推", 1) { close(); NotificationCenter.default.post(name: .openReverse, object: nil) }
+                    }
                     item("sparkles", "紫占排盤", 2, chevron: sub == .zizhan) { toggle(.zizhan) }
                     if sub == .zizhan {
                         subItem("clock", "當前時刻起盤（男）") { go(.now(.male)) }

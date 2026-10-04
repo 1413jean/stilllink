@@ -131,7 +131,7 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .newSelfChart)) { _ in closeSettings(); go(.newSelf) }
         .onReceive(NotificationCenter.default.publisher(for: .openSelf)) { _ in closeSettings(); if let me = store.me { route = .person(me.id) } }
         .onReceive(NotificationCenter.default.publisher(for: .openPillars)) { _ in go(.pillars) }
-        .onReceive(NotificationCenter.default.publisher(for: .openReverse)) { _ in closeSettings(); go(.reverse) }
+        .onReceive(NotificationCenter.default.publisher(for: .openReverse)) { _ in if AppInfo.isBeta { closeSettings(); go(.reverse) } }
         .onReceive(NotificationCenter.default.publisher(for: .infoPanelWide)) { n in
             let wide = (n.object as? Bool) ?? false
             withAnimation(Motion.base) {

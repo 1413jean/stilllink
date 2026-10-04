@@ -15,7 +15,7 @@ StillLink 是原生 SwiftUI 的紫微斗數 Mac app（macOS 14+，另有 macOS 1
 2. **Sparkle 私鑰不進 repo。** 私鑰在鑰匙圈（account `stilllink`），`build.sh` 只放公鑰。
 3. **不要自己發佈。** 只有 Jean 說「發佈／上版」才出正式版。平常改完只裝測試版給 Jean 看。
 4. **不要用 WebView 做介面。** iztro 只在 JavaScriptCore 裡算資料，畫面全部是 SwiftUI。
-5. **星曜筆記頁只開在測試版。** `StarNotes.enabled`（＝`AppInfo.isBeta`）擋住的功能（筆記頁、右側筆記卡）正式版要保持隱藏。例外：盤面上的星曜 hover 小卡從 2.1.3 起正式版也有。
+5. **星曜筆記頁只開在測試版。** `StarNotes.enabled`（＝`AppInfo.isBeta`）擋住的功能（筆記頁、右側筆記卡）正式版要保持隱藏。例外：盤面上的星曜 hover 小卡從 2.1.3 起正式版也有。命盤反推（快捷選單）也只開在測試版：反推別人的生辰牽涉個資，正式版不放。
 6. **不 force push、不改 main/release 的歷史。**
 
 ## 2. 專案結構
