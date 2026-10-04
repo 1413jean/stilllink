@@ -38,12 +38,14 @@ struct ChartBoard: View, Equatable {
     @State private var hoverKey: (String, String)?   // 目前滑鼠停的星與宮（同一顆星上移動不重設計時）
     @State private var lastTap: (Int, Date)?   // 上一次點的宮位與時間（判斷點兩下）
     @State private var cleared = false      // 再點一次已選的宮位＝取消選取（不顯示三方四正、飛化）
+    @State private var squeeze: CGFloat = 0 // 夾宮：點到被夾的宮位時，兩個鄰宮輕輕撞進來再彈回（0～1，撞完回 0）；本宮不動
     @Environment(\.zSettings) private var settings
 
     var body: some View {
         let chart = model.chart
         let selected = sel ?? chart.soulIndex
         let sf = cleared ? [] : ZW.sanFang(selected)
+        let clamps = settings.showClamp && !cleared ? ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0) : []
         GeometryReader { geo in
             let m: CGFloat = 14 * zoom   // 外圈留給自化箭頭；縮小一點讓宮格大一點
             let cw = (geo.size.width - m * 2) / 4
@@ -89,16 +91,14 @@ struct ChartBoard: View, Equatable {
                             Button(locked == i ? "解除鎖定" : "鎖定此宮三方四正") { toggleLock(i, chart) }
                         }
                         .enterFromBelow(appeared, index: r * 4 + c)
+                        .modifier(ClampSqueeze(on: !clamps.isEmpty, index: i, selected: selected, amount: squeeze))
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
                     if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
-                // 夾宮提示：選到的宮位被左右鄰宮夾時，兩道括號夾進來；換宮位就重播
-                if settings.showClamp && !cleared {
-                    let clamps = ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0)
-                    if !clamps.isEmpty {
-                        ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs)
-                            .id("\(selected)-\(level)-\(clamps.map(\.name).joined())")
-                    }
+                // 夾宮提示：選到的宮位被左右鄰宮夾時，交界線上各壓一個指向它的雙箭頭；換宮位就重播
+                if !clamps.isEmpty {
+                    ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs)
+                        .id("\(selected)-\(level)-\(clamps.map(\.name).joined())")
                 }
                 CenterInfo(person: person, model: model, selected: selected, cleared: cleared, locked: locked, taiji: taiji,
                            fs: fs, level: level, layers: layers, onToggleLayer: toggleLayer,
@@ -124,10 +124,20 @@ struct ChartBoard: View, Equatable {
             appeared = true; sel = focusIndex; onSelect(focusIndex)
             // 驗證用：ZIWEI_PICK=宮位編號 直接當成使用者點了那一宮
             if let v = ProcessInfo.processInfo.environment["ZIWEI_PICK"].flatMap(Int.init) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { userPicked = true; sel = v; onSelect(v) }
+                let wait = ProcessInfo.processInfo.environment["ZIWEI_PICK_DELAY"].flatMap(Double.init) ?? 1.2   // 錄動畫時延後點，先開始錄
+                DispatchQueue.main.asyncAfter(deadline: .now() + wait) { userPicked = true; sel = v; onSelect(v) }
             }
         }
-        .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { v in onSelect(v < 0 ? nil : v) }
+        .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { v in
+            onSelect(v < 0 ? nil : v)
+            // 選到被夾的宮位：鄰宮撞一下（加速衝進來、碰到就彈回去）
+            guard v >= 0, settings.showClamp, !Motion.reduce,
+                  !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0).isEmpty else { return }
+            withAnimation(.easeIn(duration: 0.09)) { squeeze = 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.28)) { squeeze = 0 }   // 阻尼低：碰到後往外彈過頭再晃回來
+            }
+        }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
         // 新命宮的位置直接放進偵測的值裡：macOS 13 的 onChange 拿到的是上一次的 model，不能在裡面再算
         .onChange(of: level) { _ in pickedLayers = nil }   // 換層級就回到預設的最近三層
@@ -727,7 +737,7 @@ private struct CenterInfo: View {
             VStack(spacing: fs * 0.32) {
                 Text("紫微斗數").font(ChartType.font(ChartType.centerTitle(fs), .semibold)).tracking(2)
                 Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 1) {
-                    GridRow { label("姓名"); Text("\(person.name)　　\(yang ? "陽" : "陰")\(person.gender.rawValue)　\(chart.fiveElementsClass)") }
+                    GridRow { label("姓名"); Text("\(hideBirth ? person.name.maskedName : person.name)　　\(yang ? "陽" : "陰")\(person.gender.rawValue)　\(chart.fiveElementsClass)") }
                     if let ts = person.trueSolar {
                         GridRow { label("真太陽時"); Text(mask(ts)) }
                         GridRow { label("鐘錶時間"); Text(mask(person.clock ?? "")) }
@@ -965,5 +975,19 @@ enum TextMeasure {
         let v = CGSize(width: ceil(r.width), height: ceil(r.height))
         cache[key] = v
         return v
+    }
+}
+
+/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 24pt 再彈回；被夾的宮位本身不動
+private struct ClampSqueeze: ViewModifier {
+    let on: Bool
+    let index: Int
+    let selected: Int
+    let amount: CGFloat
+    // 每一格都套同一個 offset（不是鄰宮就是 0）：用 if 分支的話，格子變成鄰宮那一刻會被當成新 view 重建，動畫就被吃掉
+    func body(content: Content) -> some View {
+        let isNeighbor = on && (index == (selected + 11) % 12 || index == (selected + 1) % 12)
+        let d = isNeighbor ? ClampOverlay.side(selected: selected, neighbor: index) : (dx: 0, dy: 0)
+        return content.offset(x: -d.dx * 24 * amount, y: -d.dy * 24 * amount)
     }
 }

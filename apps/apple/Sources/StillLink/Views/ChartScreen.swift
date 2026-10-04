@@ -43,6 +43,7 @@ let boardAspect: CGFloat = 1.12   // 高比寬多一點：四化方塊疊三層�
 
 struct ChartScreen: View {
     @EnvironmentObject var store: Store
+    @AppStorage("hideBirth") private var hideBirth = false
 
     /// 右側星曜筆記的夾宮段落：跟盤面框線同一套判斷（設定關掉夾宮提示就不列）
     private var clampsForPanel: [Clamp] {
@@ -311,7 +312,7 @@ struct ChartScreen: View {
                 }
             }
         }
-        .modifier(ChartChrome(enabled: chrome, title: ChartScreen.title(person), showInfo: $showInfo))
+        .modifier(ChartChrome(enabled: chrome, title: ChartScreen.title(person, hide: hideBirth), showInfo: $showInfo))
         .task(id: TaskKey(person: person.chartKey + store.settings.calcKey, pick: pick)) {
             let target = pick
             let m = await Engine.shared.model(for: person, pick: target)
@@ -353,7 +354,10 @@ struct ChartScreen: View {
         ToastAnchor.shared.top = f.minY
     }
 
-    static func title(_ p: Person) -> String { p.id == NowChart.id ? "此刻 · \(p.clock ?? "")" : p.name }
+    /// 視窗標題；隱藏生辰時姓名只留第一個字（此刻盤不用遮）
+    static func title(_ p: Person, hide: Bool = false) -> String {
+        p.id == NowChart.id ? "此刻 · \(p.clock ?? "")" : hide ? p.name.maskedName : p.name
+    }
 }
 
 /// 下方 AI 解盤輸入框（Codex 式）：先留位置，功能之後接上

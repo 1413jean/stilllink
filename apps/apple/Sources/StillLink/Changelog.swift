@@ -14,6 +14,14 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.3.0", date: "2026 年 10 月 4 日", major: true,
+            new: [
+                "夾宮提示換新樣式：點選被夾的宮位時，它跟左右鄰宮的交界線上會出現指向它的雙箭頭，兩個鄰宮還會撞進來夾一下（吉綠、凶紅）",
+                "隱藏命主資料時，姓名只留第一個字（王小明 → 王OO），中宮、命主資料、視窗標題都會遮",
+            ],
+            improved: [
+                "羊陀夾的判斷更準：被夾的宮位要有凶星或化忌才算，有祿存的宮位不算",
+            ]),
         ReleaseNote(version: "2.2.1", date: "2026 年 10 月 4 日", major: true,
             new: [
                 "星曜筆記開放給所有人：左側選單的「星曜筆記」可以查每顆星、四化、夾宮等說明，也能自己改寫；點宮位時右側會整理這一宮與三方四正的重點，被夾時也會寫出是哪一種夾",

@@ -280,3 +280,11 @@ final class Store: ObservableObject {
     }
 
 }
+
+extension String {
+    /// 隱藏生辰時的姓名：只留第一個字，後面每個字換成 O（王小明 → 王OO）
+    var maskedName: String {
+        guard count > 1 else { return self }
+        return String(prefix(1)) + String(repeating: "O", count: count - 1)
+    }
+}

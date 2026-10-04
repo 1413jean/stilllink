@@ -80,7 +80,7 @@ struct InfoPanel: View {
                                     if p.id == store.selfID { store.userAvatarRaw = v ?? "" }
                                 }), size: 34, enabled: !isNow && !isTemp)
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(current.name).font(Font.zHeadline)
+                                Text(hideBirth ? current.name.maskedName : current.name).font(Font.zHeadline)
                                 Text("\(current.gender.rawValue) · \(current.group)\(chart.map { " · " + $0.fiveElementsClass } ?? "")")
                                     .font(Font.zCaption).foregroundStyle(Color.zText3)
                             }
