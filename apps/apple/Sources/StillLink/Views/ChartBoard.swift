@@ -978,7 +978,7 @@ enum TextMeasure {
     }
 }
 
-/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 12pt 再彈回；被夾的宮位本身不動
+/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 24pt 再彈回；被夾的宮位本身不動
 private struct ClampSqueeze: ViewModifier {
     let on: Bool
     let index: Int
@@ -988,6 +988,6 @@ private struct ClampSqueeze: ViewModifier {
     func body(content: Content) -> some View {
         let isNeighbor = on && (index == (selected + 11) % 12 || index == (selected + 1) % 12)
         let d = isNeighbor ? ClampOverlay.side(selected: selected, neighbor: index) : (dx: 0, dy: 0)
-        return content.offset(x: -d.dx * 12 * amount, y: -d.dy * 12 * amount)
+        return content.offset(x: -d.dx * 24 * amount, y: -d.dy * 24 * amount)
     }
 }
