@@ -97,6 +97,7 @@ struct RootView: View {
     @State private var settingsToken = 0           // 每次打開都重建，才會停在指定的分類
     @State private var showWhatsNew = false        // 「新功能」視窗
     @State private var remindWhatsNew = Changelog.shouldRemind   // 右上角「新功能」提醒（看過就消失）
+    @ObservedObject private var accountMenu = AccountMenuState.shared
     @State private var newGroup: String?
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var sidebarAutoHidden = false   // 右側面板拉寬時自動收起側欄（拉回來再打開）
@@ -142,6 +143,22 @@ struct RootView: View {
             .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }
         }
         .toolbarBackground(.hidden, for: .windowToolbar)
+        // 左下角帳號選單：從帳號列往上展開，點旁邊或按 Esc 關閉
+        .overlay {
+            if accountMenu.open {
+                GeometryReader { g in
+                    let f = g.frame(in: .global)
+                    ZStack(alignment: .bottomLeading) {
+                        Color.black.opacity(0.001).onTapGesture { accountMenu.close() }
+                        AccountMenuPanel(close: { accountMenu.close() })
+                            .padding(.leading, max(8, accountMenu.anchor.minX - f.minX + 6))
+                            .padding(.bottom, max(8, f.maxY - accountMenu.anchor.minY + 4))
+                            .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .bottomLeading)))
+                    }
+                }
+                .ignoresSafeArea()
+            }
+        }
         // 設定窗：蓋在整個視窗上，點旁邊、按 ×、按 Esc 關閉；關掉馬上看到盤面的變化
         .overlay {
             if showSettings {
@@ -284,6 +301,7 @@ struct RootView: View {
         if let p = env["ZIWEI_REPORT"] {   // 驗證用：把問題回報內容寫到檔案
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { try? BugReport.report(store: store).write(toFile: p, atomically: true, encoding: .utf8) }
         }
+        if env["ZIWEI_ACCOUNT_MENU"] != nil { DispatchQueue.main.asyncAfter(deadline: .now() + 2) { accountMenu.open = true } }   // 驗證用：打開帳號選單
         if env["ZIWEI_WHATSNEW"] != nil { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { openWhatsNew() } }   // 驗證用：打開「新功能」
         if let t = env["ZIWEI_TOAST"] { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { Toast.show(t) } }   // 驗證用：跳一個提示條
         if let k = env["ZIWEI_NOTES"] { go(.starNotes(k.isEmpty ? nil : k)) }

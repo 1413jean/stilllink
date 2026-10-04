@@ -469,12 +469,13 @@ private struct SectionLabel: View {
 /// 左下角帳號列：點開是外觀、登入與設定
 private struct AccountBar: View {
     @EnvironmentObject var store: Store
+    @ObservedObject private var menu = AccountMenuState.shared
 
     var body: some View {
         VStack(spacing: 0) {
             Rectangle().fill(Color.zLine).frame(height: 0.5)
             // 用系統原生選單（NSMenu）：SwiftUI 的 Menu 在新版 macOS 會把按鈕的圖示藏起來
-            Button { AccountMenu.show(store: store) } label: {
+            Button { withAnimation(Motion.fast) { menu.open.toggle() } } label: {
                 HStack(spacing: 8) {
                     AvatarView(name: store.userAvatar, size: 20)
                     Text(store.userName).font(Font.zCallout).foregroundStyle(Color.zText).lineLimit(1)
@@ -488,43 +489,90 @@ private struct AccountBar: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 14)
             .frame(height: 44)
+            // 回報帳號列在視窗裡的位置：彈出面板從這裡往上展開
+            .background(GeometryReader { g in
+                Color.clear
+                    .onAppear { menu.anchor = g.frame(in: .global) }
+                    .onChange(of: g.frame(in: .global)) { _, f in menu.anchor = f }
+            })
         }
     }
 }
 
-/// 左下角帳號選單（原生 NSMenu，每一項都有圖示）
+/// 左下角帳號選單的開關與位置（面板畫在最外層，才能蓋過整個視窗、點旁邊關閉）
 @MainActor
-enum AccountMenu {
-    private final class Item: NSObject {
-        let run: () -> Void
-        init(_ run: @escaping () -> Void) { self.run = run }
-        @objc func fire() { run() }
+final class AccountMenuState: ObservableObject {
+    static let shared = AccountMenuState()
+    @Published var open = false
+    @Published var anchor: CGRect = .zero
+    func close() { if open { withAnimation(Motion.fast) { open = false } } }
+}
+
+/// 左下角帳號選單：自己畫的彈出面板（系統選單在新版 macOS 會把每一項的圖示藏起來）
+struct AccountMenuPanel: View {
+    @EnvironmentObject var store: Store
+    var close: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("外觀").zText(.footnote).foregroundStyle(Color.zText3)
+                .padding(.horizontal, 10).padding(.top, 4).padding(.bottom, 4)
+            ForEach(Appearance.allCases, id: \.self) { a in
+                MenuRow(icon: a.icon, title: a.label, checked: store.appearance == a) {
+                    store.appearanceWithTransition.wrappedValue = a
+                }
+            }
+            divider
+            MenuRow(icon: "gearshape", title: "設定…", shortcut: "⌘,") {
+                close(); NotificationCenter.default.post(name: .openSettings, object: nil)
+            }
+            divider
+            MenuRow(icon: "sparkles", title: "新功能…") {
+                close(); NotificationCenter.default.post(name: .openWhatsNew, object: nil)
+            }
+            MenuRow(icon: "exclamationmark.bubble", title: "回報問題…") {
+                close(); BugReport.run(store: store)
+            }
+            // Esc 關閉
+            Button("", action: close).keyboardShortcut(.cancelAction).opacity(0).frame(width: 0, height: 0)
+        }
+        .padding(6)
+        .frame(width: 240)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.zRaised))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zRaisedLine, lineWidth: 0.5))
+        .raisedShadow()
     }
 
-    static func show(store: Store) {
-        let menu = NSMenu()
-        menu.autoenablesItems = false
-        func add(_ title: String, _ icon: String, key: String = "", on: Bool = false, _ run: @escaping () -> Void) {
-            let target = Item(run)
-            let it = NSMenuItem(title: title, action: #selector(Item.fire), keyEquivalent: key)
-            it.target = target
-            it.representedObject = target   // 留住 target（NSMenuItem 的 target 是 weak）
-            it.image = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
-            it.state = on ? .on : .off
-            menu.addItem(it)
+    private var divider: some View {
+        Rectangle().fill(Color.zLine).frame(height: 0.5).padding(.horizontal, 8).padding(.vertical, 5)
+    }
+}
+
+/// 選單的一列：圖示＋文字，右邊打勾或快捷鍵；hover 有底色
+private struct MenuRow: View {
+    let icon: String
+    let title: String
+    var checked = false
+    var shortcut: String? = nil
+    let action: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(.system(size: 13)).foregroundStyle(Color.zText2).frame(width: 18)
+                Text(title).zText(.callout).foregroundStyle(Color.zText)
+                Spacer(minLength: 8)
+                if checked { Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.zText) }
+                if let shortcut { Text(shortcut).zText(.subheadline).foregroundStyle(Color.zText3) }
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            .background(RoundedRectangle(cornerRadius: 7).fill(hover ? Color.zHover : .clear))
+            .contentShape(Rectangle())
         }
-        let header = NSMenuItem(title: "外觀", action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        menu.addItem(header)
-        for a in Appearance.allCases {
-            add(a.label, a.icon, on: store.appearance == a) { store.appearanceWithTransition.wrappedValue = a }
-        }
-        menu.addItem(.separator())
-        add("設定…", "gearshape", key: ",") { NotificationCenter.default.post(name: .openSettings, object: nil) }
-        menu.addItem(.separator())
-        add("新功能…", "sparkles") { NotificationCenter.default.post(name: .openWhatsNew, object: nil) }
-        add("回報問題…", "exclamationmark.bubble") { BugReport.run(store: store) }
-        // 在滑鼠位置往上打開（帳號列在視窗最下面）
-        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        .buttonStyle(.plain)
+        .focusable(false)
+        .onHover { hover = $0 }
     }
 }
