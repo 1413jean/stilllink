@@ -155,7 +155,8 @@ struct QuickMenu: View {
     }
 }
 
-private struct QuickRowStyle: ButtonStyle {
+/// 選單列的 hover／按下底色（快捷選單、帳號選單共用）
+struct QuickRowStyle: ButtonStyle {
     @State private var hover = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

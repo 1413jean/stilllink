@@ -23,8 +23,7 @@ extension Color {
     static let zText3 = dynamic(0x9C9A93, 0x7A7872)
     static let zHover = dynamic(0xF1F0ED, 0x2C2B28)
     static let zSel = dynamic(0xEDEDEA, 0x33322E)       // 選取列：淺灰
-    static let zAccent = dynamic(0xCC5F38, 0xD9774E)   // 陶土橘：2.1.4 調深一點（原 D96B43／EC9473 太亮、看不清楚）
-    static let zAccentDeep = dynamic(0xC0552F, 0xC8643E)   // 開關等大面積填色：深色模式不要用太淺的主色
+    static let zAccent = dynamic(0xD36540, 0xE08458)   // 陶土橘：2.1.4 調深一點點（原 D96B43／EC9473 太亮、看不清楚）
 
     // 命盤（照文墨天機）
     static let wmRed = dynamic(0xD0102A, 0xFF6B76)

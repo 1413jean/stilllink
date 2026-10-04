@@ -536,43 +536,39 @@ struct AccountMenuPanel: View {
             // Esc 關閉
             Button("", action: close).keyboardShortcut(.cancelAction).opacity(0).frame(width: 0, height: 0)
         }
+        // 外觀跟右下角快捷選單一樣（zCard 底，hover 的 zHover 才看得出來）
         .padding(6)
-        .frame(width: 240)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.zRaised))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zRaisedLine, lineWidth: 0.5))
-        .raisedShadow()
+        .frame(width: 236)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.zCard).shadow(color: Color.zShadow, radius: 18, y: 6))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zLine))
     }
 
     private var divider: some View {
-        Rectangle().fill(Color.zLine).frame(height: 0.5).padding(.horizontal, 8).padding(.vertical, 5)
+        Rectangle().fill(Color.zLine).frame(height: 0.5).padding(.vertical, 4)
     }
 }
 
-/// 選單的一列：圖示＋文字，右邊打勾或快捷鍵；hover 有底色
+/// 選單的一列：跟快捷選單同一套（圖示＋文字，右邊打勾或快捷鍵；hover／按下底色用 QuickRowStyle）
 private struct MenuRow: View {
     let icon: String
     let title: String
     var checked = false
     var shortcut: String? = nil
     let action: () -> Void
-    @State private var hover = false
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Image(systemName: icon).font(.system(size: 13)).foregroundStyle(Color.zText2).frame(width: 18)
-                Text(title).zText(.callout).foregroundStyle(Color.zText)
+                Image(systemName: icon).font(Font.zIcon).foregroundStyle(Color.zText).frame(width: 18)
+                Text(title).font(Font.zBody).foregroundStyle(Color.zText)
                 Spacer(minLength: 8)
-                if checked { Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.zText) }
-                if let shortcut { Text(shortcut).zText(.subheadline).foregroundStyle(Color.zText3) }
+                if checked { Image(systemName: "checkmark").font(Font.zCaption.weight(.semibold)).foregroundStyle(Color.zText) }
+                if let shortcut { Text(shortcut).font(Font.zCallout).foregroundStyle(Color.zText3) }
             }
-            .padding(.horizontal, 10)
-            .frame(height: 30)
-            .background(RoundedRectangle(cornerRadius: 7).fill(hover ? Color.zHover : .clear))
+            .padding(.horizontal, 10).frame(height: 34)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(QuickRowStyle())
         .focusable(false)
-        .onHover { hover = $0 }
     }
 }

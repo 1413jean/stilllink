@@ -502,7 +502,7 @@ struct SettingsPage: View {
 
     private func toggle(_ t: String, _ n: String, _ b: Binding<Bool>, last: Bool = false) -> some View {
         row(t, n, last: last) {
-            HStack { Spacer(); Toggle("", isOn: b).toggleStyle(.switch).labelsHidden().tint(Color.zAccentDeep) }
+            HStack { Spacer(); Toggle("", isOn: b).toggleStyle(.switch).labelsHidden() }
         }
     }
 }
