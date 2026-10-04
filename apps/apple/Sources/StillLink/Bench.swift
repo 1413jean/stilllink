@@ -79,6 +79,22 @@ enum Bench {
             }
             return
         }
+        // 八字對照文墨：ZIWEI_BAZI_TEST="1984,10,3,13,30,f"（國曆年月日時分、m/f）→ 節氣／非節氣四柱、起運、大運（虛歲與年份）
+        if let spec = ProcessInfo.processInfo.environment["ZIWEI_BAZI_TEST"] {
+            Task.detached {
+                let f = spec.split(separator: ",").map(String.init)
+                let n = f.prefix(5).compactMap { Int($0) }
+                let p = TempChart.make(n[0], n[1], n[2], n[3], n[4], f.last == "f" ? .female : .male, name: "匿名")
+                let c = await Engine.shared.chart(for: p)
+                let b = BaziInfo(person: p, chart: c)
+                let q = b.qiyun
+                let ages = b.dayun.indices.map { "\(b.dayun[$0])\(b.dayunStartYear - b.birthYear + 1 + $0 * 10)歲\(b.dayunStartYear + $0 * 10)" }
+                let out = "\(c.lunarDate) \(c.time)\n節氣四柱 \(b.pillars.joined(separator: " "))\n非節氣四柱 \(b.lunarPillars.joined(separator: " "))\n出生後 \(q.years)年 \(q.months)月 \(q.days)天 八字起運\n\(ages.joined(separator: " "))"
+                try? out.write(toFile: path, atomically: true, encoding: .utf8)
+                exit(0)
+            }
+            return
+        }
         // 亂數起盤年份自測：ZIWEI_YEARS_TEST=1 時，排西元 1～9999 年的極端年份並回報命宮主星與四柱
         if ProcessInfo.processInfo.environment["ZIWEI_YEARS_TEST"] != nil {
             Task.detached {
