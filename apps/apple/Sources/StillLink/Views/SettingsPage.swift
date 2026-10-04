@@ -405,6 +405,8 @@ struct SettingsPage: View {
             row("製作", "設計與開發") {
                 HStack { Spacer(); Text("Jean").font(Font.zBody).foregroundStyle(Color.zText) }
             }
+            row("問題與建議", "使用上遇到問題、想要的功能") { contactLink("support@jeanui.com") }
+            row("合作與其他", "合作邀約、其他聯絡") { contactLink("hi@jeanui.com") }
             row("排盤計算", "開源紫微斗數引擎") {
                 HStack { Spacer(); Text("iztro（MIT License）").font(Font.zCallout).foregroundStyle(Color.zText2) }
             }
@@ -415,6 +417,18 @@ struct SettingsPage: View {
     }
 
     /// 檢查更新那一列的說明文字
+    /// 聯絡信箱：點了用預設郵件 App 開新信；地址本身可以選取複製
+    private func contactLink(_ address: String) -> some View {
+        HStack(spacing: 8) {
+            Spacer()
+            Text(address).font(Font.zCallout).foregroundStyle(Color.zText2).textSelection(.enabled)
+            Button { if let url = URL(string: "mailto:\(address)") { NSWorkspace.shared.open(url) } } label: {
+                Label("寫信", systemImage: "envelope")
+            }
+            .buttonStyle(ZSecondaryButton(small: true))
+        }
+    }
+
     private var updateNote: String {
         switch updater.state {
         case .idle: "有新版本時，工具列會出現「更新」按鈕"

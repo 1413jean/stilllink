@@ -1,0 +1,15 @@
+# StillLink 問題回報伺服器（Cloudflare Worker）
+# 部署：cd services/report && npx wrangler deploy
+# 金鑰：npx wrangler secret put RESEND_API_KEY（只存在 Cloudflare，不進 repo）
+name = "stilllink-report"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# 網址：https://report.jeanui.com（部署時自動建 DNS）
+routes = [{ pattern = "report.jeanui.com", custom_domain = true }]
+
+# 同一個 IP 每分鐘最多 3 封
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+simple = { limit = 3, period = 60 }

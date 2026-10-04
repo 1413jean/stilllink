@@ -33,7 +33,7 @@ struct StillLinkApp: App {
             }
             CommandGroup(replacing: .help) {
                 Button("新功能…") { NotificationCenter.default.post(name: .openWhatsNew, object: nil) }
-                Button("回報問題…") { BugReport.run(store: store) }
+                Button("回報問題…") { ReportState.shared.show() }
             }
         }
     }
@@ -99,6 +99,7 @@ struct RootView: View {
     @State private var showWhatsNew = false        // 「新功能」視窗
     @State private var remindWhatsNew = Changelog.shouldRemind   // 右上角「新功能」提醒（看過就消失）
     @ObservedObject private var accountMenu = AccountMenuState.shared
+    @ObservedObject private var report = ReportState.shared
     @State private var newGroup: String?
     @State private var columns: NavigationSplitViewVisibility = .all
     @State private var sidebarAutoHidden = false   // 右側面板拉寬時自動收起側欄（拉回來再打開）
@@ -256,6 +257,22 @@ struct RootView: View {
             }
         
 
+            if report.open {
+                ZStack {
+                    Color.black.opacity(0.32).ignoresSafeArea()
+                        .onTapGesture { report.close() }
+                    GeometryReader { g in
+                        ReportSheet(onClose: { report.close() })
+                            .frame(width: min(680, g.size.width - 48))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.zRaisedLine, lineWidth: 0.5))
+                            .raisedShadow()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+
             if showWhatsNew {
                 ZStack {
                     Color.black.opacity(0.32).ignoresSafeArea()
@@ -311,6 +328,7 @@ struct RootView: View {
         if let name = env["ZIWEI_ROUTE"], let p = store.people.first(where: { $0.name == name }) { route = .person(p.id) }
         if env["ZIWEI_NEW"] != nil { go(.new) }
         if env["ZIWEI_NEWSELF"] != nil { go(.newSelf) }
+        if env["ZIWEI_REPORT_SHEET"] != nil { ReportState.shared.open = true }   // 驗證用：一開就打開回報彈窗
         if let p = env["ZIWEI_REPORT"] {   // 驗證用：把問題回報內容寫到檔案
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { try? BugReport.report(store: store).write(toFile: p, atomically: true, encoding: .utf8) }
         }

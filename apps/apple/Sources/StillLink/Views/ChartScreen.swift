@@ -501,7 +501,7 @@ struct TipsButton: View {
                 tip("pencil.tip", "底部工具列可以畫線、框、箭頭和放備註；快捷鍵 V P H A R E C，Esc 回到選取")
                 Divider().padding(.vertical, 2)
                 // 畫面怪怪的：一鍵複製版本、系統、螢幕資訊，貼給 Jean
-                Button { open = false; BugReport.run(store: store) } label: {
+                Button { open = false; ReportState.shared.show() } label: {
                     Label("回報問題…", systemImage: "exclamationmark.bubble")
                         .zText(.footnote).foregroundStyle(Color.zText2)
                         .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
