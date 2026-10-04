@@ -37,6 +37,31 @@ struct Person: Codable, Identifiable, Hashable {
     var chartKey: String { "\(solar)|\(hour)|\(gender.rawValue)" }
 }
 
+extension Person {
+    /// 依「出生時間」設定算出排盤用的日期與時辰（存的鐘錶時間＋出生地重算）
+    /// - 照鐘錶時間：直接用鐘錶時間（跟文墨天機一樣，不扣日光節約）
+    /// - 真太陽時：扣日光節約，再加上經度時差和均時差（要有出生地）
+    func resolved(_ mode: ZSettings.TimeMode) -> Person {
+        guard let clock else { return self }
+        let parts = clock.split(whereSeparator: { $0 == "-" || $0 == " " || $0 == ":" }).compactMap { Int($0) }
+        guard parts.count == 5 else { return self }
+        var q = self
+        switch mode {
+        case .clock:
+            q.solar = "\(parts[0])-\(parts[1])-\(parts[2])"
+            q.hour = SolarTime.shichen(parts[3])
+            q.trueSolar = nil
+        case .trueSolar:
+            guard let place, let tz = TimeZone(identifier: place.timeZoneID) else { return self }
+            let r = SolarTime.compute(year: parts[0], month: parts[1], day: parts[2], hour: parts[3], minute: parts[4], longitude: place.longitude, tz: tz)
+            q.solar = "\(r.ymd.0)-\(r.ymd.1)-\(r.ymd.2)"
+            q.hour = r.shichen
+            q.trueSolar = String(format: "%d-%d-%d %02d:%02d", r.ymd.0, r.ymd.1, r.ymd.2, r.hm.0, r.hm.1)
+        }
+        return q
+    }
+}
+
 enum Appearance: String, Codable, CaseIterable {
     case light, dark, system
     var label: String { ["light": "淺色", "dark": "深色", "system": "跟隨系統"][rawValue]! }

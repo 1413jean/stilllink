@@ -314,7 +314,8 @@ struct NewChartSheet: View {
         }()
         let (h, mm) = unknownTime ? (12, 0) : (hh, mi)
         let clock = String(format: "%d-%d-%d %02d:%02d", sy, sm, sd, h, mm)
-        guard let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else {
+        // 照鐘錶時間（預設，跟文墨天機一樣）：不扣日光節約、不做經度校正
+        guard store.settings.timeMode == .trueSolar, let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else {
             return ("\(sy)-\(sm)-\(sd)", SolarTime.shichen(h), clock, nil)
         }
         let r = SolarTime.compute(year: sy, month: sm, day: sd, hour: h, minute: mm, longitude: place.longitude, tz: tz)
@@ -324,7 +325,7 @@ struct NewChartSheet: View {
 
     /// 出生時間碰到出生地的日光節約（例：台灣 1945–1961、1974–1975、1979 夏天）
     private var dstApplied: Bool {
-        guard let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else { return false }
+        guard store.settings.timeMode == .trueSolar, let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else { return false }
         let (sy, sm, sd): (Int, Int, Int) = calendar == 0 ? (y, m, d) : (Lunar.toSolar(y, m, d, leap: leap) ?? (y, m, d))
         var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
         guard let date = cal.date(from: DateComponents(year: sy, month: sm, day: sd, hour: hh, minute: mi)) else { return false }

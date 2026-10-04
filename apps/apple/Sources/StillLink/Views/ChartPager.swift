@@ -21,7 +21,8 @@ struct ChartPager: View {
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 0) {
                         ForEach(Array(pages.enumerated()), id: \.element.id) { i, p in
-                            ChartScreen(person: p, level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
+                            // 依設定（照鐘錶時間／真太陽時）用鐘錶時間重算排盤日期與時辰，舊命盤也跟著設定走
+                            ChartScreen(person: p.resolved(store.settings.timeMode), level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
                                 .padding(.top, top)
                                 .frame(width: geo.size.width, height: geo.size.height)
                                 .id(i)
