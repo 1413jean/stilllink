@@ -1,89 +1,124 @@
 import SwiftUI
 
-/// 夾宮提示：選到被夾的宮位時，它跟左右鄰宮的交界各扣上一個鏈結（🔗）；滑鼠停在鏈結上才跳出說明卡
-/// 鏈結從鄰宮那側滑到交界、轉正，最後輕輕彈一下「扣上」；每次換選取宮位用 .id 重建、重播一次
+/// 夾宮提示：選到被夾的宮位時，一條線把「左鄰宮＋被選宮位＋右鄰宮」整個圈起來（角落宮位是 L 形）
+/// 線像電流一樣微微跳動，讓人感覺三宮被鏈在一起；進場時沿著外框畫一圈；滑鼠停在線上才跳出說明卡
+/// 只有這一層的 Canvas 在重畫（每秒 12 格），不會牽動整張盤；「減少動態效果」時是一條靜止的線
 struct ClampOverlay: View {
     let clamps: [Clamp]
     let selected: Int
     let m: CGFloat, cw: CGFloat, ch: CGFloat
     let boardSize: CGSize
-    let fs: CGFloat                     // 盤面基準字級：鏈結大小跟著盤面縮放
+    let fs: CGFloat
 
-    // 動態參數：鏈結從鄰宮往交界滑的距離（宮格寬高的比例）、徽章大小、進場前的旋轉角度
-    static let travel: CGFloat = 0.28
-    static let badgeScale: CGFloat = 1.5   // 徽章直徑＝盤面字級 × 這個倍數（一般大小約 20pt）
-    static let spin: Double = -70
+    // 動態參數
+    static let drawIn: Double = 0.55         // 進場畫一圈的秒數
+    static let jitter: CGFloat = 1.3         // 平常的抖動幅度（pt）
+    static let spark: CGFloat = 3.2          // 偶爾閃一下的幅度（pt）
+    static let sparkChance: Double = 0.06    // 每個取樣點閃一下的機率
+    static let step: CGFloat = 5             // 沿線取樣間距（pt）
+    static let fps: Double = 12
 
-    private var badge: CGFloat { max(16, fs * Self.badgeScale) }
-    @State private var shown = false
-    @State private var locked = false   // 滑到定位後的「扣上」彈一下
-    @State private var pulse = false
-    @State private var hover: Int?      // 滑鼠停在哪一道括號（0／1）
+    @State private var start = Date()
+    @State private var hoverAt: CGPoint?
 
     private var color: Color { clamps.contains { !$0.good } ? Color.mJi : Color.mLu }
-    private var neighbors: [Int] { [(selected + 11) % 12, (selected + 1) % 12] }
-
-    private func rect(_ i: Int) -> CGRect {
-        let (r, c) = ZW.grid[i]
-        return CGRect(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch, width: cw, height: ch)
-    }
-
-    /// 鄰宮在被選宮位的哪一邊（-1／0／1）
-    private func side(_ n: Int) -> (dx: CGFloat, dy: CGFloat) {
-        let (r, c) = ZW.grid[selected], (rn, cn) = ZW.grid[n]
-        return (CGFloat(cn - c), CGFloat(rn - r))
-    }
 
     var body: some View {
-        let s = rect(selected)
+        let outline = Self.outline(selected: selected, m: m, cw: cw, ch: ch)
         ZStack(alignment: .topLeading) {
-            ForEach(Array(neighbors.enumerated()), id: \.offset) { k, n in
-                let d = side(n)
-                // 鄰宮淡淡亮一下再退掉：告訴人「是這兩宮在夾」
-                Rectangle().fill(color.opacity(pulse ? 0 : 0.14))
-                    .frame(width: cw, height: ch)
-                    .offset(x: rect(n).minX, y: rect(n).minY)
-                    .allowsHitTesting(false)
-                link(d, in: s, index: k)
+            TimelineView(.periodic(from: start, by: 1 / Self.fps)) { tl in
+                Canvas { ctx, _ in
+                    let t = tl.date.timeIntervalSince(start)
+                    let progress = Motion.reduce ? 1 : min(1, max(0, t) / Self.drawIn)
+                    let eased = 1 - pow(1 - progress, 3)
+                    let frame = Motion.reduce ? -1 : Int(t * Self.fps)
+                    let path = Self.electric(outline, frame: frame, upTo: eased)
+                    // 外層光暈＋內層實線
+                    var glow = ctx
+                    glow.addFilter(.blur(radius: 3))
+                    glow.stroke(path, with: .color(color.opacity(0.45)), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                    ctx.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                }
             }
-            if let k = hover {
-                card.offset(cardOrigin(for: neighbors[k], in: s))
+            .allowsHitTesting(false)
+
+            // 滑鼠感應：只有線附近 14pt 一圈，不擋宮位點擊
+            OutlineBand(points: outline, width: 14)
+                .fill(Color.white.opacity(0.001))
+                .onContinuousHover { phase in
+                    switch phase {
+                    case .active(let p): hoverAt = p
+                    case .ended: withAnimation(Motion.fast) { hoverAt = nil }
+                    }
+                }
+
+            if let p = hoverAt {
+                card.offset(cardOrigin(near: p))
                     .transition(.opacity)
                     .allowsHitTesting(false)
             }
         }
         .frame(width: boardSize.width, height: boardSize.height, alignment: .topLeading)
         .onAppear {
-            withAnimation(Motion.reduce ? nil : .spring(response: 0.42, dampingFraction: 0.78)) { shown = true }
-            withAnimation(Motion.reduce ? nil : .spring(response: 0.22, dampingFraction: 0.45).delay(0.32)) { locked = true }
-            withAnimation(Motion.reduce ? nil : .easeOut(duration: 0.9).delay(0.15)) { pulse = true }
-            if ProcessInfo.processInfo.environment["ZIWEI_CLAMP_HOVER"] != nil { hover = 0 }   // 驗證用：直接顯示說明卡
+            start = Date()
+            if ProcessInfo.processInfo.environment["ZIWEI_CLAMP_HOVER"] != nil, let p = outline.first {   // 驗證用：直接顯示說明卡
+                hoverAt = CGPoint(x: p.x + cw * 0.5, y: p.y)
+            }
         }
     }
 
-    /// 交界上的鏈結徽章：圓形底＋鏈結圖示；左右鄰宮用橫的鏈、上下鄰宮用直的鏈
-    private func link(_ d: (dx: CGFloat, dy: CGFloat), in s: CGRect, index k: Int) -> some View {
-        let size = badge
-        // 交界中點
-        let cx = d.dx < 0 ? s.minX : d.dx > 0 ? s.maxX : s.midX
-        let cy = d.dy < 0 ? s.minY : d.dy > 0 ? s.maxY : s.midY
-        let travelX = Motion.reduce || shown ? 0 : d.dx * cw * Self.travel
-        let travelY = Motion.reduce || shown ? 0 : d.dy * ch * Self.travel
-        let angle: Double = d.dx != 0 ? 45 : -45     // SF 的 link 是斜的：轉成橫的或直的
-        let pop: CGFloat = locked ? (hover == k ? 1.12 : 1) : 0.86
-        return Image(systemName: "link")
-            .font(.system(size: size * 0.52, weight: .semibold))
-            .foregroundStyle(color)
-            .rotationEffect(.degrees(angle + (shown || Motion.reduce ? 0 : Self.spin)))
-            .frame(width: size, height: size)
-            .background(Circle().fill(Color.zCard))
-            .overlay(Circle().stroke(color.opacity(0.55), lineWidth: 1))
-            .shadow(color: Color.black.opacity(0.15), radius: 3, y: 1)
-            .scaleEffect(Motion.reduce ? 1 : pop)
-            .contentShape(Circle())
-            .onHover { inside in withAnimation(Motion.fast) { hover = inside ? k : (hover == k ? nil : hover) } }
-            .opacity(shown ? 1 : 0)
-            .offset(x: cx - size / 2 + travelX, y: cy - size / 2 + travelY)
+    /// 三格的外框（宮位依地支前後相鄰，一定連在一起：一直線或 L 形），順時針頂點
+    static func outline(selected s: Int, m: CGFloat, cw: CGFloat, ch: CGFloat) -> [CGPoint] {
+        let cells = [(s + 11) % 12, s, (s + 1) % 12].map { ZW.grid[$0] }
+        let r0 = cells.map(\.0).min()!, r1 = cells.map(\.0).max()!
+        let c0 = cells.map(\.1).min()!, c1 = cells.map(\.1).max()!
+        func pts(_ g: [(Int, Int)]) -> [CGPoint] { g.map { CGPoint(x: m + CGFloat($0.0) * cw, y: m + CGFloat($0.1) * ch) } }
+        // 一直線：外框就是包住三格的長方形
+        if r0 == r1 || c0 == c1 {
+            return pts([(c0, r0), (c1 + 1, r0), (c1 + 1, r1 + 1), (c0, r1 + 1)])
+        }
+        // L 形：2×2 少一格
+        let x0 = c0, x1 = c0 + 1, x2 = c0 + 2, y0 = r0, y1 = r0 + 1, y2 = r0 + 2
+        let has = { (r: Int, c: Int) in cells.contains { $0 == (r, c) } }
+        if !has(r0, c0) { return pts([(x1, y0), (x2, y0), (x2, y2), (x0, y2), (x0, y1), (x1, y1)]) }
+        if !has(r0, c1) { return pts([(x0, y0), (x1, y0), (x1, y1), (x2, y1), (x2, y2), (x0, y2)]) }
+        if !has(r1, c1) { return pts([(x0, y0), (x2, y0), (x2, y1), (x1, y1), (x1, y2), (x0, y2)]) }
+        return pts([(x0, y0), (x2, y0), (x2, y2), (x1, y2), (x1, y1), (x0, y1)])
+    }
+
+    /// 沿著外框每 step 取一點，往垂直方向抖一下（偶爾大一點的閃），畫到 upTo（0～1）為止；frame < 0 不抖
+    static func electric(_ poly: [CGPoint], frame: Int, upTo: Double) -> Path {
+        var samples: [CGPoint] = []
+        var idx = 0
+        for k in poly.indices {
+            let a = poly[k], b = poly[(k + 1) % poly.count]
+            let len = max(1, hypot(b.x - a.x, b.y - a.y))
+            let n = max(1, Int(len / step))
+            let nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len
+            for j in 0..<n {
+                let f = CGFloat(j) / CGFloat(n)
+                var off: CGFloat = 0
+                if frame >= 0 && j > 0 {   // 轉角那一點不抖，外框的角才會利落
+                    let h1 = hash(idx, frame), h2 = hash(idx &* 7 &+ 3, frame)
+                    off = (CGFloat(h1) * 2 - 1) * jitter
+                    if h2 < sparkChance { off += (h1 < 0.5 ? -1 : 1) * spark }
+                }
+                samples.append(CGPoint(x: a.x + (b.x - a.x) * f + nx * off, y: a.y + (b.y - a.y) * f + ny * off))
+                idx += 1
+            }
+        }
+        let count = max(2, Int(Double(samples.count) * upTo))
+        var p = Path()
+        p.move(to: samples[0])
+        for q in samples.prefix(count).dropFirst() { p.addLine(to: q) }
+        if upTo >= 1 { p.closeSubpath() }
+        return p
+    }
+
+    /// 0～1 的偽亂數（同一格同一點固定，換格才變）
+    private static func hash(_ i: Int, _ frame: Int) -> Double {
+        let v = sin(Double(i) * 12.9898 + Double(frame) * 78.233) * 43758.5453
+        return v - floor(v)
     }
 
     /// 說明卡（樣式同星曜說明卡）
@@ -107,15 +142,24 @@ struct ClampOverlay: View {
         .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
     }
 
-    /// 說明卡跳在鏈結右下方；右邊放不下就放左邊，不超出盤面
-    private func cardOrigin(for n: Int, in s: CGRect) -> CGSize {
-        let d = side(n)
-        let cx = d.dx < 0 ? s.minX : d.dx > 0 ? s.maxX : s.midX
-        let cy = d.dy < 0 ? s.minY : d.dy > 0 ? s.maxY : s.midY
-        let h = CGFloat(clamps.count) * 52 + 10
-        var x = cx + badge / 2 + 6
-        if x + 240 > boardSize.width - 4 { x = cx - badge / 2 - 246 }
-        let y = min(max(4, cy + badge / 2 + 4), boardSize.height - h - 4)
-        return CGSize(width: max(4, x), height: y)
+    /// 說明卡跳在滑鼠右下方；放不下就往左、往上，不超出盤面
+    private func cardOrigin(near p: CGPoint) -> CGSize {
+        let h = CGFloat(clamps.count) * 60 + 10
+        var x = p.x + 14, y = p.y + 14
+        if x + 240 > boardSize.width - 4 { x = p.x - 254 }
+        if y + h > boardSize.height - 4 { y = p.y - h - 10 }
+        return CGSize(width: max(4, x), height: max(4, y))
+    }
+}
+
+/// 沿著外框的一圈帶狀區域（滑鼠感應用）
+private struct OutlineBand: Shape {
+    let points: [CGPoint]
+    let width: CGFloat
+    func path(in _: CGRect) -> Path {
+        var p = Path()
+        p.addLines(points)
+        p.closeSubpath()
+        return p.strokedPath(StrokeStyle(lineWidth: width, lineJoin: .miter))
     }
 }

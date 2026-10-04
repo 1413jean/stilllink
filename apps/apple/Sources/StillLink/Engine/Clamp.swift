@@ -1,6 +1,7 @@
 import Foundation
 
 /// 夾宮：被選宮位的左右鄰宮（地支前後兩宮）各有一顆成對的星或四化，就是「被 OO 夾」
+/// 鄰宮是空宮（沒有主星）時借對宮的星曜一起看（例：命宮空宮借遷移的地空，跟另一邊的地劫成空劫夾）
 struct Clamp: Hashable {
     let name: String      // 左右夾、雙忌夾忌…
     let meaning: String
@@ -30,33 +31,58 @@ extension ZW {
         ("忌", "忌", "雙忌夾", "被夾的宮位有雙化忌特質", false),
     ]
 
-    /// 某一宮有哪些四化：生年四化一定算；`level` ≥ 1 時再加上那一層運限的四化；祿存當成祿
-    private static func clampMutagens(_ p: Palace, horo: Horoscope, level: Int) -> Set<String> {
-        var out = Set(p.stars.map(\.mutagen).filter { !$0.isEmpty })
+    /// 一組星有哪些四化：生年四化一定算；`level` ≥ 1 時再加上那一層運限的四化；祿存當成祿
+    private static func clampMutagens(_ stars: [Star], horo: Horoscope, level: Int) -> Set<String> {
+        var out = Set(stars.map(\.mutagen).filter { !$0.isEmpty })
         if level >= 1 {
             let list = horo.scope(level).mutagen
-            for s in p.stars { if let m = mutagen(in: list, star: s.name) { out.insert(m.rawValue) } }
+            for s in stars { if let m = mutagen(in: list, star: s.name) { out.insert(m.rawValue) } }
         }
-        if p.stars.contains(where: { $0.name == "祿存" }) { out.insert("祿") }
+        if stars.contains(where: { $0.name == "祿存" }) { out.insert("祿") }
         return out
+    }
+
+    /// 鄰宮拿來判斷夾的星：本宮的星；空宮（沒有主星）再加上對宮的星
+    private static func clampStars(_ c: Chart, _ n: Int) -> (own: [Star], all: [Star], borrowedFrom: String?) {
+        let p = c.palaces[n]
+        guard p.major.isEmpty else { return (p.stars, p.stars, nil) }
+        let opp = c.palaces[(n + 6) % 12]
+        return (p.stars, p.stars + opp.stars, opp.name)
     }
 
     /// 被選宮位 `i` 被哪些組合夾（`level`：0＝只看生年四化，1–5＝再加上那一層的四化）
     static func clamps(_ c: Chart, horo: Horoscope, center i: Int, level: Int) -> [Clamp] {
-        let a = c.palaces[(i + 11) % 12], b = c.palaces[(i + 1) % 12], me = c.palaces[i]
-        let sa = Set(a.stars.map(\.name)), sb = Set(b.stars.map(\.name))
-        let ma = clampMutagens(a, horo: horo, level: level), mb = clampMutagens(b, horo: horo, level: level)
-        let centerJi = clampMutagens(me, horo: horo, level: level).contains("忌")
-        var out: [Clamp] = []
-        for (x, y, name, meaning, good) in clampStarPairs where (sa.contains(x) && sb.contains(y)) || (sa.contains(y) && sb.contains(x)) {
-            if name == "羊陀夾" && !centerJi { continue }
-            out.append(Clamp(name: name, meaning: meaning, good: good))
+        let na = (i + 11) % 12, nb = (i + 1) % 12
+        let a = clampStars(c, na), b = clampStars(c, nb)
+        let centerJi = clampMutagens(c.palaces[i].stars, horo: horo, level: level).contains("忌")
+        // 只靠本宮的星就成立 → 不用註明；要借對宮才成立 → 說明裡寫是哪一宮借了哪一宮
+        func note(_ needA: Bool, _ needB: Bool) -> String {
+            var parts: [String] = []
+            if needA, let f = a.borrowedFrom { parts.append("\(c.palaces[na].name)空宮，借對宮\(f)") }
+            if needB, let f = b.borrowedFrom { parts.append("\(c.palaces[nb].name)空宮，借對宮\(f)") }
+            return parts.isEmpty ? "" : "（" + parts.joined(separator: "；") + "）"
         }
-        for (x, y, name, meaning, good) in clampMutagenPairs where (ma.contains(x) && mb.contains(y)) || (ma.contains(y) && mb.contains(x)) {
+        func check(_ x: String, _ y: String, sets: ([Star]) -> Set<String>) -> String? {
+            let ao = sets(a.own), aa = sets(a.all), bo = sets(b.own), ba = sets(b.all)
+            func hit(_ l: Set<String>, _ r: Set<String>) -> Bool { (l.contains(x) && r.contains(y)) || (l.contains(y) && r.contains(x)) }
+            if hit(ao, bo) { return "" }
+            if hit(aa, bo) { return note(true, false) }
+            if hit(ao, ba) { return note(false, true) }
+            if hit(aa, ba) { return note(true, true) }
+            return nil
+        }
+        var out: [Clamp] = []
+        for (x, y, name, meaning, good) in clampStarPairs {
+            guard let n = check(x, y, sets: { Set($0.map(\.name)) }) else { continue }
+            if name == "羊陀夾" && !centerJi { continue }
+            out.append(Clamp(name: name, meaning: meaning + n, good: good))
+        }
+        for (x, y, name, meaning, good) in clampMutagenPairs {
+            guard let n = check(x, y, sets: { clampMutagens($0, horo: horo, level: level) }) else { continue }
             if name == "雙忌夾" && centerJi {
-                out.append(Clamp(name: "雙忌夾忌", meaning: "等同被夾的宮位有三個忌", good: false))
+                out.append(Clamp(name: "雙忌夾忌", meaning: "等同被夾的宮位有三個忌" + n, good: false))
             } else {
-                out.append(Clamp(name: name, meaning: meaning, good: good))
+                out.append(Clamp(name: name, meaning: meaning + n, good: good))
             }
         }
         return out
