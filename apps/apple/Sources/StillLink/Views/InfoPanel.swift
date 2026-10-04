@@ -163,6 +163,7 @@ struct InfoPanel: View {
                             }
                         }
                         .animation(Motion.base, value: current.notes.map(\.id))
+                        .clipped()   // 刪除時下面的備註往上補位，動畫中不要畫到卡片外面
                     }
                 }
 
