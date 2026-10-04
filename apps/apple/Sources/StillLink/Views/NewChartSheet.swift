@@ -57,7 +57,7 @@ struct NewChartSheet: View {
                     row("姓名", isSelfChart ? "你的名字" : "客人的名字或代稱") {
                         TextField("例如：林小姐", text: $name)
                             .focused($nameFocused)
-                            .zInput(focused: nameFocused)
+                            .zInput()
                     }
                     row("性別", "影響大限順逆", last: isSelfChart) {
                         ZSegmented(options: Gender.allCases.map { ($0, $0.rawValue) }, selection: $gender)
@@ -71,7 +71,7 @@ struct NewChartSheet: View {
                                     .focused($groupFocused)
                                     .onSubmit(commitGroup)
                                     .onChange(of: groupFocused) { _, f in if !f && addingGroup { commitGroup() } }
-                                    .zInput(focused: groupFocused)
+                                    .zInput()
                                 Button("完成", action: commitGroup).buttonStyle(ZPrimaryButton())
                             }
                             .transition(.opacity)

@@ -149,7 +149,7 @@ struct SettingsPage: View {
                 TextField("搜尋設定", text: $query).focused($searchFocused)
                 ZClearButton(text: $query)
             }
-            .zInput(.small, style: .filled, icon: "magnifyingglass", focused: searchFocused)
+            .zInput(.small, style: .filled, icon: "magnifyingglass")
             .padding(.bottom, 6)
 
             ForEach(Section.groups, id: \.0) { group in

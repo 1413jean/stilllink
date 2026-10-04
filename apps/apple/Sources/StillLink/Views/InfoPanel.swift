@@ -144,7 +144,7 @@ struct InfoPanel: View {
                         TextField("記下客人的問題或你的觀察…", text: $draft, axis: .vertical)
                             .lineLimit(2...5)
                             .focused($draftFocused)
-                            .zInput(.medium, focused: draftFocused, multiline: true)
+                            .zInput(.medium, multiline: true)
                             .onSubmit(addNote)
                         HStack {
                             Spacer()

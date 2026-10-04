@@ -82,7 +82,7 @@ struct Sidebar: View {
                                 .onExitCommand { searching = false; search = "" }
                             ZClearButton(text: $search, always: true) { searching = false }
                         }
-                        .zInput(.small, style: .filled, icon: "magnifyingglass", focused: searchFocused)
+                        .zInput(.small, style: .filled, icon: "magnifyingglass")
                     }
 
                     let pinned = store.sorted(store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID })

@@ -2,7 +2,7 @@ import SwiftUI
 
 // 輸入框（設計系統元件，Figma「❖ 輸入框 Input」記錄同一份規格）
 // 全 App 的單行、搜尋、多行輸入框都套 .zInput(...)：各處只決定尺寸、外觀、要不要圖示，
-// 框的高度、字級、圓角、focus 光圈、停用都在這裡統一。
+// 框的高度、字級、圓角、點進去的主色粗框、停用都在這裡統一（focus 由元件自己偵測，呼叫端不用傳）。
 // 聊天式輸入列（評論、AI 解盤）框裡還有工具列，是另一種元件，不套這個。
 
 /// 尺寸：框的高度和裡面的字一起決定，跟旁邊的文字搭得起來
@@ -27,10 +27,10 @@ enum InputStyle {
 }
 
 extension View {
-    /// 套上設計系統輸入框。`focused` 傳進來才會有 focus 光圈；多行（axis: .vertical、TextEditor）要設 `multiline`
+    /// 套上設計系統輸入框。多行（axis: .vertical、TextEditor）要設 `multiline`
     func zInput(_ size: InputSize = .large, style: InputStyle = .outline, icon: String? = nil,
-                focused: Bool = false, multiline: Bool = false) -> some View {
-        modifier(ZInputBox(size: size, style: style, icon: icon, focused: focused, multiline: multiline))
+                multiline: Bool = false) -> some View {
+        modifier(ZInputBox(size: size, style: style, icon: icon, multiline: multiline))
     }
 }
 
@@ -38,9 +38,10 @@ private struct ZInputBox: ViewModifier {
     let size: InputSize
     let style: InputStyle
     let icon: String?
-    let focused: Bool
     let multiline: Bool
     @Environment(\.isEnabled) private var enabled
+    // 點進去（裡面的輸入欄拿到 focus）就換主色粗框；呼叫端自己的 .focused 照樣有效，兩個綁定不衝突
+    @FocusState private var focused: Bool
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: size.radius)
@@ -52,19 +53,20 @@ private struct ZInputBox: ViewModifier {
                 .textFieldStyle(.plain)
                 .zText(size.type)
                 .foregroundStyle(Color.zText)
+                .focused($focused)
         }
         .padding(.horizontal, size.padding)
         .padding(.vertical, multiline ? size.vPadding : 0)
         .frame(maxWidth: .infinity, minHeight: size.height, alignment: .leading)
         .frame(height: multiline ? nil : size.height)
         .background(shape.fill(style == .outline ? Color.zCard : Color.zHover))
-        .overlay(shape.stroke(border, lineWidth: 1))
+        .overlay(shape.strokeBorder(border, lineWidth: focused ? 2 : 1))   // 往內畫：框變粗時外框大小不變
         .opacity(enabled ? 1 : 0.5)
         .animation(Motion.fast, value: focused)
     }
 
     private var border: Color {
-        if focused { return Color.zAccent.opacity(0.55) }
+        if focused { return Color.zAccent }
         return style == .outline ? Color.zLine : .clear
     }
 }
