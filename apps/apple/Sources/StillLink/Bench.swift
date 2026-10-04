@@ -89,7 +89,7 @@ enum Bench {
                                      : TempChart.make(Date(), .male, name: "此刻")
                 let c = await Engine.shared.chart(for: p)
                 guard let mdl = await Engine.shared.model(for: p, pick: Pick.today()) else { exit(1) }
-                let lines = (0..<12).map { i in "\(i) \(c.palaces[i].name)：" + ZW.clamps(c, horo: mdl.horo, center: i, level: 0).map { $0.name + $0.meaning.drop(while: { $0 != "（" }) }.joined(separator: "、") }
+                let lines = (0..<12).map { i in "\(i) \(c.palaces[i].name)：" + ZW.clamps(c, horo: mdl.horo, center: i, level: 0).map { $0.name + $0.borrow }.joined(separator: "、") }
                 try? lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
                 exit(0)
             }

@@ -28,6 +28,7 @@ final class StarNotes: ObservableObject {
         ("凶星", ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫"]),
         ("雜曜", ["紅鸞", "天喜", "天姚", "天刑", "咸池"]),
         ("四化", ["化祿", "化權", "化科", "化忌"]),
+        ("夾宮", ["夾宮是什麼", "紫府夾", "日月夾", "昌曲夾", "左右夾", "魁鉞夾", "火鈴夾", "空劫夾", "羊陀夾", "雙祿夾", "雙權夾", "雙科夾", "祿權夾", "科權夾", "雙忌夾", "雙忌夾忌"]),
         ("十年天干四化", ["十干四化表"] + ZW.stems.map { $0 + "干四化" } + ["化忌解方"]),
         ("實戰小應用", ["紫占", "命盤反推"]),
         ("長生十二宮", ["長生十二宮", "長生", "沐浴", "冠帶", "臨官", "帝旺", "衰", "病", "死", "墓", "絕", "胎", "養"]),
@@ -38,7 +39,7 @@ final class StarNotes: ObservableObject {
     static let groupShort = ["北斗星系": "北斗", "南斗星系": "南斗", "中天主星": "中天", "雙星組合": "雙星", "十年天干四化": "十干四化", "實戰小應用": "紫占", "長生十二宮": "長生"]
     /// 參考文件（十干四化、紫占、長生、附錄）：只有內文，沒有十二宮
     static func isDoc(_ key: String) -> Bool {
-        groups.contains { ["十年天干四化", "實戰小應用", "長生十二宮", "附錄"].contains($0.0) && $0.1.contains(key) }
+        groups.contains { ["十年天干四化", "實戰小應用", "長生十二宮", "附錄", "夾宮"].contains($0.0) && $0.1.contains(key) }
     }
 
     private(set) var defaults: [String: StarNote] = [:]
@@ -147,7 +148,8 @@ extension StarNotesCard {
             ForEach(clamps, id: \.self) { c in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(c.name).font(Font.zBodyStrong).foregroundStyle(Color.zText)
-                    Text(c.meaning).zText(.callout).foregroundStyle(Color.zText2)
+                    let n = StarNotes.shared.note(c.name).summary.trimmingCharacters(in: .whitespacesAndNewlines)
+                    Text((n.isEmpty ? c.meaning : n) + c.borrow).zText(.callout).foregroundStyle(Color.zText2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.leading, 10)
@@ -343,6 +345,8 @@ struct StarNotesPage: View {
         default: break
         }
         if key.hasPrefix("附錄") { return ["doc.text"] }
+        if key == "夾宮是什麼" { return ["info.circle"] }
+        if key.hasSuffix("夾") || key == "雙忌夾忌" { return ["link"] }   // 夾宮：雙忌夾忌是四個字，要排在雙星組合前面判斷
         if key.count == 4 { return ["sparkles"] }   // 雙星組合：一個圖示就好
         if StarNotes.isDoc(key) { return ["circle.dotted"] }  // 長生十二神
         return []

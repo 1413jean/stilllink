@@ -4,8 +4,9 @@ import Foundation
 /// 鄰宮是空宮（沒有主星）時借對宮的星曜一起看（例：命宮空宮借遷移的地空，跟另一邊的地劫成空劫夾）
 struct Clamp: Hashable {
     let name: String      // 左右夾、雙忌夾忌…
-    let meaning: String
+    let meaning: String   // 內建說明（星曜筆記沒寫時用）
     let good: Bool        // 吉夾（綠）／凶夾（紅）
+    var borrow = ""       // 空宮借對宮才成立時的註記：（命宮空宮，借對宮遷移）
 }
 
 extension ZW {
@@ -75,14 +76,14 @@ extension ZW {
         for (x, y, name, meaning, good) in clampStarPairs {
             guard let n = check(x, y, sets: { Set($0.map(\.name)) }) else { continue }
             if name == "羊陀夾" && !centerJi { continue }
-            out.append(Clamp(name: name, meaning: meaning + n, good: good))
+            out.append(Clamp(name: name, meaning: meaning, good: good, borrow: n))
         }
         for (x, y, name, meaning, good) in clampMutagenPairs {
             guard let n = check(x, y, sets: { clampMutagens($0, horo: horo, level: level) }) else { continue }
             if name == "雙忌夾" && centerJi {
-                out.append(Clamp(name: "雙忌夾忌", meaning: "兩邊是忌、本宮也有忌，等於三個忌疊在一起，壓力加倍，要特別留意。" + n, good: false))
+                out.append(Clamp(name: "雙忌夾忌", meaning: "兩邊是忌、本宮也有忌，等於三個忌疊在一起，壓力加倍，要特別留意。", good: false, borrow: n))
             } else {
-                out.append(Clamp(name: name, meaning: meaning + n, good: good))
+                out.append(Clamp(name: name, meaning: meaning, good: good, borrow: n))
             }
         }
         return out
