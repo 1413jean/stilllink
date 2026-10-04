@@ -237,14 +237,14 @@ struct CommentLayer: View {
                 Button { withAnimation(Motion.fast) { open = nil; editing = nil } } label: { iconLabel("xmark") }
                     .buttonStyle(PressStyle()).help("關閉")
             }
-            .padding(.leading, 20).padding(.trailing, 12).padding(.vertical, 12)
+            .padding(.leading, 22).padding(.trailing, 12).padding(.vertical, 14)
             Rectangle().fill(Color.zLine).frame(height: 0.5)
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 ForEach(t.messages) { m in
                     if editing == m.id { editBox(t, m) } else { message(t, m) }
                 }
             }
-            .padding(.horizontal, 20).padding(.vertical, 16)
+            .padding(.horizontal, 22).padding(.vertical, 18)
             // 回覆
             HStack(spacing: 10) {
                 AvatarView(name: app.userAvatar, size: 26)
@@ -263,7 +263,7 @@ struct CommentLayer: View {
                 .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 7)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.zHover))
             }
-            .padding(.horizontal, 20).padding(.bottom, 18)
+            .padding(.horizontal, 22).padding(.bottom, 20)
         }
         .frame(width: cardW)
         .background(RoundedRectangle(cornerRadius: 14).fill(Color.zRaised))
@@ -283,7 +283,7 @@ struct CommentLayer: View {
     private func message(_ t: CommentThread, _ m: CommentThread.Message) -> some View {
         HStack(alignment: .top, spacing: 12) {
             AvatarView(name: app.userAvatar, size: 26)
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Text(app.userName).zText(.calloutStrong).foregroundStyle(Color.zText)
                     Text(m.date, style: .relative).zText(.footnote).foregroundStyle(Color.zText3)
@@ -353,9 +353,9 @@ struct CommentLayer: View {
     /// 滑鼠停在圖釘上：小預覽卡（像 Figma）
     private func preview(_ t: CommentThread, size: CGSize) -> some View {
         let x = t.point.x * size.width + pin + 6, y = t.point.y * size.height - pin
-        return HStack(alignment: .top, spacing: 8) {
+        return HStack(alignment: .top, spacing: 10) {
             AvatarView(name: app.userAvatar, size: 22)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
                     Text(app.userName).zText(.calloutStrong).foregroundStyle(Color.zText)
                     Text(t.messages.first?.date ?? Date(), style: .relative).zText(.footnote).foregroundStyle(Color.zText3)
@@ -366,7 +366,7 @@ struct CommentLayer: View {
                 }
             }
         }
-        .padding(10)
+        .padding(.horizontal, 14).padding(.vertical, 12)
         .frame(width: 260, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zRaised))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zRaisedLine, lineWidth: 0.5))

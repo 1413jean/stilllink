@@ -22,7 +22,7 @@ struct ChartPager: View {
                     LazyHStack(spacing: 0) {
                         ForEach(Array(pages.enumerated()), id: \.element.id) { i, p in
                             // 一律照鐘錶時間排盤（跟文墨天機一樣），舊命盤也重算；真太陽時只顯示
-                            ChartScreen(person: p.resolved(), level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
+                            ChartScreen(person: p.resolved(), level: i == 0 ? level : nil, chrome: false, isCurrent: i == current, onAdd: { picking = true })
                                 .padding(.top, top)
                                 .frame(width: geo.size.width, height: geo.size.height)
                                 .id(i)

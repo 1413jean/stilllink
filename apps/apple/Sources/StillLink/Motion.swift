@@ -169,9 +169,12 @@ struct ToastHost: View {
     var body: some View {
         GeometryReader { g in
             let frame = g.frame(in: .global)
-            let dx = anchor.centerX.map { $0 - frame.midX } ?? 0
+            // 工具列位置不在視窗裡（例如畫面外的那一頁回報的）就不用
+            let x = anchor.centerX.flatMap { frame.minX...frame.maxX ~= $0 ? $0 : nil }
+            let top = anchor.top.flatMap { (frame.minY + 40)...frame.maxY ~= $0 ? $0 : nil }
+            let dx = x.map { $0 - frame.midX } ?? 0
             // 命盤頁：停在底部工具列上面一點（工具列被 AI 對話框推高時也跟著上去）；其他頁離底部 28
-            let gap = anchor.top.map { max(12, frame.maxY - $0 + 10) } ?? 28
+            let gap = top.map { max(12, frame.maxY - $0 + 10) } ?? 28
             ZStack(alignment: .bottom) { bar.offset(x: dx) }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .padding(.bottom, gap)
