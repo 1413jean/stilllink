@@ -322,11 +322,20 @@ struct NewChartSheet: View {
         return ("\(r.ymd.0)-\(r.ymd.1)-\(r.ymd.2)", r.shichen, clock, ts)
     }
 
+    /// 出生時間碰到出生地的日光節約（例：台灣 1945–1961、1974–1975、1979 夏天）
+    private var dstApplied: Bool {
+        guard let place, !unknownTime, let tz = TimeZone(identifier: place.timeZoneID) else { return false }
+        let (sy, sm, sd): (Int, Int, Int) = calendar == 0 ? (y, m, d) : (Lunar.toSolar(y, m, d, leap: leap) ?? (y, m, d))
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
+        guard let date = cal.date(from: DateComponents(year: sy, month: sm, day: sd, hour: hh, minute: mi)) else { return false }
+        return tz.isDaylightSavingTime(for: date)
+    }
+
     private var previewText: String {
         let r = resolved()
         let sc = ZW.hours[r.hour] + "時"
         if unknownTime { return "以午時排盤" }
-        if let ts = r.trueSolar { return "真太陽時 \(ts) · \(sc)" }
+        if let ts = r.trueSolar { return "真太陽時 \(ts) · \(sc)" + (dstApplied ? "（已自動扣除日光節約 1 小時，不用自己減）" : "") }
         return "\(r.clock) · \(sc)"
     }
 

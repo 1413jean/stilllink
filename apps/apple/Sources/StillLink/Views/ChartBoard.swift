@@ -209,8 +209,9 @@ struct ChartBoard: View, Equatable {
                     .foregroundStyle(mk.0.color)
                     .rotationEffect(.radians(Double(angle) + (mk.1 ? 0 : .pi)))
                     .frame(width: 14, height: 14)
-                    .position(x: ax + dx * m * 0.5 + tx * off, y: ay + dy * m * 0.5 + ty * off)
+                    // 提示要掛在 position 前面：掛在後面範圍會撐滿整個盤面，滑鼠停在盤上任何地方都跳「向心自化祿」
                     .help(mk.1 ? "離心自化\(mk.0.rawValue)" : "向心自化\(mk.0.rawValue)")
+                    .position(x: ax + dx * m * 0.5 + tx * off, y: ay + dy * m * 0.5 + ty * off)
             }
         }
     }
