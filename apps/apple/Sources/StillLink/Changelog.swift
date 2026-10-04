@@ -14,6 +14,17 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.1.5.4", date: "2026 年 10 月 4 日", major: true,
+            new: [
+                "夾宮提示：點選的宮位被左右兩宮夾住時（左右夾、昌曲夾、羊陀夾、雙忌夾…），三宮會用一條淡淡的線框起來，吉綠凶紅；鄰宮是空宮時借對宮的星曜與四化一起看（設定 → 盤面可關）",
+            ],
+            improved: [
+                "更新改成打開 App 時自動檢查，不在背景執行；有新版時工具列出現「更新」，下載好會先問你要不要重新開啟",
+                "星曜說明卡加上背景模糊",
+            ],
+            fixed: [
+                "電腦睡眠一段時間後 StillLink 可能被自動關掉（之前下載好的更新會不問就安裝）",
+            ]),
         ReleaseNote(version: "2.1.5.3", date: "2026 年 10 月 4 日",
             improved: [
                 "更新下載好後會先問你要不要現在重新開啟；選「稍後」不會打斷你，工具列會留一顆「重新開啟」，下次關閉 App 時也會自動完成更新",

@@ -92,6 +92,14 @@ struct ChartBoard: View, Equatable {
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
                     if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
+                // 夾宮提示：選到的宮位被左右鄰宮夾時，兩道括號夾進來；換宮位就重播
+                if settings.showClamp && !cleared {
+                    let clamps = ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0)
+                    if !clamps.isEmpty {
+                        ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs)
+                            .id("\(selected)-\(level)-\(clamps.map(\.name).joined())")
+                    }
+                }
                 CenterInfo(person: person, model: model, selected: selected, cleared: cleared, locked: locked, taiji: taiji,
                            fs: fs, level: level, layers: layers, onToggleLayer: toggleLayer,
                            onToggleMinor: { withAnimation(Motion.fast) { store.settings.showMinorOverlay.toggle() } },

@@ -28,6 +28,7 @@ final class StarNotes: ObservableObject {
         ("凶星", ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫"]),
         ("雜曜", ["紅鸞", "天喜", "天姚", "天刑", "咸池"]),
         ("四化", ["化祿", "化權", "化科", "化忌"]),
+        ("夾宮", ["夾宮是什麼", "紫府夾", "日月夾", "昌曲夾", "左右夾", "魁鉞夾", "火鈴夾", "空劫夾", "羊陀夾", "雙祿夾", "雙權夾", "雙科夾", "祿權夾", "科權夾", "雙忌夾", "雙忌夾忌"]),
         ("十年天干四化", ["十干四化表"] + ZW.stems.map { $0 + "干四化" } + ["化忌解方"]),
         ("實戰小應用", ["紫占", "命盤反推"]),
         ("長生十二宮", ["長生十二宮", "長生", "沐浴", "冠帶", "臨官", "帝旺", "衰", "病", "死", "墓", "絕", "胎", "養"]),
@@ -38,7 +39,7 @@ final class StarNotes: ObservableObject {
     static let groupShort = ["北斗星系": "北斗", "南斗星系": "南斗", "中天主星": "中天", "雙星組合": "雙星", "十年天干四化": "十干四化", "實戰小應用": "紫占", "長生十二宮": "長生"]
     /// 參考文件（十干四化、紫占、長生、附錄）：只有內文，沒有十二宮
     static func isDoc(_ key: String) -> Bool {
-        groups.contains { ["十年天干四化", "實戰小應用", "長生十二宮", "附錄"].contains($0.0) && $0.1.contains(key) }
+        groups.contains { ["十年天干四化", "實戰小應用", "長生十二宮", "附錄", "夾宮"].contains($0.0) && $0.1.contains(key) }
     }
 
     private(set) var defaults: [String: StarNote] = [:]
@@ -101,6 +102,7 @@ struct StarNotesCard: View {
     let index: Int
     var includeBirth = true                    // 生年四化有沒有在顯示範圍（跟盤面一樣最多三層）
     var scopes: [(String, [String])] = []      // 目前顯示的運限四化：（大限、流年…, 祿權科忌四顆星）
+    var clamps: [Clamp] = []                   // 這一宮被什麼夾（盤面上框起來的那三宮）
 
     /// 對宮、三合：輔星（含祿存天馬）、凶星一律看，其他星有四化才看（星名 → 四化標籤「生年祿・流年忌」，沒四化就是空字串）
     private func mutagenTags(_ p: Palace) -> [String: String] {
@@ -132,8 +134,30 @@ struct StarNotesCard: View {
                     PalaceNotes(palace: chart.palaces[i], only: label == "本宮" ? nil : mutagenTags(chart.palaces[i]),
                                 title: palaceTitle(i), key: StarNotes.palaceKey(names?[i] ?? chart.palaces[i].name), onOpen: onOpen)
                 }
+                if label == "本宮" && !clamps.isEmpty { clampSection }
             }
         }
+    }
+}
+
+extension StarNotesCard {
+    /// 夾宮：排在本宮後面；每一條左邊一條色線（吉綠、凶紅），跟盤面框線同色
+    var clampSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("夾宮").font(Font.zCalloutStrong).foregroundStyle(Color.zText3)
+            ForEach(clamps, id: \.self) { c in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(c.name).font(Font.zBodyStrong).foregroundStyle(Color.zText)
+                    let n = StarNotes.shared.note(c.name).summary.trimmingCharacters(in: .whitespacesAndNewlines)
+                    Text((n.isEmpty ? c.meaning : n) + c.borrow).zText(.callout).foregroundStyle(Color.zText2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.leading, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .leading) { Rectangle().fill(c.good ? Color.mLu : Color.mJi).frame(width: 2) }
+            }
+        }
+        .textSelection(.enabled)
     }
 }
 
@@ -270,10 +294,21 @@ struct StarHoverCard: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 9)
         .frame(width: 240, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(white: 0.16)))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08)))
-        .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
+        .hoverCardBackground()
         .allowsHitTesting(false)
+    }
+}
+
+extension View {
+    /// 盤面上的深色說明卡（星曜、夾宮）：深色半透明＋背景模糊，淺色模式也維持深色卡
+    func hoverCardBackground() -> some View {
+        let shape = RoundedRectangle(cornerRadius: 12)
+        return self
+            .background(Color(white: 0.12).opacity(0.72), in: shape)
+            .background(.ultraThinMaterial, in: shape)
+            .environment(\.colorScheme, .dark)
+            .overlay(shape.stroke(Color.white.opacity(0.1)))
+            .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
     }
 }
 
@@ -310,6 +345,8 @@ struct StarNotesPage: View {
         default: break
         }
         if key.hasPrefix("附錄") { return ["doc.text"] }
+        if key == "夾宮是什麼" { return ["info.circle"] }
+        if key.hasSuffix("夾") || key == "雙忌夾忌" { return ["link"] }   // 夾宮：雙忌夾忌是四個字，要排在雙星組合前面判斷
         if key.count == 4 { return ["sparkles"] }   // 雙星組合：一個圖示就好
         if StarNotes.isDoc(key) { return ["circle.dotted"] }  // 長生十二神
         return []

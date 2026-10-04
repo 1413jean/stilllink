@@ -87,6 +87,7 @@ DESIGN.md                  設計規範
 | `ZIWEI_TOAST=文字` | 3 秒後跳一個提示條 |
 | `ZIWEI_OPEN_COMMENT=1`、`ZIWEI_DRAFT=文字` | 打開第一則備註／備註輸入框 |
 | `ZIWEI_REPORT_SHEET=1` | 一開就打開回報問題彈窗 |
+| `ZIWEI_CLAMP_TEST=1` 或 `"年,月,日,時,分,m"`＋`ZIWEI_BENCH=檔案` | 印出此刻盤（或指定生辰）12 宮各被什麼夾 |
 | `ZIWEI_AUTO_UPDATE=check／download／install`＋`ZIWEI_UPDATE_LOG=檔案` | 自動檢查更新；download＝自動按更新、下載好照常跳「要不要重新開啟」彈窗；install＝全自動重開。測試時用改小版本號、改 bundle id 的副本 |
 | `ZIWEI_BAZI_TEST="1984,10,3,13,30,f"`＋`ZIWEI_BENCH=檔案` | 印出節氣／非節氣四柱、起運、大運（對照文墨天機用；起運照文墨數時辰差） |
 | `ZIWEI_PAN_HOVER=1` | 運限表左右箭頭不用 hover 也顯示 |

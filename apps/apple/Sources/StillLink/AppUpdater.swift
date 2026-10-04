@@ -2,7 +2,8 @@ import AppKit
 import Sparkle
 
 /// App 內更新：Sparkle 負責檢查、下載、驗證簽名、安裝；介面不用它的彈窗，
-/// 有新版時只在工具列出現「更新」按鈕，按下去就下載；下載好跳系統彈窗問要不要現在重新開啟。
+/// 不排背景檢查：只在打開 App、以及 App 開著時切回前景（距上次超過一小時）才查一次；「關於」也能手動查。
+/// 有新版時工具列出現「更新」按鈕，按下去才下載；下載好跳系統彈窗問要不要現在重新開啟——任何情況都不會自己關掉 App。
 @MainActor
 final class AppUpdater: NSObject, ObservableObject {
     static let shared = AppUpdater()
@@ -30,21 +31,41 @@ final class AppUpdater: NSObject, ObservableObject {
     private var choice: ((SPUUserUpdateChoice) -> Void)?
     private var relaunchReply: ((SPUUserUpdateChoice) -> Void)?
     private var pendingVersion = ""
+    private var lastCheck: Date?
+    private var activeObserver: NSObjectProtocol?
     private var expected: UInt64 = 0
     private var received: UInt64 = 0
 
-    /// 開 App 時啟動：之後 Sparkle 會自己定期在背景檢查
+    /// 開 App 時啟動 Sparkle，但不排背景檢查（舊版存下的「自動檢查」也一併關掉）
     func start() {
         guard updater == nil, Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil else { return }
         let u = SPUUpdater(hostBundle: .main, applicationBundle: .main, userDriver: self, delegate: nil)
         do { try u.start(); updater = u } catch { state = .failed("更新功能無法啟動") }
+        u.automaticallyChecksForUpdates = false
+        u.automaticallyDownloadsUpdates = false
+        // 打開 App 時查一次；之後切回 App 時，距上次超過一小時再查（App 沒開就不會查）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.quietCheck() }
+        activeObserver = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let last = self.lastCheck, Date().timeIntervalSince(last) > 3600 else { return }
+                self.quietCheck()
+            }
+        }
         // 驗證用：ZIWEI_AUTO_UPDATE=check → 馬上檢查；=install → 找到新版就自動按「更新」
         if ProcessInfo.processInfo.environment["ZIWEI_AUTO_UPDATE"] != nil { u.checkForUpdatesInBackground() }
+    }
+
+    /// 安靜地查一次：有新版才在工具列出現「更新」，沒有就什麼都不顯示
+    private func quietCheck() {
+        guard let updater, updater.canCheckForUpdates, state == .idle || state == .upToDate else { return }
+        lastCheck = Date()
+        updater.checkForUpdatesInBackground()
     }
 
     /// 「關於」頁的檢查更新
     func checkNow() {
         guard let updater, updater.canCheckForUpdates else { return }
+        lastCheck = Date()
         updater.checkForUpdates()
     }
 
@@ -71,18 +92,18 @@ final class AppUpdater: NSObject, ObservableObject {
 }
 
 extension AppUpdater: SPUUserDriver {
-    // 第一次啟動不問「要不要自動檢查」，直接開（不傳送系統資訊）
+    // 第一次啟動不問「要不要自動檢查」：一律不自動檢查（更新由使用者自己按），也不傳送系統資訊
     func show(_ request: SPUUpdatePermissionRequest, reply: @escaping (SUUpdatePermissionResponse) -> Void) {
-        reply(SUUpdatePermissionResponse(automaticUpdateChecks: true, sendSystemProfile: false))
+        reply(SUUpdatePermissionResponse(automaticUpdateChecks: false, sendSystemProfile: false))
     }
 
     func showUserInitiatedUpdateCheck(cancellation: @escaping () -> Void) { state = .checking }
 
     func showUpdateFound(with appcastItem: SUAppcastItem, state s: SPUUserUpdateState, reply: @escaping (SPUUserUpdateChoice) -> Void) {
-        // 已經下載好（之前按過更新但沒裝完）就直接裝；否則等使用者按工具列的「更新」
+        // 之前已經下載好（按過更新但沒裝完）：一樣先問要不要重新開啟，不能自己把 App 關掉（睡眠中自動安裝會讓人以為 App 被關了）
         if s.stage == .downloaded || s.stage == .installing {
-            state = .installing
-            reply(.install)
+            pendingVersion = appcastItem.displayVersionString
+            showReady(toInstallAndRelaunch: reply)
             return
         }
         choice = reply

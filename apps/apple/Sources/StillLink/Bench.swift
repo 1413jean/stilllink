@@ -79,6 +79,22 @@ enum Bench {
             }
             return
         }
+        // 夾宮自測：ZIWEI_CLAMP_TEST=1 → 此刻盤 12 宮各被什麼夾（只看生年四化）
+        if ProcessInfo.processInfo.environment["ZIWEI_CLAMP_TEST"] != nil {
+            Task.detached {
+                // 值是 "年,月,日,時,分,m/f" 就排那一張，否則排此刻
+                let f = (ProcessInfo.processInfo.environment["ZIWEI_CLAMP_TEST"] ?? "").split(separator: ",").map(String.init)
+                let n = f.prefix(5).compactMap { Int($0) }
+                let p = n.count == 5 ? TempChart.make(n[0], n[1], n[2], n[3], n[4], f.last == "f" ? .female : .male, name: "測試")
+                                     : TempChart.make(Date(), .male, name: "此刻")
+                let c = await Engine.shared.chart(for: p)
+                guard let mdl = await Engine.shared.model(for: p, pick: Pick.today()) else { exit(1) }
+                let lines = (0..<12).map { i in "\(i) \(c.palaces[i].name)：" + ZW.clamps(c, horo: mdl.horo, center: i, level: 0).map { $0.name + $0.borrow }.joined(separator: "、") }
+                try? lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+                exit(0)
+            }
+            return
+        }
         // 八字對照文墨：ZIWEI_BAZI_TEST="1984,10,3,13,30,f"（國曆年月日時分、m/f）→ 節氣／非節氣四柱、起運、大運（虛歲與年份）
         if let spec = ProcessInfo.processInfo.environment["ZIWEI_BAZI_TEST"] {
             Task.detached {
