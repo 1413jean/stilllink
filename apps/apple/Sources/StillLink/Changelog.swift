@@ -14,6 +14,11 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.1.5.1", date: "2026 年 10 月 4 日",
+            fixed: [
+                "八字跟文墨天機對齊：節氣四柱的月柱改以「節」換月（之前誤用農曆月，跟非節氣四柱一樣），大運也跟著修正",
+                "八字起運改照文墨天機的算法（數時辰差），大運歲數改用虛歲、從起運那年算",
+            ]),
         ReleaseNote(version: "2.1.5", date: "2026 年 10 月 4 日",
             new: [
                 "星曜說明卡可以照目前運限顯示宮位：看大限、流年時 hover 星曜，會寫「大官祿」這類運限宮名（設定 → 盤面可關）",
