@@ -12,8 +12,8 @@ struct StarNote: Codable, Equatable {
 @MainActor
 final class StarNotes: ObservableObject {
     static let shared = StarNotes()
-    /// 星曜筆記先只在測試版開放，正式版隱藏（Jean：正式先不要上）
-    nonisolated static var enabled: Bool { AppInfo.isBeta }
+    /// 星曜筆記正式版、測試版都開放（2.2 起）；只有「命盤反推」那篇留在測試版（牽涉反推別人生辰的個資）
+    nonisolated static var enabled: Bool { true }
     static let palaceKeys = ["命", "兄", "夫", "子", "財", "疾", "遷", "友", "官", "田", "福", "父"]
 
     /// 筆記頁的分組（依序）
@@ -30,7 +30,7 @@ final class StarNotes: ObservableObject {
         ("四化", ["化祿", "化權", "化科", "化忌"]),
         ("夾宮", ["夾宮是什麼", "紫府夾", "日月夾", "昌曲夾", "左右夾", "魁鉞夾", "火鈴夾", "空劫夾", "羊陀夾", "雙祿夾", "雙權夾", "雙科夾", "祿權夾", "科權夾", "雙忌夾", "雙忌夾忌"]),
         ("十年天干四化", ["十干四化表"] + ZW.stems.map { $0 + "干四化" } + ["化忌解方"]),
-        ("實戰小應用", ["紫占", "命盤反推"]),
+        ("實戰小應用", AppInfo.isBeta ? ["紫占", "命盤反推"] : ["紫占"]),
         ("長生十二宮", ["長生十二宮", "長生", "沐浴", "冠帶", "臨官", "帝旺", "衰", "病", "死", "墓", "絕", "胎", "養"]),
         ("附錄", ["附錄一 命宮主星職業", "附錄二 官祿宮工作模式", "附錄三 財帛宮現金處理", "附錄四 田宅宮居家風格",
                 "附錄五 遷移宮打扮風格", "附錄六 疾厄宮疾病參考", "附錄七 化忌可拜神明", "附錄八 天生沒長好", "其他備註"]),
@@ -300,14 +300,12 @@ struct StarHoverCard: View {
 }
 
 extension View {
-    /// 盤面上的深色說明卡（星曜、夾宮）：深色半透明＋背景模糊，淺色模式也維持深色卡
+    /// 盤面上的深色說明卡（星曜）：實心深色底，淺色模式也維持深色卡（不用背景模糊，Jean 試過覺得不需要）
     func hoverCardBackground() -> some View {
         let shape = RoundedRectangle(cornerRadius: 12)
         return self
-            .background(Color(white: 0.12).opacity(0.72), in: shape)
-            .background(.ultraThinMaterial, in: shape)
-            .environment(\.colorScheme, .dark)
-            .overlay(shape.stroke(Color.white.opacity(0.1)))
+            .background(shape.fill(Color(white: 0.16)))
+            .overlay(shape.stroke(Color.white.opacity(0.08)))
             .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
     }
 }

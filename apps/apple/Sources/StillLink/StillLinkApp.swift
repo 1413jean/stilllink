@@ -228,7 +228,7 @@ struct RootView: View {
                 GeometryReader { g in
                     let f = g.frame(in: .global)
                     ZStack(alignment: .bottomLeading) {
-                        Color.black.opacity(0.001).onTapGesture { accountMenu.close() }
+                        Color.black.opacity(0.001).blocksHover().onTapGesture { accountMenu.close() }
                         AccountMenuPanel(close: { accountMenu.close() })
                             .padding(.leading, max(8, accountMenu.anchor.minX - f.minX + 6))
                             .padding(.bottom, max(8, f.maxY - accountMenu.anchor.minY + 4))
@@ -241,7 +241,7 @@ struct RootView: View {
 
             if showSettings {
                 ZStack {
-                    Color.black.opacity(0.32).ignoresSafeArea()
+                    Color.black.opacity(0.32).ignoresSafeArea().blocksHover()
                         .onTapGesture { closeSettings() }
                     GeometryReader { g in
                         SettingsPage(initial: settingsSection, onClose: closeSettings)
@@ -259,7 +259,7 @@ struct RootView: View {
 
             if report.open {
                 ZStack {
-                    Color.black.opacity(0.32).ignoresSafeArea()
+                    Color.black.opacity(0.32).ignoresSafeArea().blocksHover()
                         .onTapGesture { report.close() }
                     GeometryReader { g in
                         ReportSheet(onClose: { report.close() })
@@ -275,7 +275,7 @@ struct RootView: View {
 
             if showWhatsNew {
                 ZStack {
-                    Color.black.opacity(0.32).ignoresSafeArea()
+                    Color.black.opacity(0.32).ignoresSafeArea().blocksHover()
                         .onTapGesture { closeWhatsNew() }
                     GeometryReader { g in
                         WhatsNewView(onClose: closeWhatsNew)
@@ -351,5 +351,12 @@ struct RootView: View {
         if let t = env["ZIWEI_NEW_AFTER"].flatMap(Double.init) {
             DispatchQueue.main.asyncAfter(deadline: .now() + t) { go(.new) }
         }
+    }
+}
+
+extension View {
+    /// 浮層後面那一片（點旁邊關閉）：連滑鼠移動也攔住，後面的列、按鈕才不會跟著亮起 hover
+    func blocksHover() -> some View {
+        contentShape(Rectangle()).onContinuousHover { _ in }
     }
 }
