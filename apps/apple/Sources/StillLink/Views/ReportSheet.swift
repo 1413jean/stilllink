@@ -15,7 +15,7 @@ struct ReportSheet: View {
     @EnvironmentObject var store: Store
     let onClose: () -> Void
 
-    private enum Phase: Equatable { case editing, sending, sent, failed(String) }
+    private enum Phase: Equatable { case editing, sending, failed(String) }
     @State private var message = ""
     @State private var contact = UserDefaults.standard.string(forKey: "reportContact") ?? ""
     @State private var phase: Phase = .editing
@@ -47,7 +47,7 @@ struct ReportSheet: View {
             }
             .padding(.horizontal, 32).padding(.top, 26).padding(.bottom, 16)
 
-            Group { if phase == .sent { sent } else { form } }
+            form
                 .padding(.horizontal, 32).padding(.bottom, 32)
         }
         .background(Color.zBg)
@@ -60,7 +60,7 @@ struct ReportSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("發生什麼事？").zText(.calloutStrong).foregroundStyle(Color.zText)
-                TextField("例如：打開某張命盤時，格線沒有顯示", text: $message, axis: .vertical)
+                TextField("", text: $message, axis: .vertical)
                     .lineLimit(4...10)
                     .focused($messageFocused)
                     .zInput(.medium, multiline: true)
@@ -122,21 +122,6 @@ struct ReportSheet: View {
         }
     }
 
-    // MARK: 送出成功
-
-    private var sent: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "checkmark.circle.fill").font(.system(size: 40)).foregroundStyle(Color.mLu)
-            Text("已送出，謝謝你！").zText(.headline).foregroundStyle(Color.zText)
-            Text(contact.isEmpty ? "我們會盡快看過、修正。" : "我們看過後會回信到 \(contact)。")
-                .zText(.callout).foregroundStyle(Color.zText2)
-                .multilineTextAlignment(.center)
-            Button("關閉", action: onClose).buttonStyle(ZPrimaryButton()).padding(.top, 8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-    }
-
     // MARK: 傳送
 
     private func send() {
@@ -159,7 +144,10 @@ struct ReportSheet: View {
                 let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
                 withAnimation(Motion.fast) {
                     switch code {
-                    case 200: phase = .sent
+                    case 200:
+                        // 送出成功：關掉彈窗，用提示條說一聲就好
+                        onClose()
+                        Toast.show(c.isEmpty ? "已送出，謝謝你！" : "已送出，我們會回信到 \(c)")
                     case 429: phase = .failed("送太多次了，請過一分鐘再試。")
                     default: phase = .failed("送出失敗（\(code)），可以稍後再試，或改用郵件寄送。")
                     }
