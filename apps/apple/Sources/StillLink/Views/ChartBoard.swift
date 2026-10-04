@@ -38,12 +38,14 @@ struct ChartBoard: View, Equatable {
     @State private var hoverKey: (String, String)?   // 目前滑鼠停的星與宮（同一顆星上移動不重設計時）
     @State private var lastTap: (Int, Date)?   // 上一次點的宮位與時間（判斷點兩下）
     @State private var cleared = false      // 再點一次已選的宮位＝取消選取（不顯示三方四正、飛化）
+    @State private var squeeze: CGFloat = 0 // 夾宮：點到被夾的宮位時，鄰宮往中間擠、本宮微縮一下（0～1，擠完回 0）
     @Environment(\.zSettings) private var settings
 
     var body: some View {
         let chart = model.chart
         let selected = sel ?? chart.soulIndex
         let sf = cleared ? [] : ZW.sanFang(selected)
+        let clamps = settings.showClamp && !cleared ? ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0) : []
         GeometryReader { geo in
             let m: CGFloat = 14 * zoom   // 外圈留給自化箭頭；縮小一點讓宮格大一點
             let cw = (geo.size.width - m * 2) / 4
@@ -89,16 +91,14 @@ struct ChartBoard: View, Equatable {
                             Button(locked == i ? "解除鎖定" : "鎖定此宮三方四正") { toggleLock(i, chart) }
                         }
                         .enterFromBelow(appeared, index: r * 4 + c)
+                        .modifier(ClampSqueeze(on: !clamps.isEmpty, index: i, selected: selected, amount: squeeze))
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
                     if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
-                // 夾宮提示：選到的宮位被左右鄰宮夾時，兩道括號夾進來；換宮位就重播
-                if settings.showClamp && !cleared {
-                    let clamps = ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0)
-                    if !clamps.isEmpty {
-                        ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs, style: settings.clampStyle)
-                            .id("\(selected)-\(level)-\(settings.clampStyle)-\(clamps.map(\.name).joined())")
-                    }
+                // 夾宮提示：選到的宮位被左右鄰宮夾時，交界線上各壓一個指向它的雙箭頭；換宮位就重播
+                if !clamps.isEmpty {
+                    ClampOverlay(clamps: clamps, selected: selected, m: m, cw: cw, ch: ch, boardSize: geo.size, fs: fs)
+                        .id("\(selected)-\(level)-\(clamps.map(\.name).joined())")
                 }
                 CenterInfo(person: person, model: model, selected: selected, cleared: cleared, locked: locked, taiji: taiji,
                            fs: fs, level: level, layers: layers, onToggleLayer: toggleLayer,
@@ -127,7 +127,16 @@ struct ChartBoard: View, Equatable {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { userPicked = true; sel = v; onSelect(v) }
             }
         }
-        .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { _, v in onSelect(v < 0 ? nil : v) }
+        .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { _, v in
+            onSelect(v < 0 ? nil : v)
+            // 選到被夾的宮位：夾一下（擠進去再彈回來）
+            guard v >= 0, settings.showClamp, !Motion.reduce,
+                  !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0).isEmpty else { return }
+            withAnimation(.spring(response: 0.16, dampingFraction: 0.7)) { squeeze = 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.55)) { squeeze = 0 }
+            }
+        }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
         // 新命宮的位置直接放進偵測的值裡：macOS 13 的 onChange 拿到的是上一次的 model，不能在裡面再算
         .onChange(of: level) { _, _ in pickedLayers = nil }   // 換層級就回到預設的最近三層
@@ -965,5 +974,23 @@ enum TextMeasure {
         let v = CGSize(width: ceil(r.width), height: ceil(r.height))
         cache[key] = v
         return v
+    }
+}
+
+/// 夾宮的「夾一下」：兩個鄰宮往被夾的宮位擠 4pt、被夾的宮位縮到 97%，amount 回到 0 就恢復
+private struct ClampSqueeze: ViewModifier {
+    let on: Bool
+    let index: Int
+    let selected: Int
+    let amount: CGFloat
+    func body(content: Content) -> some View {
+        if on && (index == (selected + 11) % 12 || index == (selected + 1) % 12) {
+            let d = ClampOverlay.side(selected: selected, neighbor: index)
+            content.offset(x: -d.dx * 4 * amount, y: -d.dy * 4 * amount)
+        } else if on && index == selected {
+            content.scaleEffect(1 - 0.03 * amount)
+        } else {
+            content
+        }
     }
 }

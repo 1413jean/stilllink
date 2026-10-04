@@ -272,10 +272,7 @@ struct SettingsPage: View {
             toggle("顯示神煞", "博士、將前、歲前十二神", s.showShensha)
             toggle("顯示長生十二神", "長生、沐浴、冠帶…養，寫在每宮天干地支上面", s.showChangsheng)
             toggle("星曜說明照目前運限", "選到大限、流年、流月…時，滑鼠停在星曜上的說明用那一層的宮位（例：落大官祿）；關掉則一律用本命宮位", s.hoverByScope)
-            toggle("夾宮提示", "選到被左右兩宮夾住的宮位時（左右夾、羊陀夾、雙忌夾…），兩道線會夾進來；滑鼠停在線上看說明", s.showClamp)
-            row("夾宮提示樣式", "框線：三宮用一條線框起來；雙箭頭：兩邊鄰宮像牆一樣往被夾的宮位推") {
-                SettingSegment(options: [(.frame, "框線"), (.arrows, "雙箭頭")], selection: s.clampStyle)
-            }
+            toggle("夾宮提示", "選到被左右兩宮夾住的宮位時（左右夾、羊陀夾、雙忌夾…），交界線上會出現指向它的雙箭頭；說明寫在星曜筆記", s.showClamp)
             toggle("夾宮四化照目前運限", "選到大限、流年…時，那一層的四化也一起算（例：生年祿＋大限祿＝雙祿夾）；關掉只看生年四化", s.clampByScope)
             toggle("顯示流曜", "選到大限、流年時，宮內加上大祿、大羊、年鸞、年喜…這些流曜", s.showFlowStars, last: true)
             Text("星曜顏色").zText(.calloutStrong).foregroundStyle(Color.zText).padding(.top, 18).hiddenWhenSearching()
