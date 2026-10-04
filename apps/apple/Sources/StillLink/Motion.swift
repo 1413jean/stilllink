@@ -149,6 +149,7 @@ final class ToastAnchor: ObservableObject {
     static let shared = ToastAnchor()
     @Published var centerX: CGFloat?
     @Published var top: CGFloat?      // 工具列上緣（視窗座標）：提示條停在它上面一點
+    var owner: UUID?                  // 是哪一個命盤頁回報的（切換命盤時，舊頁關掉只清自己的，不會清掉新頁剛報的位置）
 }
 
 /// 一則提示：文字＋（可選）動作按鈕

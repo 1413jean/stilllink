@@ -71,6 +71,7 @@ struct ChartScreen: View {
     /// 多張盤左右並排時，只有正在看的那一頁回報工具列位置給提示條（不然會被畫面外那頁蓋掉，高度跑掉）
     var isCurrent = true
     @State private var toolbarFrame: CGRect?
+    @State private var anchorID = UUID()
 
     init(person: Person, level: Int? = nil, chrome: Bool = true, isCurrent: Bool = true, onAdd: (() -> Void)? = nil) {
         self.person = person
@@ -286,7 +287,9 @@ struct ChartScreen: View {
         .onChange(of: isCurrent) { _, now in if now, let f = toolbarFrame { reportToolbar(f) } }
         .onDisappear {
             if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
-            if isCurrent {
+            // 只清自己報的：切換命盤時新頁會先報位置，舊頁才關掉
+            if ToastAnchor.shared.owner == anchorID {
+                ToastAnchor.shared.owner = nil
                 ToastAnchor.shared.centerX = nil
                 ToastAnchor.shared.top = nil
             }
@@ -338,6 +341,7 @@ struct ChartScreen: View {
     private func reportToolbar(_ f: CGRect) {
         toolbarFrame = f
         guard isCurrent else { return }
+        ToastAnchor.shared.owner = anchorID
         ToastAnchor.shared.centerX = f.midX
         ToastAnchor.shared.top = f.minY
     }
