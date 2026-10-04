@@ -1,18 +1,28 @@
 import AppKit
 
-/// 回報問題：把版本、系統、螢幕、設定整理成一段文字複製到剪貼簿，讓使用者貼到 LINE 傳給 Jean
-/// 不上傳任何東西，也不含命盤內容（只有張數）
+/// 回報問題：把版本、系統、螢幕、設定整理成一段文字，開一封寄給 support@jeanui.com 的信（用使用者預設的郵件 App）
+/// 同時複製到剪貼簿當退路。不上傳任何東西，也不含命盤內容（只有張數）
 @MainActor
 enum BugReport {
+    static let supportEmail = "support@jeanui.com"
+
     static func run(store: Store) {
         let text = report(store: store)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
 
+        let subject = "StillLink 問題回報（\(AppInfo.version)）"
+        let body = "請描述遇到的問題（可以把截圖直接拖進這封信）：\n\n\n\n" + text
+        var c = URLComponents()
+        c.scheme = "mailto"; c.path = supportEmail
+        c.queryItems = [URLQueryItem(name: "subject", value: subject), URLQueryItem(name: "body", value: body)]
+        if let url = c.url, NSWorkspace.shared.open(url) { return }
+
+        // 這台 Mac 沒設定郵件 App：請使用者自己寄
         let alert = NSAlert()
         alert.messageText = "已複製問題回報資訊"
         alert.informativeText = """
-        請貼到 LINE 傳給 Jean，並附上一張截圖：
+        請寄信到 \(supportEmail)，把剛剛複製的內容貼進信裡，並附上一張截圖：
         按 ⌘⇧4，再按空白鍵，點一下 StillLink 視窗就會存到桌面。
 
         回報內容只有版本、系統、螢幕和顯示設定，不含任何命盤資料。
