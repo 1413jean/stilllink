@@ -35,6 +35,8 @@ struct ZSettings: Codable, Equatable {
     var showTransfer = true     // 轉宮宮名（點選宮位當太極，顯示 X之Y）
     var showCompass = true      // 方位
     var hiddenPanels: [String] = []   // 右側面板隱藏的卡片（PanelCard 的 rawValue）
+    enum ClampStyle: String, Codable, CaseIterable { case frame, arrows }   // 夾宮提示：框線（三宮框起來）／雙箭頭（兩邊的牆往中間推）
+    var clampStyle: ClampStyle = .frame
     var showClamp = true        // 夾宮提示：選到被夾的宮位時，左右兩宮夾進來的括號線
     var clampByScope = true     // 夾宮的四化：選到大限、流年…時，加上那一層的四化一起算
     var hoverByScope = true     // hover 星曜的說明照目前選的運限宮位（大官祿、年財帛…）；關掉一律用本命宮位

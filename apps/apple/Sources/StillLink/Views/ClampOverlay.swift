@@ -10,6 +10,7 @@ struct ClampOverlay: View {
     let m: CGFloat, cw: CGFloat, ch: CGFloat
     let boardSize: CGSize
     let fs: CGFloat
+    var style: ZSettings.ClampStyle = .frame
 
     // 動態參數
     static let drawIn: Double = 0.3          // 進場畫一圈的秒數
@@ -34,6 +35,10 @@ struct ClampOverlay: View {
                     let eased = 1 - pow(1 - progress, 3)
                     let phase = Motion.reduce ? 0 : CGFloat(t * Self.flow)
                     let k = Self.strength
+                    if style == .arrows {
+                        drawArrows(ctx, t: t, eased: eased)
+                        return
+                    }
                     // 底下一條淡淡的直框，上面一條帶波紋的線在流動
                     let frameLine = Self.helix(outline, phase: 0, strand: 0, upTo: eased, amplitude: 0)
                     let wave = Self.helix(outline, phase: phase, strand: 0, upTo: eased, amplitude: Self.amplitude)
@@ -50,6 +55,45 @@ struct ClampOverlay: View {
         .frame(width: boardSize.width, height: boardSize.height, alignment: .topLeading)
         .allowsHitTesting(false)
         .onAppear { start = Date() }
+    }
+
+    /// 雙箭頭樣式：兩個鄰宮靠近交界處各一道短牆＋一對箭頭（»）指向被夾的宮位，
+    /// 牆和箭頭一起往被夾的宮位輕輕推、再退回來（像兩面會動的牆夾住中間），一直重複
+    private func drawArrows(_ ctx: GraphicsContext, t: Double, eased: Double) {
+        let (r, c) = ZW.grid[selected]
+        let s = CGRect(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch, width: cw, height: ch)
+        let k = Self.strength
+        let push = Motion.reduce ? 0 : CGFloat(0.5 - 0.5 * cos(t / 1.4 * 2 * .pi)) * 5   // 0～5pt 一推一放
+        let size = max(9, fs * 0.8)
+        for n in [(selected + 11) % 12, (selected + 1) % 12] {
+            let (rn, cn) = ZW.grid[n]
+            let dx = CGFloat(cn - c), dy = CGFloat(rn - r)       // 鄰宮在被選宮位的哪一邊
+            let ex = dx < 0 ? s.minX : dx > 0 ? s.maxX : s.midX   // 交界中點
+            let ey = dy < 0 ? s.minY : dy > 0 ? s.maxY : s.midY
+            let enter = (1 - CGFloat(eased)) * (dx != 0 ? cw : ch) * 0.15   // 進場時從遠一點滑進來
+            let dist = 10 + enter - push                              // 箭頭離交界的距離（往被夾的宮位推＝變小）
+            let px = -dy, py = dx                                     // 沿著交界的方向
+            let alpha = Double(eased)
+            // 短牆：在箭頭後面，跟交界平行
+            let wallD = dist + size * 1.6
+            let half = (dx != 0 ? ch : cw) * 0.28
+            var wall = Path()
+            wall.move(to: CGPoint(x: ex + dx * wallD + px * half, y: ey + dy * wallD + py * half))
+            wall.addLine(to: CGPoint(x: ex + dx * wallD - px * half, y: ey + dy * wallD - py * half))
+            ctx.stroke(wall, with: .color(color.opacity(0.7 * k * alpha)), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+            // 兩個箭頭（»）：尖端朝被夾的宮位
+            for j in 0..<2 {
+                let cd = dist + CGFloat(j) * size * 0.75
+                let tip = CGPoint(x: ex + dx * cd, y: ey + dy * cd)
+                let back = size * 0.55, wing = size * 0.6
+                var a = Path()
+                a.move(to: CGPoint(x: tip.x + dx * back + px * wing, y: tip.y + dy * back + py * wing))
+                a.addLine(to: tip)
+                a.addLine(to: CGPoint(x: tip.x + dx * back - px * wing, y: tip.y + dy * back - py * wing))
+                ctx.stroke(a, with: .color(color.opacity((j == 0 ? 0.95 : 0.55) * k * alpha)),
+                           style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+            }
+        }
     }
 
     /// 三格的外框（宮位依地支前後相鄰，一定連在一起：一直線或 L 形），順時針頂點
