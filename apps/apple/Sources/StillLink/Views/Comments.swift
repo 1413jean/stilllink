@@ -56,7 +56,7 @@ struct CommentLayer: View {
     @FocusState private var focused: Bool
 
     private let pin: CGFloat = 28
-    private let cardW: CGFloat = 300
+    private let cardW: CGFloat = 360   // 字放大後 300 太擠
     /// 備註的強調色：用 App 主色（原本照 Figma 用藍色，Jean 要改主色系）
     private let figmaBlue = Color.zAccent
     private var bubble: UnevenRoundedRectangle {
@@ -237,14 +237,14 @@ struct CommentLayer: View {
                 Button { withAnimation(Motion.fast) { open = nil; editing = nil } } label: { iconLabel("xmark") }
                     .buttonStyle(PressStyle()).help("關閉")
             }
-            .padding(.leading, 16).padding(.trailing, 10).padding(.vertical, 10)
+            .padding(.leading, 20).padding(.trailing, 12).padding(.vertical, 12)
             Rectangle().fill(Color.zLine).frame(height: 0.5)
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 ForEach(t.messages) { m in
                     if editing == m.id { editBox(t, m) } else { message(t, m) }
                 }
             }
-            .padding(.horizontal, 16).padding(.vertical, 14)
+            .padding(.horizontal, 20).padding(.vertical, 16)
             // 回覆
             HStack(spacing: 10) {
                 AvatarView(name: app.userAvatar, size: 26)
@@ -263,7 +263,7 @@ struct CommentLayer: View {
                 .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 7)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.zHover))
             }
-            .padding(.horizontal, 16).padding(.bottom, 16)
+            .padding(.horizontal, 20).padding(.bottom, 18)
         }
         .frame(width: cardW)
         .background(RoundedRectangle(cornerRadius: 14).fill(Color.zRaised))
@@ -281,9 +281,9 @@ struct CommentLayer: View {
 
     /// 一則留言：頭貼、名字、時間；滑過右邊出現 ⋯（編輯、刪除）
     private func message(_ t: CommentThread, _ m: CommentThread.Message) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
             AvatarView(name: app.userAvatar, size: 26)
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Text(app.userName).zText(.calloutStrong).foregroundStyle(Color.zText)
                     Text(m.date, style: .relative).zText(.footnote).foregroundStyle(Color.zText3)
