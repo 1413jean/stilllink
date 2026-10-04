@@ -727,7 +727,7 @@ private struct CenterInfo: View {
             VStack(spacing: fs * 0.32) {
                 Text("紫微斗數").font(ChartType.font(ChartType.centerTitle(fs), .semibold)).tracking(2)
                 Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 1) {
-                    GridRow { label("姓名"); Text("\(person.name)　　\(yang ? "陽" : "陰")\(person.gender.rawValue)　\(chart.fiveElementsClass)") }
+                    GridRow { label("姓名"); Text("\(hideBirth ? person.name.maskedName : person.name)　　\(yang ? "陽" : "陰")\(person.gender.rawValue)　\(chart.fiveElementsClass)") }
                     if let ts = person.trueSolar {
                         GridRow { label("真太陽時"); Text(mask(ts)) }
                         GridRow { label("鐘錶時間"); Text(mask(person.clock ?? "")) }

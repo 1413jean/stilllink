@@ -19,7 +19,7 @@ extension ZW {
         ("天魁", "天鉞", "魁鉞夾", "天魁、天鉞相夾，容易遇到長輩、上司提攜。", true),
         ("火星", "鈴星", "火鈴夾", "火星、鈴星相夾，情緒來得快、一點就燃；事情也可能突然爆開，一下子被很多人看見。", false),
         ("地空", "地劫", "空劫夾", "地空、地劫相夾，想法跳脫、不走尋常路，但也容易落空、白忙一場。", false),
-        ("擎羊", "陀羅", "羊陀夾", "擎羊、陀羅相夾，像被壓住、拖住；這一宮本身有化忌時才算數。", false),
+        ("擎羊", "陀羅", "羊陀夾", "擎羊、陀羅相夾，像被壓住、拖住；這一宮本身有凶星或化忌時才算數。", false),
     ]
 
     /// 四化夾：兩邊各有一個四化（祿存也算祿）
@@ -55,7 +55,10 @@ extension ZW {
     static func clamps(_ c: Chart, horo: Horoscope, center i: Int, level: Int) -> [Clamp] {
         let na = (i + 11) % 12, nb = (i + 1) % 12
         let a = clampStars(c, na), b = clampStars(c, nb)
-        let centerJi = clampMutagens(c.palaces[i].stars, horo: horo, level: level).contains("忌")
+        // 被夾的宮位本身（空宮一樣借對宮）：雙忌夾忌看有沒有忌；羊陀夾看有沒有凶星或忌
+        let me = clampStars(c, i).all
+        let centerJi = clampMutagens(me, horo: horo, level: level).contains("忌")
+        let centerBad = centerJi || me.contains { ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫"].contains($0.name) }
         // 只靠本宮的星就成立 → 不用註明；要借對宮才成立 → 說明裡寫是哪一宮借了哪一宮
         func note(_ needA: Bool, _ needB: Bool) -> String {
             var parts: [String] = []
@@ -75,7 +78,7 @@ extension ZW {
         var out: [Clamp] = []
         for (x, y, name, meaning, good) in clampStarPairs {
             guard let n = check(x, y, sets: { Set($0.map(\.name)) }) else { continue }
-            if name == "羊陀夾" && !centerJi { continue }
+            if name == "羊陀夾" && !centerBad { continue }
             out.append(Clamp(name: name, meaning: meaning, good: good, borrow: n))
         }
         for (x, y, name, meaning, good) in clampMutagenPairs {

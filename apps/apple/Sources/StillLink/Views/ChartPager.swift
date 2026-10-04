@@ -3,6 +3,7 @@ import SwiftUI
 /// 多張盤左右滑動：第一頁是原本的盤，按盤面旁的「＋」可以再加（已存命盤或臨時輸入），每頁運限各自獨立
 struct ChartPager: View {
     @EnvironmentObject var store: Store
+    @AppStorage("hideBirth") private var hideBirth = false   // 隱藏生辰時視窗標題也只留姓名第一個字
     let primary: Person
     var level: Int? = nil
     @State private var extras: [Person] = []
@@ -37,7 +38,7 @@ struct ChartPager: View {
             }
             .ignoresSafeArea(edges: .top)
         }
-        .navigationTitle(ChartScreen.title(pages[current]))
+        .navigationTitle(ChartScreen.title(pages[current], hide: hideBirth))
         .toolbar {
             if !extras.isEmpty {
                 ToolbarItem(placement: .principal) { pageBar }
