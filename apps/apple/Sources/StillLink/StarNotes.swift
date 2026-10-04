@@ -270,10 +270,21 @@ struct StarHoverCard: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 9)
         .frame(width: 240, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(white: 0.16)))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08)))
-        .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
+        .hoverCardBackground()
         .allowsHitTesting(false)
+    }
+}
+
+extension View {
+    /// 盤面上的深色說明卡（星曜、夾宮）：深色半透明＋背景模糊，淺色模式也維持深色卡
+    func hoverCardBackground() -> some View {
+        let shape = RoundedRectangle(cornerRadius: 12)
+        return self
+            .background(Color(white: 0.12).opacity(0.72), in: shape)
+            .background(.ultraThinMaterial, in: shape)
+            .environment(\.colorScheme, .dark)
+            .overlay(shape.stroke(Color.white.opacity(0.1)))
+            .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
     }
 }
 

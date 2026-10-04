@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// 夾宮提示：選到被夾的宮位時，一條線把「左鄰宮＋被選宮位＋右鄰宮」整個圈起來（角落宮位是 L 形）
-/// 線像電流一樣微微跳動，讓人感覺三宮被鏈在一起；進場時沿著外框畫一圈；滑鼠停在線上才跳出說明卡
-/// 只有這一層的 Canvas 在重畫（每秒 12 格），不會牽動整張盤；「減少動態效果」時是一條靜止的線
+/// 一條淡淡的框線把三宮框起來，框線帶一點點波紋、慢慢沿著框流動；進場時沿著外框畫一圈
+/// 顏色刻意淡：只是一點點提示，不搶盤面。滑鼠停在線上才跳出說明卡（停在星曜上就只出星曜說明）
+/// 只有這一層的 Canvas 在重畫（每秒 24 格），不會牽動整張盤；「減少動態效果」時兩股線靜止
 struct ClampOverlay: View {
     let clamps: [Clamp]
     let selected: Int
@@ -11,12 +12,13 @@ struct ClampOverlay: View {
     let fs: CGFloat
 
     // 動態參數
-    static let drawIn: Double = 0.55         // 進場畫一圈的秒數
-    static let jitter: CGFloat = 1.3         // 平常的抖動幅度（pt）
-    static let spark: CGFloat = 3.2          // 偶爾閃一下的幅度（pt）
-    static let sparkChance: Double = 0.06    // 每個取樣點閃一下的機率
-    static let step: CGFloat = 5             // 沿線取樣間距（pt）
-    static let fps: Double = 12
+    static let drawIn: Double = 0.6          // 進場畫一圈的秒數
+    static let amplitude: CGFloat = 1.1      // 波紋高度（pt）：一點點就好
+    static let wavelength: CGFloat = 26      // 一個波的長度（pt）
+    static let flow: Double = 18             // 流動速度（pt／秒）
+    static let step: CGFloat = 2             // 沿線取樣間距（pt）
+    static let fps: Double = 24
+    static let strength: Double = 0.55       // 整體濃淡（越小越淡）
 
     @State private var start = Date()
     @State private var hoverAt: CGPoint?
@@ -31,19 +33,22 @@ struct ClampOverlay: View {
                     let t = tl.date.timeIntervalSince(start)
                     let progress = Motion.reduce ? 1 : min(1, max(0, t) / Self.drawIn)
                     let eased = 1 - pow(1 - progress, 3)
-                    let frame = Motion.reduce ? -1 : Int(t * Self.fps)
-                    let path = Self.electric(outline, frame: frame, upTo: eased)
-                    // 外層光暈＋內層實線
+                    let phase = Motion.reduce ? 0 : CGFloat(t * Self.flow)
+                    let k = Self.strength
+                    // 底下一條淡淡的直框，上面一條帶波紋的線在流動
+                    let frameLine = Self.helix(outline, phase: 0, strand: 0, upTo: eased, amplitude: 0)
+                    let wave = Self.helix(outline, phase: phase, strand: 0, upTo: eased, amplitude: Self.amplitude)
+                    ctx.stroke(frameLine, with: .color(color.opacity(0.35 * k)), style: StrokeStyle(lineWidth: 1, lineJoin: .miter))
                     var glow = ctx
-                    glow.addFilter(.blur(radius: 3))
-                    glow.stroke(path, with: .color(color.opacity(0.45)), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
-                    ctx.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                    glow.addFilter(.blur(radius: 2))
+                    glow.stroke(wave, with: .color(color.opacity(0.25 * k)), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    ctx.stroke(wave, with: .color(color.opacity(0.85 * k)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
                 }
             }
             .allowsHitTesting(false)
 
-            // 滑鼠感應：只有線附近 14pt 一圈，不擋宮位點擊
-            OutlineBand(points: outline, width: 14)
+            // 滑鼠感應：只有線本身附近 8pt（滑到星曜上不會誤觸，星曜照樣出星曜說明）
+            OutlineBand(points: outline, width: 8)
                 .fill(Color.white.opacity(0.001))
                 .onContinuousHover { phase in
                     switch phase {
@@ -62,7 +67,7 @@ struct ClampOverlay: View {
         .onAppear {
             start = Date()
             if ProcessInfo.processInfo.environment["ZIWEI_CLAMP_HOVER"] != nil, let p = outline.first {   // 驗證用：直接顯示說明卡
-                hoverAt = CGPoint(x: p.x + cw * 0.5, y: p.y)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { hoverAt = CGPoint(x: p.x + cw * 0.5, y: p.y) }
             }
         }
     }
@@ -86,10 +91,10 @@ struct ClampOverlay: View {
         return pts([(x0, y0), (x2, y0), (x2, y2), (x1, y2), (x1, y1), (x0, y1)])
     }
 
-    /// 沿著外框每 step 取一點，往垂直方向抖一下（偶爾大一點的閃），畫到 upTo（0～1）為止；frame < 0 不抖
-    static func electric(_ poly: [CGPoint], frame: Int, upTo: Double) -> Path {
+    /// 沿著外框走，線在中心線兩側用正弦擺動（amplitude 0＝直框）；phase 往前推＝波紋流動
+    static func helix(_ poly: [CGPoint], phase: CGFloat, strand: Int, upTo: Double, amplitude: CGFloat) -> Path {
         var samples: [CGPoint] = []
-        var idx = 0
+        var dist: CGFloat = 0
         for k in poly.indices {
             let a = poly[k], b = poly[(k + 1) % poly.count]
             let len = max(1, hypot(b.x - a.x, b.y - a.y))
@@ -97,15 +102,11 @@ struct ClampOverlay: View {
             let nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len
             for j in 0..<n {
                 let f = CGFloat(j) / CGFloat(n)
-                var off: CGFloat = 0
-                if frame >= 0 && j > 0 {   // 轉角那一點不抖，外框的角才會利落
-                    let h1 = hash(idx, frame), h2 = hash(idx &* 7 &+ 3, frame)
-                    off = (CGFloat(h1) * 2 - 1) * jitter
-                    if h2 < sparkChance { off += (h1 < 0.5 ? -1 : 1) * spark }
-                }
+                let s = dist + len * f
+                let off = amplitude == 0 ? 0 : amplitude * sin((s - phase) / wavelength * 2 * .pi + (strand == 1 ? .pi : 0))
                 samples.append(CGPoint(x: a.x + (b.x - a.x) * f + nx * off, y: a.y + (b.y - a.y) * f + ny * off))
-                idx += 1
             }
+            dist += len
         }
         let count = max(2, Int(Double(samples.count) * upTo))
         var p = Path()
@@ -113,12 +114,6 @@ struct ClampOverlay: View {
         for q in samples.prefix(count).dropFirst() { p.addLine(to: q) }
         if upTo >= 1 { p.closeSubpath() }
         return p
-    }
-
-    /// 0～1 的偽亂數（同一格同一點固定，換格才變）
-    private static func hash(_ i: Int, _ frame: Int) -> Double {
-        let v = sin(Double(i) * 12.9898 + Double(frame) * 78.233) * 43758.5453
-        return v - floor(v)
     }
 
     /// 說明卡（樣式同星曜說明卡）
@@ -137,9 +132,7 @@ struct ClampOverlay: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 9)
         .frame(width: 240, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(white: 0.16)))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08)))
-        .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
+        .hoverCardBackground()
     }
 
     /// 說明卡跳在滑鼠右下方；放不下就往左、往上，不超出盤面
