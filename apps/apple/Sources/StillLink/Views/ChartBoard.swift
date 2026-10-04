@@ -728,8 +728,9 @@ private struct CenterInfo: View {
 
     var body: some View {
         let chart = model.chart
-        let pillars = chart.chineseDate.split(separator: " ").map(String.init)
-        let yang = ["甲", "丙", "戊", "庚", "壬"].contains(String(pillars.first?.prefix(1) ?? ""))
+        // 陰陽男女照盤面的年干（跟著「年界」設定）；四柱本身用 bz.pillars（節氣四柱：月以「節」換），不能再從 chineseDate 取（那是農曆月）
+        let yearStem = String(chart.chineseDate.prefix(1))
+        let yang = ["甲", "丙", "戊", "庚", "壬"].contains(yearStem)
         let flies = model.flying[selected]
         ZStack {
             SanFangShape(points: Quad(ZW.sanFang(selected).map { ZW.anchor[$0] }))
