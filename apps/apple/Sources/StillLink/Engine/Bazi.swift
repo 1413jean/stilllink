@@ -49,16 +49,17 @@ enum Bazi {
     struct Qiyun { let years: Int; let months: Int; let days: Int; let forward: Bool }
 
     /// 陽男陰女順行、陰男陽女逆行；三天折一年、一天折四個月、一個時辰折十天
-    static func qiyun(birth: Date, yearStem: String, male: Bool) -> Qiyun {
+    /// 照文墨天機：數「出生時辰」到「交節時辰」差幾個時辰（不是用分鐘換算），所以天數只會是 0／10／20
+    static func qiyun(birth: Date, yearStem: String, male: Bool, tz: TimeZone) -> Qiyun {
         let yang = ["甲", "丙", "戊", "庚", "壬"].contains(yearStem)
         let forward = yang == male
         let jie = nearestJie(from: birth, forward: forward)
-        let minutes = abs(jie.timeIntervalSince(birth)) / 60
-        let years = Int(minutes / 4320)
-        let r1 = minutes - Double(years) * 4320
-        let months = Int(r1 / 360)
-        let days = Int((r1 - Double(months) * 360) / 12)
-        return Qiyun(years: years, months: months, days: days, forward: forward)
+        // 時辰序號：當地時間每兩小時一格，子時從 23 點起
+        func shichen(_ d: Date) -> Int {
+            Int(floor((d.timeIntervalSince1970 + Double(tz.secondsFromGMT(for: d)) + 3600) / 7200))
+        }
+        let n = abs(shichen(jie) - shichen(birth))
+        return Qiyun(years: n / 36, months: (n % 36) / 3, days: (n % 3) * 10, forward: forward)
     }
 
     /// 由月柱往前或往後推八步大運
@@ -167,12 +168,10 @@ struct BaziInfo {
     let qiyun: Bazi.Qiyun
     let dayun: [String]
     let birthYear: Int
+    /// 第一步大運開始的國曆年（出生加上起運的年月日）；大運歲數用虛歲＝這年 − 出生年 ＋ 1
+    let dayunStartYear: Int
 
     init(person p: Person, chart: Chart) {
-        pillars = chart.chineseDate.split(separator: " ").map(String.init)
-        lunarPillars = Bazi.lunarPillars(lunarYear: chart.lunarYear, lunarMonth: chart.lunarMonth, jieqi: pillars)
-        dayStem = String(pillars.count > 2 ? pillars[2].prefix(1) : "")
-        ziDou = Bazi.ziDou(lunarMonth: chart.lunarMonth, hourBranch: p.hour == 12 ? 0 : p.hour)
         // 出生的絕對時間：有鐘錶時間＋出生地就照用，否則以時辰起點、台北時區估算
         let tz = TimeZone(identifier: p.place?.timeZoneID ?? "Asia/Taipei") ?? .current
         var cal = Calendar(identifier: .gregorian); cal.timeZone = tz
@@ -180,7 +179,19 @@ struct BaziInfo {
         let n = src.split(whereSeparator: { " -:".contains($0) }).compactMap { Int($0) }
         let birth = n.count >= 5 ? cal.date(from: DateComponents(year: n[0], month: n[1], day: n[2], hour: n[3], minute: n[4])) ?? Date() : Date()
         birthYear = n.first ?? p.birthYear
-        qiyun = Bazi.qiyun(birth: birth, yearStem: String(pillars.first?.prefix(1) ?? ""), male: p.gender == .male)
+
+        // 節氣四柱：年以立春、月以「節」換（iztro 的 chineseDate 月柱是照農曆月，會跟非節氣四柱一樣）
+        // 日柱、時柱沿用 iztro，跟盤面的晚子時設定一致
+        let iz = chart.chineseDate.split(separator: " ").map(String.init)
+        let solar = Bazi.pillars(at: birth, tz: tz)
+        pillars = iz.count == 4 ? [solar[0], solar[1], iz[2], iz[3]] : iz
+        lunarPillars = Bazi.lunarPillars(lunarYear: chart.lunarYear, lunarMonth: chart.lunarMonth, jieqi: iz)
+        dayStem = String(pillars.count > 2 ? pillars[2].prefix(1) : "")
+        ziDou = Bazi.ziDou(lunarMonth: chart.lunarMonth, hourBranch: p.hour == 12 ? 0 : p.hour)
+
+        qiyun = Bazi.qiyun(birth: birth, yearStem: String(pillars.first?.prefix(1) ?? ""), male: p.gender == .male, tz: tz)
         dayun = Bazi.dayun(monthPillar: pillars.count > 1 ? pillars[1] : "", forward: qiyun.forward)
+        let start = cal.date(byAdding: DateComponents(year: qiyun.years, month: qiyun.months, day: qiyun.days), to: birth) ?? birth
+        dayunStartYear = cal.component(.year, from: start)
     }
 }

@@ -749,7 +749,8 @@ private struct CenterInfo: View {
                         .font(ChartType.font(ChartType.centerSmall(fs), .medium))
                     HStack(alignment: .top, spacing: 0) {
                         ForEach(Array(dayun.enumerated()), id: \.offset) { k, gz in
-                            let age = qy.years + 1 + k * 10
+                            // 虛歲（照文墨天機）：第一步從起運那年算，之後每步十年
+                            let age = bz.dayunStartYear - birthYear + 1 + k * 10
                             VStack(spacing: 0) {
                                 // 十神小字掛在天干右邊、不佔寬度，干支和歲數才會對齊同一條中線
                                 Text(String(gz.prefix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.prefix(1))).color)
@@ -759,9 +760,9 @@ private struct CenterInfo: View {
                                             .offset(x: ChartType.godLabel(fs) + 1)
                                     }
                                 Text(String(gz.suffix(1))).font(ChartType.font(ChartType.dayun(fs))).foregroundStyle(ZW.wuxing(String(gz.suffix(1))).color)
-                                Text("\(age)歲").font(ChartType.font(ChartType.godLabel(fs))).foregroundStyle(Color.zText2)
+                                Text(k == dayun.count - 1 ? "\(age)虛歲" : "\(age)歲").font(ChartType.font(ChartType.godLabel(fs))).foregroundStyle(Color.zText2)
                                     .lineLimit(1).minimumScaleFactor(0.6)
-                                Text(verbatim: "\(birthYear + age - 1)").font(ChartType.font(ChartType.godLabel(fs)).monospacedDigit()).foregroundStyle(Color.zText3)
+                                Text(verbatim: "\(bz.dayunStartYear + k * 10)").font(ChartType.font(ChartType.godLabel(fs)).monospacedDigit()).foregroundStyle(Color.zText3)
                                     .lineLimit(1).minimumScaleFactor(0.6)
                             }
                             .frame(width: fs * 1.75)
