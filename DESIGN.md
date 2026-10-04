@@ -48,7 +48,7 @@
 - 線條：`zLine` 一般邊線、`zGrid` 盤面格線。
 - 文字：`zText` 主要、`zText2` 次要、`zText3` 輔助。
 - 狀態：`zHover` 滑過、`zSel` 選取。
-- 強調：`zAccent`，赭紅色。整個 app 的 tint 也是它，送出鈕和星形圖示都用它。
+- 強調：`zAccent`，陶土橘（淺色 `#CC5F38`／深色 `#D9774E`）。整個 app 的 tint 也是它，主要按鈕、送出鈕、選取色都用它。開關這類大面積填色用再深一階的 `zAccentDeep`（`#C0552F`／`#C8643E`）。
 - `zOnColor` 是色塊上的文字顏色，`zShadow` 是浮層陰影。
 
 ### 命盤用色
