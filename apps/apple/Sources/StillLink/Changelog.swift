@@ -14,6 +14,11 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.1.5.2", date: "2026 年 10 月 4 日",
+            improved: [
+                "「回報問題」改成在 App 裡直接寫、按送出就寄給我們，不用再打開郵件 App；可以留下 email 收到回覆",
+                "設定 → 關於加上聯絡信箱：問題與建議 support@jeanui.com、合作與其他 hi@jeanui.com",
+            ]),
         ReleaseNote(version: "2.1.5.1", date: "2026 年 10 月 4 日",
             fixed: [
                 "八字跟文墨天機對齊：節氣四柱的月柱改以「節」換月（之前誤用農曆月，跟非節氣四柱一樣），大運也跟著修正",
