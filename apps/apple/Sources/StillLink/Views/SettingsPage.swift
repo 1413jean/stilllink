@@ -437,7 +437,7 @@ struct SettingsPage: View {
 
     private var updateNote: String {
         switch updater.state {
-        case .idle: "按「檢查更新」看看有沒有新版本"
+        case .idle: "打開 App 時會自動檢查；有新版本時，工具列會出現「更新」按鈕"
         case .checking: "檢查中…"
         case .upToDate: "已經是最新版本"
         case .available(let v): "有新版本：\(v)"
