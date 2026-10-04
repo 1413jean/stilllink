@@ -79,6 +79,18 @@ enum Bench {
             }
             return
         }
+        // 夾宮自測：ZIWEI_CLAMP_TEST=1 → 此刻盤 12 宮各被什麼夾（只看生年四化）
+        if ProcessInfo.processInfo.environment["ZIWEI_CLAMP_TEST"] != nil {
+            Task.detached {
+                let p = TempChart.make(Date(), .male, name: "此刻")
+                let c = await Engine.shared.chart(for: p)
+                guard let mdl = await Engine.shared.model(for: p, pick: Pick.today()) else { exit(1) }
+                let lines = (0..<12).map { i in "\(i) \(c.palaces[i].name)：" + ZW.clamps(c, horo: mdl.horo, center: i, level: 0).map(\.name).joined(separator: "、") }
+                try? lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+                exit(0)
+            }
+            return
+        }
         // 八字對照文墨：ZIWEI_BAZI_TEST="1984,10,3,13,30,f"（國曆年月日時分、m/f）→ 節氣／非節氣四柱、起運、大運（虛歲與年份）
         if let spec = ProcessInfo.processInfo.environment["ZIWEI_BAZI_TEST"] {
             Task.detached {
