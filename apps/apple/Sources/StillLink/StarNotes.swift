@@ -300,14 +300,12 @@ struct StarHoverCard: View {
 }
 
 extension View {
-    /// 盤面上的深色說明卡（星曜、夾宮）：深色半透明＋背景模糊，淺色模式也維持深色卡
+    /// 盤面上的深色說明卡（星曜）：實心深色底，淺色模式也維持深色卡（不用背景模糊，Jean 試過覺得不需要）
     func hoverCardBackground() -> some View {
         let shape = RoundedRectangle(cornerRadius: 12)
         return self
-            .background(Color(white: 0.12).opacity(0.72), in: shape)
-            .background(.ultraThinMaterial, in: shape)
-            .environment(\.colorScheme, .dark)
-            .overlay(shape.stroke(Color.white.opacity(0.1)))
+            .background(shape.fill(Color(white: 0.16)))
+            .overlay(shape.stroke(Color.white.opacity(0.08)))
             .shadow(color: Color.black.opacity(0.25), radius: 12, y: 5)
     }
 }
