@@ -14,6 +14,10 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.3.2", date: "2026 年 10 月 4 日",
+            fixed: [
+                "中宮的節氣四柱月柱顯示錯誤（例：甲子年九月初九應為癸酉，卻顯示甲戌），現在跟文墨天機一致；大運、起運本來就是對的",
+            ]),
         ReleaseNote(version: "2.3.1", date: "2026 年 10 月 4 日",
             improved: [
                 "夾宮提示可以選樣式：設定 → 盤面「夾宮提示樣式」，「雙箭頭」是交界線上的箭頭加鄰宮撞進來，「框線」是三宮用一條淡淡的線框起來",
