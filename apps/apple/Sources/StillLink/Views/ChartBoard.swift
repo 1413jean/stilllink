@@ -38,7 +38,7 @@ struct ChartBoard: View, Equatable {
     @State private var hoverKey: (String, String)?   // 目前滑鼠停的星與宮（同一顆星上移動不重設計時）
     @State private var lastTap: (Int, Date)?   // 上一次點的宮位與時間（判斷點兩下）
     @State private var cleared = false      // 再點一次已選的宮位＝取消選取（不顯示三方四正、飛化）
-    @State private var squeeze: CGFloat = 0 // 夾宮：點到被夾的宮位時，鄰宮往中間擠、本宮微縮一下（0～1，擠完回 0）
+    @State private var squeeze: CGFloat = 0 // 夾宮：點到被夾的宮位時，兩個鄰宮輕輕撞進來再彈回（0～1，撞完回 0）；本宮不動
     @Environment(\.zSettings) private var settings
 
     var body: some View {
@@ -129,12 +129,12 @@ struct ChartBoard: View, Equatable {
         }
         .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { _, v in
             onSelect(v < 0 ? nil : v)
-            // 選到被夾的宮位：夾一下（擠進去再彈回來）
+            // 選到被夾的宮位：鄰宮撞一下（加速衝進來、碰到就彈回去）
             guard v >= 0, settings.showClamp, !Motion.reduce,
                   !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0).isEmpty else { return }
-            withAnimation(.spring(response: 0.16, dampingFraction: 0.7)) { squeeze = 1 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
-                withAnimation(.spring(response: 0.38, dampingFraction: 0.55)) { squeeze = 0 }
+            withAnimation(.easeIn(duration: 0.09)) { squeeze = 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.5)) { squeeze = 0 }
             }
         }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
@@ -977,7 +977,7 @@ enum TextMeasure {
     }
 }
 
-/// 夾宮的「夾一下」：兩個鄰宮往被夾的宮位擠 4pt、被夾的宮位縮到 97%，amount 回到 0 就恢復
+/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 5pt 再彈回；被夾的宮位本身不動
 private struct ClampSqueeze: ViewModifier {
     let on: Bool
     let index: Int
@@ -986,9 +986,7 @@ private struct ClampSqueeze: ViewModifier {
     func body(content: Content) -> some View {
         if on && (index == (selected + 11) % 12 || index == (selected + 1) % 12) {
             let d = ClampOverlay.side(selected: selected, neighbor: index)
-            content.offset(x: -d.dx * 4 * amount, y: -d.dy * 4 * amount)
-        } else if on && index == selected {
-            content.scaleEffect(1 - 0.03 * amount)
+            content.offset(x: -d.dx * 5 * amount, y: -d.dy * 5 * amount)
         } else {
             content
         }
