@@ -80,7 +80,8 @@ DESIGN.md                  設計規範
 | `ZIWEI_DATA_DIR=路徑` | 用另一份資料夾（測試必設） |
 | `ZIWEI_THEME=light/dark` | 強制淺色／深色 |
 | `ZIWEI_LEVEL=0–5` | 開在本命／大限／流年／流月／流日／流時 |
-| `ZIWEI_PICK=宮位編號` | 當成使用者點了那一宮 |
+| `ZIWEI_PICK=宮位編號`（＋`ZIWEI_PICK_DELAY=秒`） | 當成使用者點了那一宮（延後點：錄動畫時先開始錄） |
+| `ZIWEI_CLAMP_T=秒` | 夾宮框線樣式的能量流定格在第幾秒（截圖看動畫中間的樣子） |
 | `ZIWEI_NEW=1`、`ZIWEI_EDIT` | 直接開新增／編輯命盤 |
 | `ZIWEI_SETTINGS=區段` | 直接開到設定某一節 |
 | `ZIWEI_SETTINGS_QUERY=文字` | 設定窗打開時直接搜尋 |
