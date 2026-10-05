@@ -76,7 +76,7 @@ struct ClampOverlay: View {
 
 /// 夾宮提示（框線樣式）：選到被夾的宮位時，「左鄰宮＋被選宮位＋右鄰宮」三宮的外框（角落宮位是 L 形）上跑一段能量流：
 /// 從被夾的宮位那一側出發，兩道光像彗星一樣沿外框往兩邊跑（前端亮、尾巴淡、光往內暈一點），在對面會合後淡掉，
-/// 最後只留一條淡淡的靜止框線。只在開頭約 1 秒重畫，跑完就停（不一直動、不耗電）；「減少動態效果」時直接顯示框線
+/// 最後只留一條淡淡的靜止框線。每 5 秒再跑一次；每次只重畫約 1 秒，其餘時間停住不重畫（換宮位就停）；「減少動態效果」時只顯示框線
 struct ClampFrameOverlay: View {
     let clamps: [Clamp]
     let selected: Int
@@ -88,6 +88,7 @@ struct ClampFrameOverlay: View {
     static let duration: Double = 0.95       // 兩道光跑到對面會合的秒數
     static let tail: CGFloat = 0.2           // 彗星尾巴長度（外框周長的比例）
     static let strength: Double = 0.55       // 整體濃淡（越小越淡）
+    static let interval: Double = 5          // 每幾秒跑一次
 
     @State private var start = Date()
     @State private var done = false
@@ -132,10 +133,15 @@ struct ClampFrameOverlay: View {
         }
         .frame(width: boardSize.width, height: boardSize.height, alignment: .topLeading)
         .allowsHitTesting(false)
-        .onAppear {
-            start = Date()
+        // 每 interval 秒跑一次能量流；view 消失（換宮位、取消選取）時 .task 會自動取消
+        .task {
             if Motion.reduce { done = true; return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.duration + 0.05) { done = true }
+            while !Task.isCancelled {
+                start = Date(); done = false
+                try? await Task.sleep(nanoseconds: UInt64((Self.duration + 0.05) * 1e9))
+                done = true
+                try? await Task.sleep(nanoseconds: UInt64((Self.interval - Self.duration - 0.05) * 1e9))
+            }
         }
     }
 
