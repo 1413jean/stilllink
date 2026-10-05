@@ -45,7 +45,7 @@ struct ChartBoard: View, Equatable {
         let chart = model.chart
         let selected = sel ?? chart.soulIndex
         let sf = cleared ? [] : ZW.sanFang(selected)
-        let clamps = settings.showClamp && !cleared ? ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0) : []
+        let clamps = settings.showClamp && !cleared ? ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0, hepan: hepan) : []
         GeometryReader { geo in
             let m: CGFloat = 14 * zoom   // 外圈留給自化箭頭；縮小一點讓宮格大一點
             let cw = (geo.size.width - m * 2) / 4
@@ -138,7 +138,7 @@ struct ChartBoard: View, Equatable {
             onSelect(v < 0 ? nil : v)
             // 選到被夾的宮位：鄰宮撞一下（加速衝進來、碰到就彈回去）
             guard v >= 0, settings.showClamp, settings.clampStyle == .arrows, !Motion.reduce,
-                  !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0).isEmpty else { return }
+                  !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0, hepan: hepan).isEmpty else { return }
             withAnimation(.easeIn(duration: 0.09)) { squeeze = 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
                 withAnimation(.spring(response: 0.36, dampingFraction: 0.28)) { squeeze = 0 }   // 阻尼低：碰到後往外彈過頭再晃回來

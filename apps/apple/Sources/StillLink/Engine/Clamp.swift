@@ -32,33 +32,42 @@ extension ZW {
         ("忌", "忌", "雙忌夾", "兩邊都是忌，這一宮像被兩股壓力夾住，容易糾結、卡關。", false),
     ]
 
-    /// 一組星有哪些四化：生年四化一定算；`level` ≥ 1 時再加上那一層運限的四化；祿存當成祿
-    private static func clampMutagens(_ stars: [Star], horo: Horoscope, level: Int) -> Set<String> {
+    /// 判斷夾宮用的一組星：星本身＋這些星所在宮位的地支（合盤的合祿看地支）
+    struct ClampSide { var stars: [Star]; var branches: [String] }
+
+    /// 一組星有哪些四化：生年四化一定算；`level` ≥ 1 時再加上那一層運限的四化；合盤時加上對方年干的四化；祿存、合祿當成祿
+    private static func clampMutagens(_ side: ClampSide, horo: Horoscope, level: Int, hepan: Hepan?) -> Set<String> {
+        let stars = side.stars
         var out = Set(stars.map(\.mutagen).filter { !$0.isEmpty })
         if level >= 1 {
             let list = horo.scope(level).mutagen
             for s in stars { if let m = mutagen(in: list, star: s.name) { out.insert(m.rawValue) } }
+        }
+        if let h = hepan {
+            for s in stars { if let m = h.mutagen(star: s.name) { out.insert(m.rawValue) } }
+            if side.branches.contains(where: { h.stars(at: $0).contains("合祿") }) { out.insert("祿") }
         }
         if stars.contains(where: { $0.name == "祿存" }) { out.insert("祿") }
         return out
     }
 
     /// 鄰宮拿來判斷夾的星：本宮的星；空宮（沒有主星）再加上對宮的星
-    private static func clampStars(_ c: Chart, _ n: Int) -> (own: [Star], all: [Star], borrowedFrom: String?) {
+    private static func clampStars(_ c: Chart, _ n: Int) -> (own: ClampSide, all: ClampSide, borrowedFrom: String?) {
         let p = c.palaces[n]
-        guard p.major.isEmpty else { return (p.stars, p.stars, nil) }
+        let own = ClampSide(stars: p.stars, branches: [p.branch])
+        guard p.major.isEmpty else { return (own, own, nil) }
         let opp = c.palaces[(n + 6) % 12]
-        return (p.stars, p.stars + opp.stars, opp.name)
+        return (own, ClampSide(stars: p.stars + opp.stars, branches: [p.branch, opp.branch]), opp.name)
     }
 
-    /// 被選宮位 `i` 被哪些組合夾（`level`：0＝只看生年四化，1–5＝再加上那一層的四化）
-    static func clamps(_ c: Chart, horo: Horoscope, center i: Int, level: Int) -> [Clamp] {
+    /// 被選宮位 `i` 被哪些組合夾（`level`：0＝只看生年四化，1–5＝再加上那一層的四化；`hepan`：合盤時加上對方年干的四化）
+    static func clamps(_ c: Chart, horo: Horoscope, center i: Int, level: Int, hepan: Hepan? = nil) -> [Clamp] {
         let na = (i + 11) % 12, nb = (i + 1) % 12
         let a = clampStars(c, na), b = clampStars(c, nb)
         // 被夾的宮位本身（空宮一樣借對宮）：雙忌夾忌看有沒有忌；羊陀夾看有沒有凶星或忌
         let me = clampStars(c, i).all
-        let centerJi = clampMutagens(me, horo: horo, level: level).contains("忌")
-        let centerBad = centerJi || me.contains { ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫"].contains($0.name) }
+        let centerJi = clampMutagens(me, horo: horo, level: level, hepan: hepan).contains("忌")
+        let centerBad = centerJi || me.stars.contains { ["擎羊", "陀羅", "火星", "鈴星", "地空", "地劫"].contains($0.name) }
         // 只靠本宮的星就成立 → 不用註明；要借對宮才成立 → 說明裡寫是哪一宮借了哪一宮
         func note(_ needA: Bool, _ needB: Bool) -> String {
             var parts: [String] = []
@@ -66,7 +75,7 @@ extension ZW {
             if needB, let f = b.borrowedFrom { parts.append("\(c.palaces[nb].name)空宮，借對宮\(f)") }
             return parts.isEmpty ? "" : "（" + parts.joined(separator: "；") + "）"
         }
-        func check(_ x: String, _ y: String, sets: ([Star]) -> Set<String>) -> String? {
+        func check(_ x: String, _ y: String, sets: (ClampSide) -> Set<String>) -> String? {
             let ao = sets(a.own), aa = sets(a.all), bo = sets(b.own), ba = sets(b.all)
             func hit(_ l: Set<String>, _ r: Set<String>) -> Bool { (l.contains(x) && r.contains(y)) || (l.contains(y) && r.contains(x)) }
             if hit(ao, bo) { return "" }
@@ -77,13 +86,13 @@ extension ZW {
         }
         var out: [Clamp] = []
         for (x, y, name, meaning, good) in clampStarPairs {
-            guard let n = check(x, y, sets: { Set($0.map(\.name)) }) else { continue }
+            guard let n = check(x, y, sets: { Set($0.stars.map(\.name)) }) else { continue }
             // 羊陀永遠排在祿存兩旁：有祿存的宮位不算被夾（祿存是加強主星）；其他宮位要有凶星或化忌才算
-            if name == "羊陀夾" && (!centerBad || me.contains { $0.name == "祿存" }) { continue }
+            if name == "羊陀夾" && (!centerBad || me.stars.contains { $0.name == "祿存" }) { continue }
             out.append(Clamp(name: name, meaning: meaning, good: good, borrow: n))
         }
         for (x, y, name, meaning, good) in clampMutagenPairs {
-            guard let n = check(x, y, sets: { clampMutagens($0, horo: horo, level: level) }) else { continue }
+            guard let n = check(x, y, sets: { clampMutagens($0, horo: horo, level: level, hepan: hepan) }) else { continue }
             if name == "雙忌夾" && centerJi {
                 out.append(Clamp(name: "雙忌夾忌", meaning: "兩邊是忌、本宮也有忌，等於三個忌疊在一起，壓力加倍，要特別留意。", good: false, borrow: n))
             } else {
