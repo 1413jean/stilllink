@@ -79,6 +79,19 @@ enum Bench {
             }
             return
         }
+        // 列出每一宮所有星曜：ZIWEI_PALACE_DUMP="年,月,日,時,分,m/f"（查「空宮」是不是真的空）
+        if let spec = ProcessInfo.processInfo.environment["ZIWEI_PALACE_DUMP"] {
+            Task.detached {
+                let f = spec.split(separator: ",").map(String.init)
+                let n = f.prefix(5).compactMap { Int($0) }
+                let p = TempChart.make(n[0], n[1], n[2], n[3], n[4], f.last == "f" ? .female : .male, name: "測試")
+                let c = await Engine.shared.chart(for: p)
+                let lines = c.palaces.map { q in "\(q.branch) \(q.name)｜主：\(q.major.map(\.name).joined(separator: " "))｜輔：\(q.minor.map(\.name).joined(separator: " "))｜雜：\(q.adj.map(\.name).joined(separator: " "))｜長生：\(q.changsheng)" }
+                try? ("\(c.lunarDate) \(c.time)\n" + lines.joined(separator: "\n")).write(toFile: path, atomically: true, encoding: .utf8)
+                exit(0)
+            }
+            return
+        }
         // 夾宮自測：ZIWEI_CLAMP_TEST=1 → 此刻盤 12 宮各被什麼夾（只看生年四化）
         if ProcessInfo.processInfo.environment["ZIWEI_CLAMP_TEST"] != nil {
             Task.detached {
