@@ -659,7 +659,7 @@ private struct StarColumn: View {
         var b: [(String, Color)?] = slots.map { m, c in m.map { ($0.rawValue, c) } }
         while let last = b.last, last == nil { b.removeLast() }
         if let minor { b.append((minor.rawValue, .fMinor)) }
-        if let hepanMut { b.append((hepanMut.rawValue, .wmEarth)) }   // 合四化放最後
+        if let hepanMut { b.append((hepanMut.rawValue, .fHepan)) }   // 合四化放最後（方塊用 fHepan，比文字用的 wmEarth 沉）
         return b
     }
 

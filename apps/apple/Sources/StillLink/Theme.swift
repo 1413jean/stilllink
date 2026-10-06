@@ -65,6 +65,7 @@ extension Color {
     static let fJi = dynamic(0xD0102A, 0x9C3239)
     static let fBirth = dynamic(0xD0102A, 0x9C3239)       // 生年四化方塊
     static let fMinor = dynamic(0x0098B5, 0x0098B5)       // 小限四化方塊：深淺色都用同一個青色
+    static let fHepan = dynamic(0xA0651E, 0x7A5A34)       // 合盤四化方塊：土色，深色模式偏棕調沉（白字才看得清，也跟流月的琥珀分開）
     /// 運限四化方塊底色：大限、流年、流月、流日、流時
     static let fScopes: [Color] = [
         dynamic(0x1F8A3A, 0x2F6B45), dynamic(0x1F5FBF, 0x335B99), dynamic(0xC27A12, 0x8E6224),
