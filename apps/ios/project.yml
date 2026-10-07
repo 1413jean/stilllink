@@ -13,6 +13,7 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: VC9YS2RA2T   # Jean 的 Personal Team（免費帳號：裝到手機 7 天後要重裝）
 targets:
   StillLink:
     type: application
