@@ -421,7 +421,8 @@ struct SettingsPage: View {
             }
             row("隱私權政策", "資料只存在你的 Mac，不會上傳") { legalButton(.privacy) }
             row("使用條款", "使用 StillLink 前請先閱讀") { legalButton(.terms) }
-            row("刪除資料", "如何清空或完整移除 App 與資料", last: true) { legalButton(.delete) }
+            row("刪除資料", "如何清空或完整移除 App 與資料") { legalButton(.delete) }
+            row("開源授權", "MIT License：可免費使用、修改、分享", last: true) { legalButton(.license) }
         }
     }
 

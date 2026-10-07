@@ -52,6 +52,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/StillLink"
 cp Resources/*.js Resources/*.json Resources/zone.tab "$APP/Contents/Resources/"
 cp -R Resources/sfx "$APP/Contents/Resources/sfx"
+cp ../../LICENSE ../../THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"   # 開源授權：設定 →「關於」打開
 mkdir -p "$APP/Contents/Frameworks" && cp -R "$FW" "$APP/Contents/Frameworks/"
 # App 圖示（改圖示：swift scripts/make-icon.swift Resources/icon-1024.png，測試版加參數 beta）
 ICONSET=.build/AppIcon.iconset

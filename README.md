@@ -80,6 +80,14 @@ apps/apple/
 DESIGN.md       設計規範
 ```
 
+## 授權
+
+StillLink 採用 [MIT License](LICENSE)：可以免費使用、修改、分享，也可以商用，只要保留版權聲明。
+
+星曜筆記的預設內容（`apps/apple/Resources/star-notes.json`）由原作者整理，版權屬於原作者，不包含在 MIT 授權內。
+
+用到的第三方元件（iztro、Sparkle、音效、時區資料）各自的授權寫在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
 ## 致謝
 
 排盤計算使用 [iztro](https://github.com/SylarLong/iztro)（MIT License）。
