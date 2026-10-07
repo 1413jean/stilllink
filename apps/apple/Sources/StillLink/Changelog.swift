@@ -14,6 +14,16 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.3.3", date: "2026 年 10 月 7 日",
+            new: [
+                "夾宮把合盤也算進來：合盤時對方年干的四化、合祿一起判斷四化夾",
+                "新增祿科夾（一邊祿一邊科）",
+                "設定 → 關於新增「開源授權」：StillLink 採用 MIT 授權，可以免費使用、修改、分享",
+            ],
+            improved: [
+                "夾宮動畫更清楚：雙箭頭會在鄰宮撞進來時吸附變色；框線樣式改成兩道光沿外框跑一圈",
+                "合盤四化方塊的顏色調深，深色模式下更好讀",
+            ]),
         ReleaseNote(version: "2.3.2", date: "2026 年 10 月 4 日",
             fixed: [
                 "中宮的節氣四柱月柱顯示錯誤（例：甲子年九月初九應為癸酉，卻顯示甲戌），現在跟文墨天機一致；大運、起運本來就是對的",

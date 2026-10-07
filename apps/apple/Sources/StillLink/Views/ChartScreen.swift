@@ -48,7 +48,7 @@ struct ChartScreen: View {
     /// 右側星曜筆記的夾宮段落：跟盤面框線同一套判斷（設定關掉夾宮提示就不列）
     private var clampsForPanel: [Clamp] {
         guard store.settings.showClamp, let m = model, let i = selPalace else { return [] }
-        return ZW.clamps(m.chart, horo: m.horo, center: i, level: store.settings.clampByScope ? shownLevel : 0)
+        return ZW.clamps(m.chart, horo: m.horo, center: i, level: store.settings.clampByScope ? shownLevel : 0, hepan: hepanYear.map(Hepan.init))
     }
     let person: Person
     /// false：標題和工具列交給外層（ChartPager 多頁時統一管理）

@@ -5,6 +5,7 @@ enum LegalDoc: String, CaseIterable, Identifiable {
     case privacy = "隱私權政策"
     case terms = "使用條款"
     case delete = "刪除資料"
+    case license = "開源授權"
     var id: String { rawValue }
 
     static let updated = "最後更新：2026 年 10 月 2 日"
@@ -13,6 +14,7 @@ enum LegalDoc: String, CaseIterable, Identifiable {
     /// 最上面一句話的重點
     var summary: String {
         switch self {
+        case .license: "StillLink 採用 MIT 授權：可以免費使用、修改、分享，也可以商用，只要保留版權聲明。"
         case .privacy: "你輸入的命盤只存在你自己的 Mac 上，我們看不到，也拿不到。"
         case .terms: "StillLink 是免費的排盤工具，盤上的內容給你參考，決定還是在你自己手上。開始使用，就表示你同意以下約定。"
         case .delete: "StillLink 沒有帳號，所以沒有帳號要刪。所有資料都在你的 Mac 上，可以自己全部清掉。"
@@ -21,6 +23,12 @@ enum LegalDoc: String, CaseIterable, Identifiable {
 
     var sections: [(String, String)] {
         switch self {
+        case .license: [
+            ("你可以做什麼", "免費使用、修改、分享，也可以拿來商用；轉發或改作時請保留原本的版權與授權聲明。"),
+            ("星曜筆記的內容", "星曜筆記的預設內容由原作者整理，版權屬於原作者，不包含在 MIT 授權內。"),
+            ("MIT License 全文", Self.bundled("LICENSE")),
+            ("第三方元件", Self.bundled("THIRD_PARTY_NOTICES.md")),
+        ]
         case .privacy: [
             ("我們會收集你的資料嗎？",
              "不會。StillLink 沒有帳號、沒有登入、沒有雲端，也沒有任何數據分析、廣告或追蹤工具。你建立的命盤（姓名、出生日期與時間、出生地）、備註、照片、頭貼和設定，都只留在你的電腦裡。"),
@@ -70,5 +78,12 @@ enum LegalDoc: String, CaseIterable, Identifiable {
              "如果未來加入帳號和雲端同步，這裡會加上刪除帳號與雲端資料的方法。"),
         ]
         }
+    }
+
+    /// App 裡附的授權檔（build.sh 從 repo 根目錄複製進 Resources）
+    static func bundled(_ name: String) -> String {
+        guard let url = Bundle.main.url(forResource: name, withExtension: nil),
+              let text = try? String(contentsOf: url, encoding: .utf8) else { return "（找不到 \(name)）" }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
