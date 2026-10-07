@@ -30,7 +30,10 @@ struct PeopleList: View {
         .environment(\.defaultMinListRowHeight, 64)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜尋姓名、分組、命宮主星")
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜尋姓名、分組、命宮主星")
+        // 搜尋框跟著內容：往上滑收走、往下滑回頂端才出現；導覽列沒有底色，捲到上面用漸層霧化
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        .modifier(SoftTopEdge())
         .navigationDestination(for: UUID.self) { id in
             if let p = store.people.first(where: { $0.id == id }) { ChartView(person: p) }
         }
@@ -171,5 +174,16 @@ struct PersonRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// 捲到導覽列底下時漸層霧化（iOS 26 scroll edge effect；26.0 測試版缺型別會閃退，26.1 起才用）
+struct SoftTopEdge: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.1, *) {
+            content.scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            content
+        }
     }
 }
