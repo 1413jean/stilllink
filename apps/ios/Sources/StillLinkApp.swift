@@ -88,16 +88,19 @@ struct RootView: View {
             NavigationStack {
                 HomeView(personID: homeID, openDrawer: openDrawer)
             }
-            .tabItem { Image(systemName: "house").accessibilityLabel("首頁") }
+            .tabContent()
             .tag(Tab.home)
             NavigationStack { PeopleList() }
-                .tabItem { Image(systemName: "person.2").accessibilityLabel("命盤") }
+                .tabContent()
                 .tag(Tab.people)
             NavigationStack { SettingsView() }
-                .tabItem { Image(systemName: "gearshape").accessibilityLabel("設定") }
+                .tabContent()
                 .tag(Tab.settings)
         }
-        .tabViewStyle(.sidebarAdaptable)
+        // 系統分頁列藏起來，換成自己的（圖示置中、Instagram 式）
+        .overlay(alignment: .bottom) {
+            GlassTabBar(tab: $tab).padding(.bottom, 2)
+        }
     }
 
     /// 首頁換成某張盤（nil＝此刻），記進最近紀錄
@@ -146,9 +149,17 @@ struct HomeView: View {
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button(action: openDrawer) { Image(systemName: "text.alignleft") }
+                Button(action: openDrawer) { SidebarGlyph().foregroundStyle(Color.zText) }
                     .accessibilityLabel("側欄")
             }
         }
+    }
+}
+
+private extension View {
+    /// 每個分頁：藏掉系統分頁列，底部留出自己分頁列的高度，捲到底內容不會被蓋住
+    func tabContent() -> some View {
+        toolbar(.hidden, for: .tabBar)
+            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 66) }
     }
 }

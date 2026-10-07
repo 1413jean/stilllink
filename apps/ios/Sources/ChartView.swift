@@ -9,6 +9,8 @@ struct ChartView: View {
     @State private var model: ChartModel?
     @State private var shownLevel: Int
     @State private var editing = false
+    @State private var confirmDelete = false
+    @Environment(\.dismiss) private var dismiss
     @State private var zoom: CGFloat = 1        // 兩指捏合縮放（1～2.5）
     @State private var zoomBase: CGFloat = 1
     /// 盤面實際排版用的倍率：捏合中先用 scaleEffect（順），放手後用這個倍率重排，字才清楚
@@ -23,6 +25,8 @@ struct ChartView: View {
         _shownLevel = State(initialValue: lv)
     }
 
+    /// 釘選狀態要看 store 裡最新的那份
+    private var current: Person { store.people.first { $0.id == person.id } ?? person }
     private var isNow: Bool { person.id == Person.nowID }
 
     var body: some View {
@@ -75,11 +79,23 @@ struct ChartView: View {
             }
             if !isNow {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { editing = true } label: { Image(systemName: "pencil") }
-                        .accessibilityLabel("編輯命主資料")
+                    Menu {
+                        Button("編輯命主資料", systemImage: "person.text.rectangle") { editing = true }
+                        Button(current.pinned ? "取消釘選" : "釘選", systemImage: current.pinned ? "pin.slash" : "pin") {
+                            var q = current; q.pinned.toggle(); store.update(q)
+                        }
+                        Divider()
+                        Button("刪除命盤", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                    } label: {
+                        Image(systemName: "ellipsis").foregroundStyle(Color.zText)
+                    }
+                    .accessibilityLabel("更多")
                 }
             }
         }
+        .confirmationDialog("刪除「\(person.name)」的命盤？", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("刪除", role: .destructive) { store.delete(person.id); dismiss() }
+        } message: { Text("刪除後無法復原") }
         .sheet(isPresented: $editing) {
             PersonForm(editing: person)
         }

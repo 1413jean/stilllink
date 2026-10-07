@@ -64,17 +64,20 @@ struct SidebarView: View {
     }
 
     private func personRow(_ p: Person) -> some View {
-        row(hideBirth ? p.name.maskedName : p.name, icon: "square.grid.3x3", selected: current == p.id,
+        row(hideBirth ? p.name.maskedName : p.name, icon: nil, selected: current == p.id,
             detail: store.soulStars[p.id].map { $0.isEmpty ? "命無主星" : $0 }) { onPick(p.id) }
     }
 
-    private func row(_ title: String, icon: String, selected: Bool, detail: String? = nil, action: @escaping () -> Void) -> some View {
+    private func row(_ title: String, icon: String?, selected: Bool, detail: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(Color.zText2)
-                    .frame(width: 26)
+                // 命盤列不放圖示，只有功能列（此刻、所有命盤）有
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(Color.zText2)
+                        .frame(width: 26)
+                }
                 Text(title).zText(.body).foregroundStyle(Color.zText).lineLimit(1)
                 Spacer(minLength: 8)
                 if let detail { Text(detail).zText(.footnote).foregroundStyle(Color.zText3).lineLimit(1) }
