@@ -48,10 +48,14 @@ private struct GlassCapsule: ViewModifier {
         if #available(iOS 26.1, *) {
             content.glassEffect(.regular.interactive(), in: Capsule())
         } else {
+            // 沒有 Liquid Glass：比較實的卡片底，淺色背景上才看得出一條分頁列
             content
-                .background(.regularMaterial, in: Capsule())
-                .overlay(Capsule().stroke(Color.zLine.opacity(0.6), lineWidth: 0.5))
-                .shadow(color: .black.opacity(0.1), radius: 16, y: 4)
+                .background {
+                    Capsule().fill(.regularMaterial)
+                    Capsule().fill(Color.zCard.opacity(0.75))
+                }
+                .overlay(Capsule().stroke(Color.zLine, lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.12), radius: 18, y: 6)
         }
     }
 }

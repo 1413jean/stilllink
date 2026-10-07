@@ -33,24 +33,43 @@ struct RootView: View {
     private var homeID: UUID? { UUID(uuidString: homeRaw) }
 
     var body: some View {
-        GeometryReader { geo in
-            let w = min(geo.size.width * 0.82, 360)
-            // 主畫面往右推的距離：開著時可以往左拖回去，關著時從左緣往右拉
-            let x = drawer ? max(0, w + min(0, drag)) : max(0, min(w, drag))
-            ZStack(alignment: .leading) {
-                SidebarView(current: homeID, onPick: show, onAllCharts: {
-                    tab = .people; closeDrawer()
-                }, onNew: {
-                    closeDrawer(); adding = true
-                }, onProfile: {
-                    tab = .settings; closeDrawer()
-                })
-                .frame(width: w)
-                .offset(x: (x - w) * 0.25)   // 側欄跟著慢一點滑進來，有層次
+        // 外層量安全區域；內層整個用螢幕完整尺寸排（主畫面推開時圓角要貼齊螢幕上下緣，跟 Claude 一樣）
+        GeometryReader { outer in
+            let inset = outer.safeAreaInsets
+            GeometryReader { geo in
+                let w = min(geo.size.width * 0.82, 360)
+                // 主畫面往右推的距離：開著時可以往左拖回去，關著時從左緣往右拉
+                let x = drawer ? max(0, w + min(0, drag)) : max(0, min(w, drag))
+                ZStack(alignment: .leading) {
+                    SidebarView(current: homeID, onPick: show, onAllCharts: {
+                        tab = .people; closeDrawer()
+                    }, onNew: {
+                        closeDrawer(); adding = true
+                    }, onProfile: {
+                        tab = .settings; closeDrawer()
+                    })
+                    // 側欄自己避開狀態列和 Home 橫條
+                    .padding(.top, inset.top)
+                    .padding(.bottom, inset.bottom)
+                    .frame(width: w, height: geo.size.height)
+                    .offset(x: (x - w) * 0.25)   // 側欄跟著慢一點滑進來，有層次
 
-                tabs
-                    .clipShape(RoundedRectangle(cornerRadius: x > 0 ? 44 : 0, style: .continuous))
-                    .shadow(color: .black.opacity(x > 0 ? 0.14 : 0), radius: 24, x: -4)
+                    // 分頁列跟主畫面一起被推開，停在 Home 橫條上方
+                    ZStack(alignment: .bottom) {
+                        tabs
+                        GlassTabBar(tab: $tab)
+                            .padding(.bottom, max(12, inset.bottom - 12))
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .background(Color.zBg)
+                    .clipShape(RoundedRectangle(cornerRadius: x > 0 ? 48 : 0, style: .continuous))
+                    .overlay {
+                        // 推開時主畫面左緣一條細框，跟側欄分得開
+                        RoundedRectangle(cornerRadius: 48, style: .continuous)
+                            .stroke(Color.zLine, lineWidth: 0.5)
+                            .opacity(x > 0 ? 1 : 0)
+                    }
+                    .shadow(color: .black.opacity(x > 0 ? 0.1 : 0), radius: 20, x: -2)
                     // 開著時點右邊露出的畫面＝關起來；也可以往左拖
                     .overlay {
                         if drawer {
@@ -63,13 +82,14 @@ struct RootView: View {
                     .overlay(alignment: .leading) {
                         if !drawer && tab == .home {
                             Color.clear.frame(width: 18).contentShape(Rectangle())
-                                .padding(.top, 140)
+                                .padding(.top, inset.top + 80)
                                 .gesture(dragGesture(w))
                         }
                     }
                     .offset(x: x)
-                    .ignoresSafeArea()
+                }
             }
+            .ignoresSafeArea()
         }
         .background(Color.zSide.ignoresSafeArea())
         .sheet(isPresented: $adding) {
@@ -97,10 +117,7 @@ struct RootView: View {
                 .tabContent()
                 .tag(Tab.settings)
         }
-        // 系統分頁列藏起來，換成自己的（圖示置中、Instagram 式）
-        .overlay(alignment: .bottom) {
-            GlassTabBar(tab: $tab).padding(.bottom, 2)
-        }
+        // 系統分頁列藏起來，換成自己的 GlassTabBar（圖示置中、Instagram 式），放在 body 裡
     }
 
     /// 首頁換成某張盤（nil＝此刻），記進最近紀錄
@@ -160,6 +177,6 @@ private extension View {
     /// 每個分頁：藏掉系統分頁列，底部留出自己分頁列的高度，捲到底內容不會被蓋住
     func tabContent() -> some View {
         toolbar(.hidden, for: .tabBar)
-            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 66) }
+            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
     }
 }
