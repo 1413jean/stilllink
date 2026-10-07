@@ -51,19 +51,9 @@ struct PeriodTable: View {
                     }
                 }
             }
-            #if os(iOS)
-            // 手機寬度放不下 10 欄（iOS 字級大一號），改成跟流月一樣左右滑的一列
-            row("流日", enabled: pick.level >= 3) {
-                ForEach(1...monthLen, id: \.self) { d in
-                    cell(ZW.lunarDays[d - 1], j1.map { ZW.ganzhi(ZW.dayIndex(jdn: $0 + d - 1)) }, group: "day", on: d == pick.ld && pick.level >= 4, minW: 52) {
-                        pick.level = (d == pick.ld && pick.level == 4) ? 3 : 4; pick.ld = d
-                    }
-                }
-            }
-            #else
             HStack(spacing: 0) {
                 head("流日")
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 10), spacing: 0) {
+                LazyVGrid(columns: dayColumns, spacing: 0) {
                     ForEach(1...30, id: \.self) { d in
                         cell(ZW.lunarDays[d - 1], j1.map { ZW.ganzhi(ZW.dayIndex(jdn: $0 + d - 1)) }, group: "day", on: d == pick.ld && pick.level >= 4, minW: 0) {
                             pick.level = (d == pick.ld && pick.level == 4) ? 3 : 4; pick.ld = d
@@ -76,7 +66,6 @@ struct PeriodTable: View {
                 .opacity(pick.level < 3 ? 0.35 : 1)
             }
             Divider()
-            #endif
             row("流時", divider: false, enabled: pick.level >= 4) {
                 ForEach(0..<12, id: \.self) { h in
                     cell(ZW.branches[h] + "時", ZW.hourGanzhi(dayStem: dayStem, hour: h), group: "hour", on: h == pick.hour && pick.level >= 5) {
@@ -88,6 +77,15 @@ struct PeriodTable: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
+    }
+
+    /// 流日格子：Mac 一排 10 天；iPhone 字級大一號放不下，照寬度自動分欄（約 6 欄 × 5 行），一樣填滿整列
+    private var dayColumns: [GridItem] {
+        #if os(iOS)
+        [GridItem(.adaptive(minimum: 50), spacing: 0)]
+        #else
+        Array(repeating: GridItem(.flexible(), spacing: 0), count: 10)
+        #endif
     }
 
     private func jdnOf(_ y: Int, _ m: Int) -> Int? {
