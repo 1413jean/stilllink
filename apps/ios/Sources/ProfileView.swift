@@ -94,10 +94,11 @@ struct SettingsView: View {
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.top, 8)
+            .padding(.top, 20)
             .padding(.bottom, 24)
         }
         .background(Color.zBg)
+        .zEdgeFades()
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $editingSelf) {
             if let p = store.me { PersonForm(editing: p) } else { PersonForm(asSelf: true) }

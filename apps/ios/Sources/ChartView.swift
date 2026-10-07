@@ -61,12 +61,12 @@ struct ChartView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.top, 4)
+                .padding(.top, 16)
                 .padding(.bottom, 24)
             }
         }
         .background(Color.zBg)
-        .zNavBar()
+        .zEdgeFades()
         .navigationTitle(isNow ? "此刻" : person.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

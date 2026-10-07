@@ -126,10 +126,11 @@ struct JournalView: View {
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.top, 8)
+            .padding(.top, 20)
             .padding(.bottom, 24)
         }
         .background(Color.zBg)
+        .zEdgeFades()
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $writing) { NewEntrySheet(star: star, prompt: JournalPrompt.today(star: star)) }
         .confirmationDialog("刪除這則日記？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
