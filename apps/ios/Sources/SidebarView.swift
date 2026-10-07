@@ -94,11 +94,7 @@ struct SidebarView: View {
     private var bottomBar: some View {
         HStack {
             Button(action: onProfile) {
-                Text(String(store.userName.prefix(1)))
-                    .zText(.headline)
-                    .foregroundStyle(Color.zText)
-                    .frame(width: 52, height: 52)
-                    .background(Circle().fill(Color.zCard))
+                AvatarView(name: store.userAvatar, size: 52)
                     .overlay(Circle().stroke(Color.zLine))
                     .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
             }

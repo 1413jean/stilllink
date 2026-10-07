@@ -85,11 +85,7 @@ struct SettingsView: View {
 
     private var me: some View {
         HStack(spacing: 16) {
-            Text(String(store.userName.prefix(1)))
-                .zText(.title2)
-                .foregroundStyle(Color.zText2)
-                .frame(width: 68, height: 68)
-                .background(Circle().fill(Color.zHover))
+            AvatarView(name: store.userAvatar, size: 68)
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.userName).zText(.title2).foregroundStyle(Color.zText)
                 Text(subtitle).zText(.subheadline).foregroundStyle(Color.zText3)

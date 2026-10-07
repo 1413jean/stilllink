@@ -174,11 +174,7 @@ struct PersonRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(String(person.name.prefix(1)))
-                .font(.zHeadline)
-                .foregroundStyle(Color.zText2)
-                .frame(width: 40, height: 40)
-                .background(Circle().fill(Color.zCard))
+            AvatarView(name: person.avatar, size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(hideBirth ? person.name.maskedName : person.name).font(.zHeadline).foregroundStyle(Color.zText)
@@ -186,7 +182,11 @@ struct PersonRow: View {
                     if person.pinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(Color.zAccent) }
                 }
                 HStack(spacing: 6) {
-                    if let soul { Text(soul.isEmpty ? "命無主星" : "命 \(soul)").foregroundStyle(Color.wmRed) }
+                    // 主星用次要灰，「命」再淡一階：名字才是主角
+                    if let soul {
+                        if soul.isEmpty { Text("命無主星").foregroundStyle(Color.zText3) }
+                        else { Text("命 ").foregroundStyle(Color.zText3) + Text(soul).foregroundStyle(Color.zText2) }
+                    }
                     if !hideBirth { Text(person.clock ?? person.solar).foregroundStyle(Color.zText3) }
                 }
                 .zText(.footnote)
