@@ -254,7 +254,7 @@ private struct NewEntrySheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            ZForm {
                 Section {
                     TextField(prompt, text: $text, axis: .vertical)
                         .lineLimit(5...12)

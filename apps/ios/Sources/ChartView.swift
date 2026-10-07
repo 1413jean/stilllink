@@ -66,6 +66,7 @@ struct ChartView: View {
             }
         }
         .background(Color.zBg)
+        .zNavBar()
         .navigationTitle(isNow ? "此刻" : person.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -100,7 +101,7 @@ struct ChartView: View {
         } message: { Text("刪除後無法復原") }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
-                ChartSettingsView()
+                DisplaySettingsView(showRulesLink: true)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showSettings = false } } }
             }
             .presentationDetents([.medium, .large])

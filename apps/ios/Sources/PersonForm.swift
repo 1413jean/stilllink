@@ -42,7 +42,7 @@ struct PersonForm: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            ZForm {
                 Section("基本資料") {
                     TextField("姓名", text: $name, prompt: Text(asSelf ? "你的名字" : "客人的名字或代稱"))
                         .focused($nameFocused)
@@ -78,7 +78,7 @@ struct PersonForm: View {
                         Picker("日", selection: $ld) {
                             ForEach(1...30, id: \.self) { Text(ZW.lunarDays[$0 - 1]).tag($0) }
                         }
-                        Toggle("閏月", isOn: $leap)
+                        Toggle("閏月", isOn: $leap).zSwitch()
                     } else {
                         DatePicker("出生日期", selection: $solarDate, in: PersonForm.dateRange, displayedComponents: .date)
                             .environment(\.calendar, PersonForm.cal)
@@ -87,7 +87,7 @@ struct PersonForm: View {
                         DatePicker("出生時間", selection: $time, displayedComponents: .hourAndMinute)
                             .environment(\.locale, Locale(identifier: "zh_TW"))
                     }
-                    Toggle("時間不確定", isOn: $unknownTime.animation())
+                    Toggle("時間不確定", isOn: $unknownTime.animation()).zSwitch()
                 } header: {
                     Text("出生時間")
                 } footer: {
@@ -260,6 +260,9 @@ struct PlacePicker: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.zBg)
+        .zNavBar()
         .navigationTitle("國家／地區")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜尋國家或城市")
@@ -296,6 +299,9 @@ private struct CityPicker: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.zBg)
+        .zNavBar()
         .navigationTitle(region.name)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜尋城市")

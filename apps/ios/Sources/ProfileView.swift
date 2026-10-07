@@ -5,6 +5,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var store: Store
     @AppStorage("appearance") private var appearance: Appearance = .system
+    @AppStorage("hideBirth") private var hideBirth = false
     @State private var editingSelf = false
     @State private var soon = false
 
@@ -33,23 +34,50 @@ struct SettingsView: View {
                 .padding(.bottom, 20)
 
                 group("偏好") {
-                    Menu {
+                    menuRow("外觀") {
                         Picker("外觀", selection: $appearance) {
-                            ForEach(Appearance.allCases, id: \.self) { Label($0.label, systemImage: $0.icon).tag($0) }
+                            ForEach(Appearance.allCases, id: \.self) { Text($0.label).tag($0) }
                         }
-                    } label: {
-                        rowLabel("外觀", value: appearance.label, chevron: "chevron.up.chevron.down")
                     }
                     divider
-                    NavigationLink { ChartSettingsView() } label: {
-                        rowLabel("排盤與盤面", value: store.settings.algorithm == .standard ? "斗數全書" : "中州派")
+                    NavigationLink { RulesSettingsView() } label: {
+                        rowLabel("排盤規則", value: store.settings.algorithm == .standard ? "斗數全書" : "中州派")
                     }
                     divider
-                    Toggle(isOn: $store.settings.sound) { Text("介面音效").zText(.body).foregroundStyle(Color.zText) }
-                        .padding(.horizontal, 16).frame(minHeight: 52)
+                    NavigationLink { DisplaySettingsView() } label: { rowLabel("盤面顯示", value: "") }
                     divider
-                    Toggle(isOn: $store.settings.haptics) { Text("觸覺回饋").zText(.body).foregroundStyle(Color.zText) }
+                    toggle("打開命盤時預設顯示大限", $store.settings.openWithDecade)
+                    divider
+                    toggle("隱藏生辰", $hideBirth)
+                    divider
+                    toggle("側欄顯示我的命盤", $store.showSelfInSidebar)
+                }
+                .padding(.bottom, 20)
+
+                group("動態與回饋") {
+                    toggle("介面動畫", $store.settings.motion)
+                    divider
+                    toggle("觸覺回饋", $store.settings.haptics)
+                    divider
+                    toggle("介面音效", $store.settings.sound)
+                    if store.settings.sound {
+                        divider
+                        menuRow("音色") {
+                            Picker("音色", selection: $store.settings.soundStyle) {
+                                ForEach(Sound.styles, id: \.id) { Text($0.name).tag($0.id) }
+                            }
+                        }
+                        .onChange(of: store.settings.soundStyle) { _, v in Sound.play(v, "select", volume: store.settings.volume) }
+                        divider
+                        HStack(spacing: 12) {
+                            Image(systemName: "speaker.fill").foregroundStyle(Color.zText3)
+                            Slider(value: $store.settings.volume, in: 0...1) { editing in
+                                if !editing { Sound.play(store.settings.soundStyle, "select", volume: store.settings.volume) }
+                            }
+                            Image(systemName: "speaker.wave.3.fill").foregroundStyle(Color.zText3)
+                        }
                         .padding(.horizontal, 16).frame(minHeight: 52)
+                    }
                 }
                 .padding(.bottom, 20)
 
@@ -138,6 +166,23 @@ struct SettingsView: View {
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.zHover))
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
+    }
+
+    /// 左邊標題、右邊系統選單（值＋上下箭頭）
+    private func menuRow<P: View>(_ title: String, @ViewBuilder picker: () -> P) -> some View {
+        HStack {
+            Text(title).zText(.body).foregroundStyle(Color.zText)
+            Spacer(minLength: 12)
+            picker().pickerStyle(.menu).labelsHidden().tint(Color.zText3)
+        }
+        .padding(.leading, 16).padding(.trailing, 4)
+        .frame(minHeight: 52)
+    }
+
+    private func toggle(_ title: String, _ on: Binding<Bool>) -> some View {
+        Toggle(isOn: on) { Text(title).zText(.body).foregroundStyle(Color.zText) }
+            .zSwitch()
+            .padding(.horizontal, 16).frame(minHeight: 52)
     }
 
     private var divider: some View {

@@ -14,7 +14,7 @@ struct StillLinkApp: App {
                 .environmentObject(store)
                 .environmentObject(journal)
                 .environment(\.zSettings, store.settings)
-                .tint(Color.zText)   // 按鈕、選單、分頁一律用主文字色；需要強調的地方各自用 zAccent
+                .tint(Color.zText)   // 按鈕、選單一律用主文字色；分頁列、開關用 zAccent
                 .preferredColorScheme(appearance.scheme)
         }
     }
@@ -29,6 +29,7 @@ struct RootView: View {
     @AppStorage("homeChart") private var homeRaw = ""
     @AppStorage("recentCharts") private var recentRaw = ""
     @State private var drawer = false
+    @State private var homePath = NavigationPath()
     @State private var drag: CGFloat = 0
     @State private var adding = false
 
@@ -44,7 +45,7 @@ struct RootView: View {
                 let x = drawer ? max(0, w + min(0, drag)) : max(0, min(w, drag))
                 ZStack(alignment: .leading) {
                     SidebarView(current: homeID, showingAll: homeRaw == "all", onPick: show, onAllCharts: {
-                        homeRaw = "all"; tab = .home; closeDrawer()
+                        homeRaw = "all"; homePath = NavigationPath(); tab = .home; closeDrawer()
                     }, onNew: {
                         closeDrawer(); adding = true
                     }, onProfile: {
@@ -111,24 +112,41 @@ struct RootView: View {
 
     /// 系統分頁列（iOS 26 Liquid Glass；照 Figma Tab Bar 74:206：圖示＋文字）
     private var tabs: some View {
-        TabView(selection: $tab) {
-            NavigationStack {
+        TabView(selection: Binding(get: { tab }, set: { t in
+            if t == .home && tab == .home { reselectHome() }
+            tab = t
+        })) {
+            NavigationStack(path: $homePath) {
                 HomeView(mode: homeRaw, openDrawer: openDrawer)
             }
+            .tint(Color.zText)
             .tabItem { Label("首頁", systemImage: "sun.horizon") }
             .tag(Tab.home)
             NavigationStack { JournalView() }
+                .tint(Color.zText)
                 .tabItem { Label("日記", systemImage: "book.closed") }
                 .tag(Tab.journal)
             NavigationStack { SettingsView() }
+                .tint(Color.zText)
                 .tabItem { Label("我的", systemImage: "person.crop.circle") }
                 .tag(Tab.settings)
+        }
+        .tint(Color.zAccent)   // 分頁列選到的那格用主色；各分頁內容在上面改回主文字色
+    }
+
+    /// 首頁分頁再點一次：有點進去的頁面就退回最上層，已經在最上層就回到此刻盤
+    private func reselectHome() {
+        if !homePath.isEmpty {
+            homePath = NavigationPath()
+        } else if !homeRaw.isEmpty {
+            withAnimation(Motion.base) { homeRaw = "" }
         }
     }
 
     /// 首頁換成某張盤（nil＝此刻），記進最近紀錄
     private func show(_ id: UUID?) {
         homeRaw = id?.uuidString ?? ""
+        homePath = NavigationPath()
         if let id {
             var list = recentRaw.split(separator: ",").map(String.init).filter { $0 != id.uuidString }
             list.insert(id.uuidString, at: 0)
