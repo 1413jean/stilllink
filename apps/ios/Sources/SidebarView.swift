@@ -126,3 +126,15 @@ struct SidebarView: View {
         }
     }
 }
+
+/// 側欄按鈕（照 Claude）：三條由長到短的細線
+struct SidebarGlyph: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            ForEach([20.0, 15, 9], id: \.self) { w in
+                Capsule().frame(width: w, height: 1.8)
+            }
+        }
+        .frame(width: 22, height: 22, alignment: .leading)
+    }
+}

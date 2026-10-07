@@ -5,12 +5,14 @@ import SwiftUI
 @main
 struct StillLinkApp: App {
     @StateObject private var store = Store()
+    @StateObject private var journal = JournalStore()
     @AppStorage("appearance") private var appearance: Appearance = .system
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(store)
+                .environmentObject(journal)
                 .environment(\.zSettings, store.settings)
                 .tint(Color.zAccent)
                 .preferredColorScheme(appearance.scheme)
@@ -18,9 +20,9 @@ struct StillLinkApp: App {
     }
 }
 
-/// 外層：左邊側欄（照 Claude App：整個畫面往右推開）＋三個分頁（首頁、命盤、設定，只放圖示）
+/// 外層：左邊側欄（照 Claude App：整個畫面往右推開）＋四個分頁（照 Figma：首頁、命盤、日記、我的）
 struct RootView: View {
-    enum Tab: String { case home, people, settings }
+    enum Tab: String { case home, people, journal, settings }
     @EnvironmentObject private var store: Store
     @AppStorage("tab") private var tab: Tab = .home
     /// 首頁顯示哪一張盤：nil＝此刻
@@ -56,12 +58,8 @@ struct RootView: View {
                     .overlay(Color.black.opacity(0.28 * (1 - x / w)).allowsHitTesting(false))
                     .offset(x: (x - w) * 0.25)   // 側欄跟著慢一點滑進來，有層次
 
-                    // 分頁列跟主畫面一起被推開，停在 Home 橫條上方
-                    ZStack(alignment: .bottom) {
-                        tabs
-                        GlassTabBar(tab: $tab)
-                            .padding(.bottom, max(12, inset.bottom - 12))
-                    }
+                    // 分頁列（系統原生）在主畫面裡，跟著一起被推開
+                    tabs
                     .frame(width: geo.size.width, height: geo.size.height)
                     .background(Color.zBg)
                     // 圓角跟著推開的距離長出來，不是一動就整個變圓
@@ -110,21 +108,24 @@ struct RootView: View {
         }
     }
 
+    /// 系統分頁列（iOS 26 Liquid Glass；照 Figma Tab Bar 74:206：圖示＋文字）
     private var tabs: some View {
         TabView(selection: $tab) {
             NavigationStack {
                 HomeView(personID: homeID, openDrawer: openDrawer)
             }
-            .tabContent()
+            .tabItem { Label("首頁", systemImage: "sun.horizon") }
             .tag(Tab.home)
             NavigationStack { PeopleList() }
-                .tabContent()
+                .tabItem { Label("命盤", systemImage: "sparkles") }
                 .tag(Tab.people)
+            NavigationStack { JournalView() }
+                .tabItem { Label("日記", systemImage: "book.closed") }
+                .tag(Tab.journal)
             NavigationStack { SettingsView() }
-                .tabContent()
+                .tabItem { Label("我的", systemImage: "person.crop.circle") }
                 .tag(Tab.settings)
         }
-        // 系統分頁列藏起來，換成自己的 GlassTabBar（圖示置中、Instagram 式），放在 body 裡
     }
 
     /// 首頁換成某張盤（nil＝此刻），記進最近紀錄
@@ -180,13 +181,5 @@ struct HomeView: View {
                     .accessibilityLabel("側欄")
             }
         }
-    }
-}
-
-private extension View {
-    /// 每個分頁：藏掉系統分頁列，底部留出自己分頁列的高度，捲到底內容不會被蓋住
-    func tabContent() -> some View {
-        toolbar(.hidden, for: .tabBar)
-            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 76) }
     }
 }
