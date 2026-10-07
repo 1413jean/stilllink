@@ -140,7 +140,8 @@ final class Store: ObservableObject {
 
     init() {
         Store.current = self
-        Engine.shared.configure(settings)
+        // 引擎建立時會自己套用已存的設定；在背景載，開 app 不卡主執行緒
+        Engine.preload()
         Motion.userEnabled = settings.motion
         if let data = try? Data(contentsOf: url), let list = try? JSONDecoder().decode([Person].self, from: data) {
             people = list
@@ -158,12 +159,17 @@ final class Store: ObservableObject {
     private func refreshSoulStars() {
         let list = people
         Task {
-            await Engine.shared.warm(list, pick: Pick.today())
-            var out: [UUID: String] = [:]
-            for p in list {
-                let c = await Engine.shared.chart(for: p)
-                out[p.id] = c.palaces.first { $0.name == "命宮" }?.major.map(\.name).joined() ?? ""
-            }
+            // 在背景拿引擎：第一次要等 iztro 載完，不能卡在主執行緒
+            let out = await Task.detached { () -> [UUID: String] in
+                let e = Engine.shared
+                await e.warm(list, pick: Pick.today())
+                var out: [UUID: String] = [:]
+                for p in list {
+                    let c = await e.chart(for: p)
+                    out[p.id] = c.palaces.first { $0.name == "命宮" }?.major.map(\.name).joined() ?? ""
+                }
+                return out
+            }.value
             soulStars = out
         }
     }

@@ -45,7 +45,7 @@ struct ChartView: View {
                                 .transaction(value: pick) { $0.animation = nil }
                                 .transition(.opacity)
                         } else {
-                            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                            BoardSkeleton().transition(.opacity)
                         }
                     }
                     .frame(width: boardW * sharpZoom, height: boardW * aspect * sharpZoom)
@@ -53,6 +53,12 @@ struct ChartView: View {
                     .frame(width: boardW * zoom, height: boardW * aspect * zoom, alignment: .top)
                     .gesture(magnify)
 
+                    if model == nil {
+                        PeriodTableSkeleton()
+                            .padding(.horizontal, 12)
+                            .frame(width: geo.size.width)
+                            .transition(.opacity)
+                    }
                     if let model {
                         PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
                             .padding(.horizontal, 12)
@@ -112,8 +118,8 @@ struct ChartView: View {
             PersonForm(editing: person)
         }
         .task(id: LoadKey(chart: person.chartKey + settings.calcKey, pick: pick)) {
-            let target = pick
-            let m = await Engine.shared.model(for: person, pick: target)
+            let target = pick, p = person
+            let m = await Task.detached { await Engine.shared.model(for: p, pick: target) }.value
             guard !Task.isCancelled else { return }
             // 第一次淡入；之後換運限直接換，不讓整張盤一起動畫
             if model == nil {
@@ -123,7 +129,7 @@ struct ChartView: View {
                 var t = Transaction(); t.disablesAnimations = true
                 withTransaction(t) { model = m; shownLevel = target.level }
             }
-            Engine.shared.prefetch(person, around: target)
+            Engine.shared.prefetch(p, around: target)
         }
     }
 

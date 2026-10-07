@@ -375,62 +375,6 @@ private struct AIComposer: View {
     }
 }
 
-/// 載入中的盤面骨架
-struct BoardSkeleton: View {
-    var body: some View {
-        GeometryReader { geo in
-            let m: CGFloat = 18
-            let cw = (geo.size.width - m * 2) / 4
-            let ch = (geo.size.height - m * 2) / 4
-            ZStack(alignment: .topLeading) {
-                ForEach(0..<12, id: \.self) { i in
-                    let (r, c) = ZW.grid[i]
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 4) {
-                            ForEach(0..<4, id: \.self) { _ in RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 0.09, height: ch * 0.28) }
-                        }
-                        Spacer()
-                        RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 0.55, height: 8)
-                        HStack {
-                            RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 0.22, height: ch * 0.18)
-                            Spacer()
-                            RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 0.12, height: ch * 0.24)
-                        }
-                    }
-                    .padding(8)
-                    .frame(width: cw, height: ch)
-                    .overlay(Rectangle().stroke(Color.zLine, lineWidth: 0.5))
-                    .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
-                }
-                VStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 4).fill(Color.zHover).frame(width: cw * 0.7, height: 16)
-                    ForEach(0..<4, id: \.self) { _ in RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 1.2, height: 9) }
-                }
-                .frame(width: cw * 2, height: ch * 2)
-                .offset(x: m + cw, y: m + ch)
-            }
-        }
-        .shimmer()
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
-    }
-}
-
-extension View {
-    /// 骨架的呼吸動畫
-    func shimmer() -> some View { modifier(Shimmer()) }
-}
-
-private struct Shimmer: ViewModifier {
-    @State private var on = false
-    func body(content: Content) -> some View {
-        content
-            .opacity(on ? 0.55 : 1)
-            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: on)
-            .onAppear { on = true }
-    }
-}
-
 /// 命盤頁的標題＋「客人資料」開關；多頁時由 ChartPager 統一放，不在每一頁重複
 struct ChartChrome: ViewModifier {
     let enabled: Bool

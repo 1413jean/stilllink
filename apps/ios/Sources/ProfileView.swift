@@ -117,7 +117,11 @@ struct SettingsView: View {
             AvatarView(name: store.userAvatar, size: 68)
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.userName).zText(.title2).foregroundStyle(Color.zText)
-                Text(subtitle).zText(.subheadline).foregroundStyle(Color.zText3)
+                if let p = store.me, store.soulStars[p.id] == nil {
+                    SkeletonBar(width: 110, height: 12).padding(.top, 4)
+                } else {
+                    Text(subtitle).zText(.subheadline).foregroundStyle(Color.zText3)
+                }
             }
         }
     }

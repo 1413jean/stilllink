@@ -163,6 +163,7 @@ struct PersonRow: View {
                 }
                 HStack(spacing: 6) {
                     // 主星用次要灰，「命」再淡一階：名字才是主角
+                    if soul == nil { SkeletonBar(width: 56, height: 11) }
                     if let soul {
                         if soul.isEmpty { Text("命無主星").foregroundStyle(Color.zText3) }
                         else { Text("命 ").foregroundStyle(Color.zText3) + Text(soul).foregroundStyle(Color.zText2) }

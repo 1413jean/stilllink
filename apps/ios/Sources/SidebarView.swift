@@ -76,7 +76,7 @@ struct SidebarView: View {
 
     private func personRow(_ p: Person) -> some View {
         row(hideBirth ? p.name.maskedName : p.name, icon: nil, selected: current == p.id,
-            detail: store.soulStars[p.id].map { $0.isEmpty ? "命無主星" : $0 }) { onPick(p.id) }
+            detail: store.soulStars[p.id].map { $0.isEmpty ? "命無主星" : $0 }, loading: store.soulStars[p.id] == nil) { onPick(p.id) }
             // 長按：跟 Claude 一樣浮起來＋選單
             .contextMenu {
                 Button(p.pinned ? "取消釘選" : "釘選", systemImage: p.pinned ? "pin.slash" : "pin") {
@@ -88,7 +88,7 @@ struct SidebarView: View {
             }
     }
 
-    private func row(_ title: String, icon: String?, selected: Bool, detail: String? = nil, action: @escaping () -> Void) -> some View {
+    private func row(_ title: String, icon: String?, selected: Bool, detail: String? = nil, loading: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 // 命盤列不放圖示，只有功能列（此刻、所有命盤）有
@@ -101,6 +101,7 @@ struct SidebarView: View {
                 Text(title).zText(.body).foregroundStyle(Color.zText).lineLimit(1)
                 Spacer(minLength: 8)
                 if let detail { Text(detail).zText(.footnote).foregroundStyle(Color.zText3).lineLimit(1) }
+                else if loading { SkeletonBar(width: 40, height: 10) }
             }
             .padding(.horizontal, 12)
             .frame(height: 48)
