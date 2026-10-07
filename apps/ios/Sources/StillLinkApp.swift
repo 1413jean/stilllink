@@ -101,6 +101,7 @@ struct RootView: View {
             let env = ProcessInfo.processInfo.environment
             // 驗證用：ZIWEI_TAB=people 直接開到命盤分頁；ZIWEI_DRAWER=1 打開側欄
             if env["ZIWEI_TAB"] == "people" { homeRaw = "all"; tab = .home }
+            if env["ZIWEI_TAB"] == "home" { homeRaw = "" }
             if let t = env["ZIWEI_TAB"].flatMap(Tab.init) { tab = t }
             if env["ZIWEI_DRAWER"] != nil { drawer = true }
             // 驗證用：ZIWEI_DRAWER_CLOSE=秒 幾秒後自動關上（錄關閉動畫）

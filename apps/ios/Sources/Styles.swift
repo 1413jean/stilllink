@@ -34,25 +34,63 @@ private struct EdgeFades: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .modifier(HideSystemScrollEdge())
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
             .toolbarBackgroundVisibility(.hidden, for: .tabBar)
-            // 頂部從導覽列（或狀態列）往下多淡 top；底部從分頁列往上多淡 bottom
-            .overlay(alignment: .top) { TopFade(color: .zBg, height: top) }
-            .overlay(alignment: .bottom) { TopFade(color: .zBg, edge: .bottom, height: bottom) }
+            // 先量這一頁的安全區域（狀態列＋導覽列、分頁列），再從螢幕上下緣明確排：
+            // 頂部蓋到導覽列下面再多 top，底部蓋到分頁列上面再多 bottom
+            .overlay {
+                GeometryReader { g in
+                    VStack(spacing: 0) {
+                        EdgeFade(edge: .top, height: g.safeAreaInsets.top + top)
+                        Spacer(minLength: 0)
+                        EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom)
+                    }
+                    .ignoresSafeArea()
+                }
+                .allowsHitTesting(false)
+            }
+            .onAppear(perform: SystemScrollEdge.hideAll)
     }
 }
 
-/// iOS 26 的捲動邊緣效果關掉，改用上面的 TopFade
-private struct HideSystemScrollEdge: ViewModifier {
-    func body(content: Content) -> some View {
-        // 26.0 測試版（模擬器）缺 scrollEdgeEffectHidden 的型別會閃退：先退回柔和效果
-        if #available(iOS 26.1, *) {
-            content.scrollEdgeEffectHidden(true, for: .all)
-        } else if #available(iOS 26.0, *) {
-            content.scrollEdgeEffectStyle(.soft, for: .all)
-        } else {
-            content
+/// 狀態列、導覽列、分頁列後面：背景色（backgroundPrimary）漸層 100%→0%，疊漸進背景模糊（邊緣 24 → 0）
+struct EdgeFade: View {
+    let edge: VerticalEdge
+    var height: CGFloat = 20
+
+    var body: some View {
+        let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
+        ZStack {
+            BackdropBlur(fadeFromTop: edge == .top, radius: 24)
+            LinearGradient(colors: [Color.zBg, Color.zBg.opacity(0)], startPoint: start, endPoint: end)
         }
+        .frame(height: height)
+        .allowsHitTesting(false)
+    }
+}
+
+/// iOS 26 的捲動邊緣效果（深色模式會整片變黑）全部關掉，改用上面的 EdgeFade。
+/// SwiftUI 的 scrollEdgeEffectHidden 在 26.0 測試版缺型別會閃退，所以直接找 UIScrollView 關：
+/// 用 KVC＋responds(to:) 檢查，沒有這個屬性的系統（iOS 18）什麼都不做
+enum SystemScrollEdge {
+    @MainActor static func hideAll() {
+        // 畫面剛出來時 List／ScrollView 還沒掛上去，晚一點再掃一次
+        for delay in [0.05, 0.4] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+                    for w in scene.windows { walk(w) }
+                }
+            }
+        }
+    }
+
+    @MainActor private static func walk(_ v: UIView) {
+        if let sv = v as? UIScrollView {
+            for key in ["topEdgeEffect", "bottomEdgeEffect", "leftEdgeEffect", "rightEdgeEffect"]
+            where sv.responds(to: NSSelectorFromString(key)) {
+                (sv.value(forKey: key) as? NSObject)?.setValue(true, forKey: "hidden")
+            }
+        }
+        v.subviews.forEach(walk)
     }
 }

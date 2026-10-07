@@ -64,6 +64,8 @@ struct ChartView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 24)
             }
+            // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看捲上去之後頂端的樣子）
+            .defaultScrollAnchor(ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] != nil ? .bottom : .top)
         }
         .background(Color.zBg)
         .zEdgeFades()

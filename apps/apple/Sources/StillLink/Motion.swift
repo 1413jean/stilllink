@@ -140,6 +140,8 @@ struct BackdropBlur: NSViewRepresentable {
 struct BackdropBlur: UIViewRepresentable {
     var fadeFromTop: Bool? = nil
     var material: UIBlurEffect.Style = .headerView
+    /// 漸進模糊的起點半徑（邊緣最模糊、往內到 0）；系統材質的半徑大約 24，所以這裡只用來決定遮罩是線性的
+    var radius: CGFloat = 0
 
     final class View: UIVisualEffectView {
         var fadeFromTop: Bool?
@@ -148,8 +150,9 @@ struct BackdropBlur: UIViewRepresentable {
             super.layoutSubviews()
             guard let top = fadeFromTop else { layer.mask = nil; return }
             gradient.frame = bounds
-            gradient.colors = [1, 0.8, 0.45, 0.15, 0].map { UIColor.black.withAlphaComponent($0).cgColor }
-            gradient.locations = [0, 0.25, 0.55, 0.8, 1]
+            // 漸進模糊：邊緣最模糊、線性淡到 0（Figma Background blur · Progressive 24 → 0）
+            gradient.colors = [1, 0].map { UIColor.black.withAlphaComponent($0).cgColor }
+            gradient.locations = [0, 1]
             gradient.startPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
             gradient.endPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
             layer.mask = gradient
@@ -170,7 +173,7 @@ struct BackdropBlur: UIViewRepresentable {
 
 /// 跟 Mac 版同名的材質，共用程式不用改
 extension UIBlurEffect.Style {
-    static var headerView: Self { .systemChromeMaterial }
+    static var headerView: Self { .systemUltraThinMaterial }   // 最淡的模糊：顏色交給上面的同底色漸層，不要材質自己的深色
     static var hudWindow: Self { .systemMaterial }
 }
 #endif
