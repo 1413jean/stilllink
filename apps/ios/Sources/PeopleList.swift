@@ -177,10 +177,10 @@ struct PersonRow: View {
     }
 }
 
-/// 捲到導覽列底下時漸層霧化（iOS 26 scroll edge effect；26.0 測試版缺型別會閃退，26.1 起才用）
+/// 捲到導覽列底下時漸層霧化（iOS 26 scroll edge effect；不設的話 List 預設是硬邊，搜尋框下面會有一條帶子）
 struct SoftTopEdge: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.1, *) {
+        if #available(iOS 26.0, *) {
             content.scrollEdgeEffectStyle(.soft, for: .top)
         } else {
             content
