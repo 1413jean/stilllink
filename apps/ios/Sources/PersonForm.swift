@@ -3,6 +3,8 @@ import SwiftUI
 /// 新增／編輯命盤：系統 Form。換算邏輯跟 Mac 版 NewChartSheet 一樣（照鐘錶時間排盤，有出生地另算真太陽時）
 struct PersonForm: View {
     var editing: Person? = nil
+    /// 新增完成（例：側欄新增後直接在首頁打開）
+    var onCreated: ((Person) -> Void)? = nil
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss
 
@@ -214,8 +216,10 @@ struct PersonForm: View {
             store.update(p)
             if p.id == store.selfID { store.userName = p.name }
         } else {
-            store.add(Person(name: n, gender: gender, solar: r.solar, hour: r.hour, group: group,
-                             clock: r.clock, trueSolar: r.trueSolar, place: place))
+            let p = Person(name: n, gender: gender, solar: r.solar, hour: r.hour, group: group,
+                           clock: r.clock, trueSolar: r.trueSolar, place: place)
+            store.add(p)
+            onCreated?(p)
         }
         dismiss()
     }
