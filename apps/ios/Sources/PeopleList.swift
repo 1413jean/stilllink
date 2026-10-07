@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// 命盤列表：分組成 Section，可搜尋、左滑刪除、右滑釘選、長按選單
+/// 所有命盤（從側欄進）：跟「我的」「日記」同一套樣式——小標＋大標、暖白底、淺灰圓角卡片；
+/// 底下還是系統 List，左滑刪除、右滑釘選、長按選單都照用
 struct PeopleList: View {
     @EnvironmentObject private var store: Store
     @State private var query = ""
@@ -12,28 +13,46 @@ struct PeopleList: View {
 
     var body: some View {
         List {
+            Section {
+                searchField
+            } header: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("CHARTS · 命盤").zText(.eyebrow).foregroundStyle(Color.zAccent)
+                    Text("所有命盤").zText(.titleLarge).foregroundStyle(Color.zText)
+                }
+                .textCase(nil)
+                .padding(.bottom, 8)
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
+            .listRowSeparator(.hidden)
+
             if query.isEmpty, store.showSelfInSidebar, let me = store.me {
-                Section("我") { link(me) }
+                Section { link(me) } header: { header("我") }
             }
             ForEach(sections, id: \.0) { title, list in
-                Section(title) {
+                Section {
                     ForEach(list) { link($0) }
-                }
+                } header: { header(title) }
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("命盤")
+        .listSectionSpacing(20)
+        .scrollContentBackground(.hidden)
+        .background(Color.zBg)
+        .environment(\.defaultMinListRowHeight, 64)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: UUID.self) { id in
             if let p = store.people.first(where: { $0.id == id }) { ChartView(person: p) }
         }
         .navigationDestination(item: $routed) { id in
             if let p = store.people.first(where: { $0.id == id }) { ChartView(person: p) }
         }
-        .searchable(text: $query, prompt: "搜尋姓名、分組、命宮主星")
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) { sortMenu }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { adding = true } label: { Image(systemName: "plus") }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                sortMenu
+                Button { adding = true } label: { Image(systemName: "plus").foregroundStyle(Color.zText) }
                     .accessibilityLabel("新增命盤")
             }
         }
@@ -82,8 +101,33 @@ struct PeopleList: View {
         }
     }
 
+    private func header(_ t: String) -> some View {
+        Text(t).zText(.eyebrow).foregroundStyle(Color.zText3)
+            .textCase(nil)
+            .padding(.leading, -16)
+    }
+
+    /// 搜尋框：淺灰膠囊（跟卡片同色）
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Color.zText3)
+            TextField("搜尋姓名、分組、命宮主星", text: $query)
+                .zText(.body)
+                .submitLabel(.search)
+            if !query.isEmpty {
+                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3) }
+                    .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 44)
+        .background(Capsule().fill(Color.zHover))
+    }
+
     private func link(_ p: Person) -> some View {
         NavigationLink(value: p.id) { PersonRow(person: p, soul: store.soulStars[p.id], hideBirth: hideBirth) }
+            .listRowBackground(Color.zHover)
+            .listRowSeparatorTint(Color.zLine)
             .swipeActions(edge: .trailing) {
                 Button("刪除", systemImage: "trash", role: .destructive) { deleting = p }
                 Button("編輯", systemImage: "pencil") { editing = p }.tint(.gray)
@@ -116,7 +160,7 @@ struct PeopleList: View {
             Divider()
             Toggle("隱藏生辰", isOn: $hideBirth)
         } label: {
-            Image(systemName: "arrow.up.arrow.down")
+            Image(systemName: "arrow.up.arrow.down").foregroundStyle(Color.zText)
         }
         .accessibilityLabel("排序")
     }
@@ -134,7 +178,7 @@ struct PersonRow: View {
                 .font(.zHeadline)
                 .foregroundStyle(Color.zText2)
                 .frame(width: 40, height: 40)
-                .background(Circle().fill(Color.zHover))
+                .background(Circle().fill(Color.zCard))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(hideBirth ? person.name.maskedName : person.name).font(.zHeadline).foregroundStyle(Color.zText)

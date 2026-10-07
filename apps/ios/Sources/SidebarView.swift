@@ -4,6 +4,7 @@ import SwiftUI
 /// 左下角頭像（到設定）、右下角黑色「新增命盤」
 struct SidebarView: View {
     let current: UUID?
+    var showingAll = false
     var onPick: (UUID?) -> Void
     var onAllCharts: () -> Void
     var onNew: () -> Void
@@ -23,8 +24,8 @@ struct SidebarView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 20)
 
-                    row("此刻", icon: "clock", selected: current == nil) { onPick(nil) }
-                    row("所有命盤", icon: "person.2", selected: false, action: onAllCharts)
+                    row("此刻", icon: "clock", selected: current == nil && !showingAll) { onPick(nil) }
+                    row("所有命盤", icon: "person.2", selected: showingAll, action: onAllCharts)
 
                     let pinned = store.people.filter(\.pinned)
                     if !pinned.isEmpty {

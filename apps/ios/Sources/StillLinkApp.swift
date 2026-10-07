@@ -22,10 +22,10 @@ struct StillLinkApp: App {
 
 /// 外層：左邊側欄（照 Claude App：整個畫面往右推開）＋四個分頁（照 Figma：首頁、命盤、日記、我的）
 struct RootView: View {
-    enum Tab: String { case home, people, journal, settings }
+    enum Tab: String { case home, journal, settings }
     @EnvironmentObject private var store: Store
     @AppStorage("tab") private var tab: Tab = .home
-    /// 首頁顯示哪一張盤：nil＝此刻
+    /// 首頁顯示什麼：空字串＝此刻、"all"＝所有命盤、UUID＝那張盤
     @AppStorage("homeChart") private var homeRaw = ""
     @AppStorage("recentCharts") private var recentRaw = ""
     @State private var drawer = false
@@ -43,8 +43,8 @@ struct RootView: View {
                 // 主畫面往右推的距離：開著時可以往左拖回去，關著時從左緣往右拉
                 let x = drawer ? max(0, w + min(0, drag)) : max(0, min(w, drag))
                 ZStack(alignment: .leading) {
-                    SidebarView(current: homeID, onPick: show, onAllCharts: {
-                        tab = .people; closeDrawer()
+                    SidebarView(current: homeID, showingAll: homeRaw == "all", onPick: show, onAllCharts: {
+                        homeRaw = "all"; tab = .home; closeDrawer()
                     }, onNew: {
                         closeDrawer(); adding = true
                     }, onProfile: {
@@ -99,6 +99,7 @@ struct RootView: View {
         .onAppear {
             let env = ProcessInfo.processInfo.environment
             // 驗證用：ZIWEI_TAB=people 直接開到命盤分頁；ZIWEI_DRAWER=1 打開側欄
+            if env["ZIWEI_TAB"] == "people" { homeRaw = "all"; tab = .home }
             if let t = env["ZIWEI_TAB"].flatMap(Tab.init) { tab = t }
             if env["ZIWEI_DRAWER"] != nil { drawer = true }
             // 驗證用：ZIWEI_DRAWER_CLOSE=秒 幾秒後自動關上（錄關閉動畫）
@@ -112,13 +113,10 @@ struct RootView: View {
     private var tabs: some View {
         TabView(selection: $tab) {
             NavigationStack {
-                HomeView(personID: homeID, openDrawer: openDrawer)
+                HomeView(mode: homeRaw, openDrawer: openDrawer)
             }
             .tabItem { Label("首頁", systemImage: "sun.horizon") }
             .tag(Tab.home)
-            NavigationStack { PeopleList() }
-                .tabItem { Label("命盤", systemImage: "sparkles") }
-                .tag(Tab.people)
             NavigationStack { JournalView() }
                 .tabItem { Label("日記", systemImage: "book.closed") }
                 .tag(Tab.journal)
@@ -161,15 +159,17 @@ struct RootView: View {
     }
 }
 
-/// 首頁：預設是此刻盤；從側欄點了某張命盤就換成那張
+/// 首頁：預設是此刻盤；從側欄點「所有命盤」換成命盤列表，點某張命盤就換成那張
 struct HomeView: View {
-    let personID: UUID?
+    let mode: String
     var openDrawer: () -> Void
     @EnvironmentObject private var store: Store
 
     var body: some View {
         Group {
-            if let id = personID, let p = store.people.first(where: { $0.id == id }) {
+            if mode == "all" {
+                PeopleList()
+            } else if let id = UUID(uuidString: mode), let p = store.people.first(where: { $0.id == id }) {
                 ChartView(person: p).id(p.id)
             } else {
                 NowChartView()
