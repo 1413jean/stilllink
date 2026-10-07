@@ -52,6 +52,8 @@ struct RootView: View {
                     .padding(.top, inset.top)
                     .padding(.bottom, inset.bottom)
                     .frame(width: w, height: geo.size.height)
+                    // 主畫面蓋回來時側欄逐漸變暗（照 Claude），拖的時候跟著手指
+                    .overlay(Color.black.opacity(0.28 * (1 - x / w)).allowsHitTesting(false))
                     .offset(x: (x - w) * 0.25)   // 側欄跟著慢一點滑進來，有層次
 
                     // 分頁列跟主畫面一起被推開，停在 Home 橫條上方
@@ -62,14 +64,15 @@ struct RootView: View {
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                     .background(Color.zBg)
-                    .clipShape(RoundedRectangle(cornerRadius: x > 0 ? 48 : 0, style: .continuous))
+                    // 圓角跟著推開的距離長出來，不是一動就整個變圓
+                    .clipShape(RoundedRectangle(cornerRadius: 52 * min(1, x / 60), style: .continuous))
                     .overlay {
                         // 推開時主畫面左緣一條細框，跟側欄分得開
-                        RoundedRectangle(cornerRadius: 48, style: .continuous)
+                        RoundedRectangle(cornerRadius: 52 * min(1, x / 60), style: .continuous)
                             .stroke(Color.zLine, lineWidth: 0.5)
-                            .opacity(x > 0 ? 1 : 0)
+                            .opacity(min(1, x / 60))
                     }
-                    .shadow(color: .black.opacity(x > 0 ? 0.1 : 0), radius: 20, x: -2)
+                    .shadow(color: .black.opacity(0.1 * min(1, x / 60)), radius: 20, x: -2)
                     // 開著時點右邊露出的畫面＝關起來；也可以往左拖
                     .overlay {
                         if drawer {
@@ -81,7 +84,7 @@ struct RootView: View {
                     // 首頁：從左緣往右拉打開側欄（避開上方導覽列的按鈕）
                     .overlay(alignment: .leading) {
                         if !drawer && tab == .home {
-                            Color.clear.frame(width: 18).contentShape(Rectangle())
+                            Color.clear.frame(width: 24).contentShape(Rectangle())
                                 .padding(.top, inset.top + 80)
                                 .gesture(dragGesture(w))
                         }
@@ -100,6 +103,10 @@ struct RootView: View {
             // 驗證用：ZIWEI_TAB=people 直接開到命盤分頁；ZIWEI_DRAWER=1 打開側欄
             if let t = env["ZIWEI_TAB"].flatMap(Tab.init) { tab = t }
             if env["ZIWEI_DRAWER"] != nil { drawer = true }
+            // 驗證用：ZIWEI_DRAWER_CLOSE=秒 幾秒後自動關上（錄關閉動畫）
+            if let t = env["ZIWEI_DRAWER_CLOSE"].flatMap(Double.init) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + t) { show(store.people.first?.id) }
+            }
         }
     }
 
@@ -132,11 +139,14 @@ struct RootView: View {
         closeDrawer()
     }
 
+    /// 側欄開關：快進慢停、不回彈（照 Claude 約 0.3 秒）
+    static let drawerAnim = Animation.snappy(duration: 0.3, extraBounce: 0)
+
     private func openDrawer() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { drawer = true; drag = 0 }
+        withAnimation(RootView.drawerAnim) { drawer = true; drag = 0 }
     }
     private func closeDrawer() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { drawer = false; drag = 0 }
+        withAnimation(RootView.drawerAnim) { drawer = false; drag = 0 }
     }
 
     private func dragGesture(_ w: CGFloat) -> some Gesture {
@@ -145,7 +155,7 @@ struct RootView: View {
             .onEnded { v in
                 let end = v.predictedEndTranslation.width
                 let open = drawer ? end > -w / 3 : end > w / 3
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { drawer = open; drag = 0 }
+                withAnimation(RootView.drawerAnim) { drawer = open; drag = 0 }
             }
     }
 }
