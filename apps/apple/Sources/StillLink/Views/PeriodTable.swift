@@ -51,6 +51,16 @@ struct PeriodTable: View {
                     }
                 }
             }
+            #if os(iOS)
+            // 手機寬度放不下 10 欄（iOS 字級大一號），改成跟流月一樣左右滑的一列
+            row("流日", enabled: pick.level >= 3) {
+                ForEach(1...monthLen, id: \.self) { d in
+                    cell(ZW.lunarDays[d - 1], j1.map { ZW.ganzhi(ZW.dayIndex(jdn: $0 + d - 1)) }, group: "day", on: d == pick.ld && pick.level >= 4, minW: 52) {
+                        pick.level = (d == pick.ld && pick.level == 4) ? 3 : 4; pick.ld = d
+                    }
+                }
+            }
+            #else
             HStack(spacing: 0) {
                 head("流日")
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 10), spacing: 0) {
@@ -66,6 +76,7 @@ struct PeriodTable: View {
                 .opacity(pick.level < 3 ? 0.35 : 1)
             }
             Divider()
+            #endif
             row("流時", divider: false, enabled: pick.level >= 4) {
                 ForEach(0..<12, id: \.self) { h in
                     cell(ZW.branches[h] + "時", ZW.hourGanzhi(dayStem: dayStem, hour: h), group: "hour", on: h == pick.hour && pick.level >= 5) {
@@ -129,6 +140,7 @@ struct PeriodTable: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressStyle())
+        .id(on ? AnyHashable("sel") : AnyHashable(group + main))
     }
 }
 
@@ -286,8 +298,12 @@ struct PanRow<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) { content }
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 0) { content } }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                // 打開時把選到的格子（例：今天、目前大限）捲進畫面
+                .onAppear { proxy.scrollTo("sel", anchor: .center) }
+        }
     }
 }
 #endif
