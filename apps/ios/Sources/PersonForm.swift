@@ -52,9 +52,12 @@ struct PersonForm: View {
                     }
                     .pickerStyle(.segmented)
                     if !asSelf && editing?.id != store.selfID {
-                        Picker("分組", selection: $group) {
-                            ForEach(groupOptions, id: \.self) { Text($0).tag($0) }
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("分組")
+                            // 刻度尺：左右拖、點選項；每經過一格震一下（跟 Mac 版同一個元件）
+                            GroupDial(options: groupOptions, selection: $group)
                         }
+                        .padding(.vertical, 4)
                         Button("新增分組…", systemImage: "folder.badge.plus") { addingGroup = true }
                     }
                 }

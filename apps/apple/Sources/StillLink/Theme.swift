@@ -163,7 +163,22 @@ enum ZType: String, CaseIterable {
     }
     /// 「粗」在 macOS 是 Medium、iOS 是 Semibold（Figma 變數 font/weight/strong 依模式不同）
     #if os(iOS)
-    var font: Font { .system(size: spec.size, weight: spec.strong ? .semibold : .regular) }
+    var font: Font { Font.system(textStyle, weight: spec.strong ? .semibold : .regular) }
+    /// 對應的 Dynamic Type 文字樣式（預設大小跟上面的 iOS 字級一樣）
+    var textStyle: Font.TextStyle {
+        switch self {
+        case .titleLarge: .largeTitle
+        case .title1: .title
+        case .title2: .title2
+        case .title3: .title3
+        case .headline, .body, .bodyStrong: .body
+        case .callout, .calloutStrong: .callout
+        case .subheadline, .subheadlineStrong: .subheadline
+        case .footnote, .footnoteStrong: .footnote
+        case .caption1, .caption1Strong: .caption
+        case .caption2, .eyebrow: .caption2
+        }
+    }
     #else
     var font: Font { .system(size: spec.size, weight: spec.strong ? .medium : .regular) }
     #endif

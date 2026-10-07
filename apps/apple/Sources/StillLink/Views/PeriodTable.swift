@@ -79,6 +79,17 @@ struct PeriodTable: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
     }
 
+    /// 表格字級：Mac 照原本；iPhone 的設計系統字級大一號，表格裡降一階才放得下、不會壓迫
+    #if os(iOS)
+    static let headFont = ZType.footnoteStrong.font
+    static let mainFont = ZType.caption1.font
+    static let subFont = ZType.caption2.font
+    #else
+    static let headFont = Font.zCalloutStrong
+    static let mainFont = Font.zCaption
+    static let subFont = Font.zMicro
+    #endif
+
     /// 流日格子：Mac 一排 10 天；iPhone 字級大一號放不下，照寬度自動分欄（約 6 欄 × 5 行），一樣填滿整列
     private var dayColumns: [GridItem] {
         #if os(iOS)
@@ -94,7 +105,7 @@ struct PeriodTable: View {
 
     private func head(_ t: String) -> some View {
         Text(t)
-            .font(Font.zCalloutStrong)
+            .font(PeriodTable.headFont)
             .multilineTextAlignment(.center)
             .frame(width: 52)
             .frame(maxHeight: .infinity)
@@ -124,9 +135,9 @@ struct PeriodTable: View {
             action()   // 選取底色直接跳過去：盤面同時要重畫，滑動動畫會被卡住，看起來反而頓
         } label: {
             VStack(spacing: 1) {
-                Text(main).font(Font.zCaption)
-                if let sub { Text(sub).font(Font.zMicro).opacity(0.7) }
-                if let extra { Text(extra).font(Font.zMicro).foregroundStyle(on ? Color.zBg : Color.minorColor) }
+                Text(main).font(PeriodTable.mainFont)
+                if let sub { Text(sub).font(PeriodTable.subFont).opacity(0.7) }
+                if let extra { Text(extra).font(PeriodTable.subFont).foregroundStyle(on ? Color.zBg : Color.minorColor) }
             }
             .foregroundStyle(on ? Color.zBg : Color.zText)
             .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)

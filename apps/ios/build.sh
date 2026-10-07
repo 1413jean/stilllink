@@ -21,7 +21,7 @@ if [[ "$1" == xcode ]]; then xcodegen generate; open StillLink.xcodeproj; exit 0
 FILES=(Sources/**/*.swift(N)
   $SHARED/Engine/*.swift
   $SHARED/{AppInfo,Platform,Settings,Store,Theme,Motion,Sound,StarNotes}.swift
-  $SHARED/Views/{ChartBoard,ClampOverlay,Controls,ZInput,PeriodTable}.swift)
+  $SHARED/Views/{ChartBoard,ClampOverlay,Controls,ZInput,PeriodTable,GroupDial}.swift)
 
 SDK=$(xcrun -sdk iphonesimulator --show-sdk-path)
 ARCH=$(uname -m)

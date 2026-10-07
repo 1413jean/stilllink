@@ -12,6 +12,8 @@ struct SidebarView: View {
     @EnvironmentObject private var store: Store
     @AppStorage("recentCharts") private var recentRaw = ""
     @AppStorage("hideBirth") private var hideBirth = false
+    @State private var editing: Person?
+    @State private var deleting: Person?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -45,6 +47,14 @@ struct SidebarView: View {
             bottomBar
         }
         .background(Color.zSide.ignoresSafeArea())
+        .sheet(item: $editing) { PersonForm(editing: $0) }
+        .confirmationDialog("刪除「\(deleting?.name ?? "")」的命盤？", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                            titleVisibility: .visible) {
+            Button("刪除", role: .destructive) {
+                if let p = deleting { withAnimation { store.delete(p.id) }; if current == p.id { onPick(nil) } }
+                deleting = nil
+            }
+        } message: { Text("刪除後無法復原") }
     }
 
     /// 最近看過的命盤（首頁打開過的），不夠就用最近新增的補到 12 筆；釘選的不重複列
@@ -67,6 +77,15 @@ struct SidebarView: View {
     private func personRow(_ p: Person) -> some View {
         row(hideBirth ? p.name.maskedName : p.name, icon: nil, selected: current == p.id,
             detail: store.soulStars[p.id].map { $0.isEmpty ? "命無主星" : $0 }) { onPick(p.id) }
+            // 長按：跟 Claude 一樣浮起來＋選單
+            .contextMenu {
+                Button(p.pinned ? "取消釘選" : "釘選", systemImage: p.pinned ? "pin.slash" : "pin") {
+                    var q = p; q.pinned.toggle(); withAnimation { store.update(q) }
+                }
+                Button("編輯命主資料", systemImage: "pencil") { editing = p }
+                Divider()
+                Button("刪除", systemImage: "trash", role: .destructive) { deleting = p }
+            }
     }
 
     private func row(_ title: String, icon: String?, selected: Bool, detail: String? = nil, action: @escaping () -> Void) -> some View {
@@ -132,6 +151,6 @@ struct SidebarGlyph: View {
                 Capsule().frame(width: w, height: 1.8)
             }
         }
-        .frame(width: 22, height: 22, alignment: .leading)
+        .frame(width: 20, height: 20, alignment: .leading)   // 框跟最長那條一樣寬，放在按鈕裡才會置中
     }
 }

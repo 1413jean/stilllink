@@ -46,10 +46,10 @@ struct SettingsView: View {
                     }
                     divider
                     Toggle(isOn: $store.settings.sound) { Text("介面音效").zText(.body).foregroundStyle(Color.zText) }
-                        .padding(.horizontal, 16).frame(height: 52)
+                        .padding(.horizontal, 16).frame(minHeight: 52)
                     divider
                     Toggle(isOn: $store.settings.haptics) { Text("觸覺回饋").zText(.body).foregroundStyle(Color.zText) }
-                        .padding(.horizontal, 16).frame(height: 52)
+                        .padding(.horizontal, 16).frame(minHeight: 52)
                 }
                 .padding(.bottom, 20)
 
@@ -161,7 +161,7 @@ struct SettingsView: View {
             }
         }
         .padding(.horizontal, 16)
-        .frame(height: 52)
+        .frame(minHeight: 52)
         .contentShape(Rectangle())
     }
 

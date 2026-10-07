@@ -13,27 +13,14 @@ struct PeopleList: View {
 
     var body: some View {
         List {
-            Section {
-                searchField
-            } header: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("CHARTS · 命盤").zText(.eyebrow).foregroundStyle(Color.zAccent)
-                    Text("所有命盤").zText(.titleLarge).foregroundStyle(Color.zText)
-                }
-                .textCase(nil)
-                .padding(.bottom, 8)
+            let showMe = query.isEmpty && store.showSelfInSidebar && store.me != nil
+            if showMe, let me = store.me {
+                Section { link(me) } header: { header("我", first: true) }
             }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
-            .listRowSeparator(.hidden)
-
-            if query.isEmpty, store.showSelfInSidebar, let me = store.me {
-                Section { link(me) } header: { header("我") }
-            }
-            ForEach(sections, id: \.0) { title, list in
+            ForEach(Array(sections.enumerated()), id: \.element.0) { i, sec in
                 Section {
-                    ForEach(list) { link($0) }
-                } header: { header(title) }
+                    ForEach(sec.1) { link($0) }
+                } header: { header(sec.0, first: !showMe && i == 0) }
             }
         }
         .listStyle(.insetGrouped)
@@ -43,6 +30,7 @@ struct PeopleList: View {
         .environment(\.defaultMinListRowHeight, 64)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜尋姓名、分組、命宮主星")
         .navigationDestination(for: UUID.self) { id in
             if let p = store.people.first(where: { $0.id == id }) { ChartView(person: p) }
         }
@@ -101,27 +89,17 @@ struct PeopleList: View {
         }
     }
 
-    private func header(_ t: String) -> some View {
-        Text(t).zText(.eyebrow).foregroundStyle(Color.zText3)
-            .textCase(nil)
-            .padding(.leading, -16)
-    }
-
-    /// 搜尋框：淺灰膠囊（跟卡片同色）
-    private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").foregroundStyle(Color.zText3)
-            TextField("搜尋姓名、分組、命宮主星", text: $query)
-                .zText(.body)
-                .submitLabel(.search)
-            if !query.isEmpty {
-                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3) }
-                    .buttonStyle(.plain)
+    /// 分組標題；第一個分組上面再放頁面的小標＋大標
+    private func header(_ t: String, first: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if first {
+                Text("CHARTS · 命盤").zText(.eyebrow).foregroundStyle(Color.zAccent).padding(.bottom, 4)
+                Text("所有命盤").zText(.titleLarge).foregroundStyle(Color.zText).padding(.bottom, 20)
             }
+            Text(t).zText(.eyebrow).foregroundStyle(Color.zText3)
         }
-        .padding(.horizontal, 14)
-        .frame(height: 44)
-        .background(Capsule().fill(Color.zHover))
+        .textCase(nil)
+        .padding(.leading, first ? 0 : -16)
     }
 
     private func link(_ p: Person) -> some View {

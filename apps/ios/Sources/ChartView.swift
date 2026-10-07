@@ -10,6 +10,7 @@ struct ChartView: View {
     @State private var shownLevel: Int
     @State private var editing = false
     @State private var confirmDelete = false
+    @State private var showSettings = false
     @Environment(\.dismiss) private var dismiss
     @State private var zoom: CGFloat = 1        // 兩指捏合縮放（1～2.5）
     @State private var zoomBase: CGFloat = 1
@@ -33,6 +34,8 @@ struct ChartView: View {
         GeometryReader { geo in
             // 手機直拿：盤面左右只留一點邊；iPad／橫放：寬度上限跟 Mac 一樣
             let boardW = min(geo.size.width - 8, 920)
+            // iPhone 直拿：盤面拉長一點，宮格裡疊三層四化、流年歲數才不擠（iPad 照 Mac 比例）
+            let aspect: CGFloat = geo.size.width < 600 ? 1.3 : 1.12
             ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                 VStack(spacing: 14) {
                     Group {
@@ -45,9 +48,9 @@ struct ChartView: View {
                             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     }
-                    .frame(width: boardW * sharpZoom, height: boardW * 1.12 * sharpZoom)
+                    .frame(width: boardW * sharpZoom, height: boardW * aspect * sharpZoom)
                     .scaleEffect(zoom / sharpZoom, anchor: .top)
-                    .frame(width: boardW * zoom, height: boardW * 1.12 * zoom, alignment: .top)
+                    .frame(width: boardW * zoom, height: boardW * aspect * zoom, alignment: .top)
                     .gesture(magnify)
 
                     if let model {
@@ -72,10 +75,9 @@ struct ChartView: View {
                         .accessibilityLabel("還原大小")
                 }
             }
-            if pick.level > 0 {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("本命") { pick.level = 0 }
-                }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showSettings = true } label: { Image(systemName: "slider.horizontal.3").frame(width: 22, height: 22) }
+                    .accessibilityLabel("命盤設定")
             }
             if !isNow {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -87,7 +89,7 @@ struct ChartView: View {
                         Divider()
                         Button("刪除命盤", systemImage: "trash", role: .destructive) { confirmDelete = true }
                     } label: {
-                        Image(systemName: "ellipsis").foregroundStyle(Color.zText)
+                        Image(systemName: "ellipsis").frame(width: 22, height: 22)   // 給固定的框，圓按鈕裡才會置中
                     }
                     .accessibilityLabel("更多")
                 }
@@ -96,6 +98,13 @@ struct ChartView: View {
         .confirmationDialog("刪除「\(person.name)」的命盤？", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("刪除", role: .destructive) { store.delete(person.id); dismiss() }
         } message: { Text("刪除後無法復原") }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                ChartSettingsView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showSettings = false } } }
+            }
+            .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $editing) {
             PersonForm(editing: person)
         }

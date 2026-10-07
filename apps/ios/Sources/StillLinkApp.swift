@@ -14,7 +14,7 @@ struct StillLinkApp: App {
                 .environmentObject(store)
                 .environmentObject(journal)
                 .environment(\.zSettings, store.settings)
-                .tint(Color.zAccent)
+                .tint(Color.zText)   // 按鈕、選單、分頁一律用主文字色；需要強調的地方各自用 zAccent
                 .preferredColorScheme(appearance.scheme)
         }
     }

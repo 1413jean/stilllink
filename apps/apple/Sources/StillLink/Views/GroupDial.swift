@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 /// 刻度尺式的選擇器：選項橫向排開，下面有刻度、正中間一條主色指示線；停下來自動對齊中間，每經過一根刻度震一下
 /// 操作（不是每個人都會用觸控板左右滑）：
@@ -84,8 +86,10 @@ struct GroupDial: View {
             installScrollMonitor()
         }
         .onDisappear {
+            #if os(macOS)
             if let monitor { NSEvent.removeMonitor(monitor) }
             monitor = nil
+            #endif
         }
         .onChange(of: selection) { _, s in
             guard let i = options.firstIndex(of: s), i != current else { return }
@@ -100,7 +104,7 @@ struct GroupDial: View {
         offset = v
         let t = Int((v / (itemW / 5)).rounded(.down))
         if t != tick {
-            if tick != nil && settings.haptics { NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now) }
+            if tick != nil && settings.haptics { Platform.haptic(.alignment) }
             tick = t
         }
     }
@@ -117,7 +121,9 @@ struct GroupDial: View {
     /// 滾動事件：游標在尺（含外圍一圈）上才接手
     /// - 觸控板：只接左右滑，上下滑照樣捲整頁
     /// - 滑鼠滾輪：上下滾一格＝換一個
+    /// 滑鼠滾輪、觸控板（只有 Mac；iPhone 用手指拖）
     private func installScrollMonitor() {
+        #if os(macOS)
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { e in
             guard let win = e.window, win.isKeyWindow, let content = win.contentView else { return e }
@@ -143,6 +149,7 @@ struct GroupDial: View {
             }
             return nil
         }
+        #endif
     }
 
     /// 每個選項下面一組刻度：中間長、兩旁短

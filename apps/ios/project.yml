@@ -35,6 +35,7 @@ targets:
           - "Views/Controls.swift"
           - "Views/ZInput.swift"
           - "Views/PeriodTable.swift"
+          - "Views/GroupDial.swift"
           - "Platform.swift"
       - path: ../apple/Resources/iztro.min.js
         buildPhase: resources
