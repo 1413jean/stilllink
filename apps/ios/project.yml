@@ -1,0 +1,63 @@
+# iOS 版專案設定：xcodegen generate 產生 StillLink.xcodeproj（xcodeproj 不進 git）
+# 排盤引擎、資料、設計 token、命盤繪製直接引用 Mac 版的同一份檔案（apps/apple/Sources/StillLink），
+# 畫面外框（導覽、列表、表單、設定）是 iOS 自己的原生元件，放在 Sources/
+name: StillLink
+options:
+  bundleIdPrefix: app.stilllink
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  StillLink:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: ../apple/Sources/StillLink
+        group: Shared
+        includes:
+          - "Engine/*.swift"
+          - "AppInfo.swift"
+          - "Settings.swift"
+          - "Store.swift"
+          - "Theme.swift"
+          - "Motion.swift"
+          - "Sound.swift"
+          - "StarNotes.swift"
+          - "Views/ChartBoard.swift"
+          - "Views/ClampOverlay.swift"
+          - "Views/Controls.swift"
+          - "Views/ZInput.swift"
+          - "Views/PeriodTable.swift"
+          - "Platform.swift"
+      - path: ../apple/Resources/iztro.min.js
+        buildPhase: resources
+      - path: ../apple/Resources/bridge.js
+        buildPhase: resources
+      - path: ../apple/Resources/zone.tab
+        buildPhase: resources
+      - path: ../apple/Resources/star-notes.json
+        buildPhase: resources
+      - path: ../apple/Resources/sfx
+        type: folder
+        buildPhase: resources
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: StillLink
+        StillLinkChannel: beta
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.stilllink.ios.beta
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO

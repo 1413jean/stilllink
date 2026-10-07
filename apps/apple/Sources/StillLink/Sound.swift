@@ -1,4 +1,11 @@
+import Foundation
+#if os(macOS)
 import AppKit
+typealias PlatformSound = NSSound
+#else
+import AVFoundation
+typealias PlatformSound = AVAudioPlayer
+#endif
 
 /// 介面回饋：音效（uisfx.com，CC0）＋觸控板震動。每種操作可以各自選音效。
 enum Sound {
@@ -30,7 +37,7 @@ enum Sound {
         static func level(_ lv: Int) -> Event { [.decade, .decade, .year, .month, .day, .hour][max(0, min(5, lv))] }
     }
 
-    private static var cache: [String: NSSound] = [:]
+    private static var cache: [String: PlatformSound] = [:]
 
     static func url(_ style: String, _ cue: String) -> URL? {
         if let u = Bundle.main.url(forResource: cue, withExtension: "mp3", subdirectory: "sfx/\(style)") { return u }
@@ -38,8 +45,8 @@ enum Sound {
     }
 
     /// 播放某個操作的音效＋觸控板回饋
-    static func tap(_ s: ZSettings, _ e: Event = .palace) {
-        if s.haptics { NSHapticFeedbackManager.defaultPerformer.perform(e == .palace ? .alignment : .levelChange, performanceTime: .now) }
+    @MainActor static func tap(_ s: ZSettings, _ e: Event = .palace) {
+        if s.haptics { Platform.haptic(e == .palace ? .alignment : .levelChange) }
         guard s.sound else { return }
         play(s.soundStyle, s.cues[e.rawValue] ?? e.defaultCue, volume: s.volume)
     }
@@ -47,10 +54,20 @@ enum Sound {
     static func play(_ style: String, _ cue: String, volume: Double) {
         guard cue != "none", let u = url(style, cue) else { return }
         let key = style + "/" + cue
+        #if os(macOS)
         let snd = cache[key] ?? NSSound(contentsOf: u, byReference: true)
         guard let snd else { return }
         cache[key] = snd
         snd.stop()
+        #else
+        // 跟靜音開關走（.ambient），不會打斷使用者正在聽的音樂
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: .mixWithOthers)
+        let snd = cache[key] ?? (try? AVAudioPlayer(contentsOf: u))
+        guard let snd else { return }
+        cache[key] = snd
+        snd.stop()
+        snd.currentTime = 0
+        #endif
         snd.volume = Float(volume)
         snd.play()
     }

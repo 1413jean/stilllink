@@ -1,12 +1,16 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 /// 動態設計 token（參考 GSAP 的原則：out 系 easing、短時長、清單錯開、只動 transform／opacity）
 /// 系統「減少動態效果」打開時，全部改成瞬間切換。
 enum Motion {
     /// 設定裡的「介面動畫」開關
     static var userEnabled = true
-    static var reduce: Bool { !userEnabled || NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+    static var reduce: Bool { !userEnabled || Platform.reduceMotion }
 
     /// hover、按壓等即時回饋（≈ power1.out 0.15s）
     static var fast: Animation? { reduce ? nil : .timingCurve(0.25, 0.46, 0.45, 0.94, duration: 0.15) }
@@ -94,6 +98,7 @@ struct TopFade: View {
 /// 背景模糊：把視窗裡在它後面的內容模糊化（NSVisualEffectView，within window）
 /// fadeFromTop：true＝上面 100% 往下淡到 0；false＝上面 0 往下到 100%；nil＝整片
 /// 漸層用圖層遮罩（CAGradientLayer）；maskImage 和 SwiftUI .mask 都會讓模糊整片消失
+#if os(macOS)
 struct BackdropBlur: NSViewRepresentable {
     var fadeFromTop: Bool? = nil
     var material: NSVisualEffectView.Material = .headerView
@@ -130,6 +135,45 @@ struct BackdropBlur: NSViewRepresentable {
         v.needsLayout = true
     }
 }
+#else
+/// iOS：UIVisualEffectView，漸層一樣用圖層遮罩（UIKit 圖層原點在左上，方向跟 Mac 相反）
+struct BackdropBlur: UIViewRepresentable {
+    var fadeFromTop: Bool? = nil
+    var material: UIBlurEffect.Style = .headerView
+
+    final class View: UIVisualEffectView {
+        var fadeFromTop: Bool?
+        private let gradient = CAGradientLayer()
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            guard let top = fadeFromTop else { layer.mask = nil; return }
+            gradient.frame = bounds
+            gradient.colors = [1, 0.8, 0.45, 0.15, 0].map { UIColor.black.withAlphaComponent($0).cgColor }
+            gradient.locations = [0, 0.25, 0.55, 0.8, 1]
+            gradient.startPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
+            gradient.endPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
+            layer.mask = gradient
+        }
+    }
+
+    func makeUIView(context: Context) -> View {
+        let v = View(effect: UIBlurEffect(style: material))
+        v.fadeFromTop = fadeFromTop
+        return v
+    }
+    func updateUIView(_ v: View, context: Context) {
+        v.effect = UIBlurEffect(style: material)
+        v.fadeFromTop = fadeFromTop
+        v.setNeedsLayout()
+    }
+}
+
+/// 跟 Mac 版同名的材質，共用程式不用改
+extension UIBlurEffect.Style {
+    static var headerView: Self { .systemChromeMaterial }
+    static var hudWindow: Self { .systemMaterial }
+}
+#endif
 
 // MARK: Snackbar 提示
 

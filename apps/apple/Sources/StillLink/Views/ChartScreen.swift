@@ -1,20 +1,5 @@
 import SwiftUI
 
-/// 運限選擇（預設大限）：level 0 本命、1 大限、2 流年、3 流月、4 流日、5 流時；年月日都是農曆
-struct Pick: Equatable, Hashable {
-    var level = 1
-    var year: Int
-    var lm: Int
-    var ld: Int
-    var hour: Int
-
-    static func today() -> Pick {
-        let c = Calendar.current.dateComponents([.year, .month, .day, .hour], from: Date())
-        let l = Lunar.toLunar(c.year!, c.month!, c.day!)
-        return Pick(year: l.year, lm: l.month, ld: l.day, hour: SolarTime.shichen(c.hour!) % 12)
-    }
-}
-
 /// 首頁：以當下時間排盤（不存檔）
 struct NowChart: View {
     @AppStorage("nowGender") private var gender: Gender = .male
@@ -30,7 +15,7 @@ struct NowChart: View {
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
     }
 
-    static let id = UUID(uuidString: "00000000-0000-0000-0000-00000000A0A0")!
+    static let id = Person.nowID
 }
 
 /// 盤面寬度上限（約文墨天機的比例）

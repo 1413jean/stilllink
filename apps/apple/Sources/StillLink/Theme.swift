@@ -1,14 +1,21 @@
 import SwiftUI
-import AppKit
 
 /// 設計 token：Claude／Codex 式的暖白與暖黑，亮暗各一組
 extension Color {
     static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
+        #if os(macOS)
         Color(nsColor: NSColor(name: nil) { ap in
             let hex = ap.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
             return NSColor(srgbRed: CGFloat((hex >> 16) & 0xff) / 255, green: CGFloat((hex >> 8) & 0xff) / 255,
                            blue: CGFloat(hex & 0xff) / 255, alpha: 1)
         })
+        #else
+        Color(uiColor: UIColor { t in
+            let hex = t.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: CGFloat((hex >> 16) & 0xff) / 255, green: CGFloat((hex >> 8) & 0xff) / 255,
+                           blue: CGFloat(hex & 0xff) / 255, alpha: 1)
+        })
+        #endif
     }
 
     static let zBg = dynamic(0xFAF9F6, 0x1C1B19)        // 暗色底：Stillink DS bg-inverse
@@ -110,8 +117,29 @@ enum ZType: String, CaseIterable {
     case caption2 = "body/body.caption.2"
     case eyebrow = "label/label.eyebrow"
 
-    /// （字級, 行高, 粗體, 字距）— macOS 模式
+    /// （字級, 行高, 粗體, 字距）— Mac 用 macOS 模式、iPhone／iPad 用 iOS 模式（Figma Typography 兩個 mode）
     var spec: (size: CGFloat, lineHeight: CGFloat, strong: Bool, tracking: CGFloat) {
+        #if os(iOS)
+        switch self {
+        case .titleLarge: (34, 41, true, 0)
+        case .title1: (28, 34, true, 0)
+        case .title2: (22, 28, true, 0)
+        case .title3: (20, 25, true, 0)
+        case .headline: (17, 22, true, 0)
+        case .body: (17, 22, false, 0)
+        case .bodyStrong: (17, 22, true, 0)
+        case .callout: (16, 21, false, 0)
+        case .calloutStrong: (16, 21, true, 0)
+        case .subheadline: (15, 20, false, 0)
+        case .subheadlineStrong: (15, 20, true, 0)
+        case .footnote: (13, 18, false, 0)
+        case .footnoteStrong: (13, 18, true, 0)
+        case .caption1: (12, 16, false, 0)
+        case .caption1Strong: (12, 16, true, 0)
+        case .caption2: (11, 13, false, 0)
+        case .eyebrow: (11, 13, true, 1.4)
+        }
+        #else
         switch self {
         case .titleLarge: (32, 38, true, 0)
         case .title1: (22, 28, true, 0)
@@ -131,8 +159,14 @@ enum ZType: String, CaseIterable {
         case .caption2: (9, 12, false, 0)
         case .eyebrow: (10, 12, true, 1.4)
         }
+        #endif
     }
+    /// 「粗」在 macOS 是 Medium、iOS 是 Semibold（Figma 變數 font/weight/strong 依模式不同）
+    #if os(iOS)
+    var font: Font { .system(size: spec.size, weight: spec.strong ? .semibold : .regular) }
+    #else
     var font: Font { .system(size: spec.size, weight: spec.strong ? .medium : .regular) }
+    #endif
 }
 
 extension View {

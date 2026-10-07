@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 /// 照文墨天機排的十二宮盤面（純 SwiftUI 繪製）
 struct ChartBoard: View, Equatable {
@@ -21,7 +20,7 @@ struct ChartBoard: View, Equatable {
     /// 「此刻」盤每分鐘換一次鐘錶時間，但盤面用不到它（只有換時辰才變）：不要因此整盤重畫
     /// （每分鐘整盤重畫，在部分外接螢幕上會留下綠色殘點）
     private static func samePerson(_ a: Person, _ b: Person) -> Bool {
-        guard a.id == NowChart.id, b.id == NowChart.id else { return a == b }
+        guard a.id == Person.nowID, b.id == Person.nowID else { return a == b }
         var x = a, y = b
         x.clock = nil; y.clock = nil
         return x == y
@@ -68,7 +67,7 @@ struct ChartBoard: View, Equatable {
                             .exclusively(before: TapGesture().onEnded {
                                 // 同一宮在系統雙擊間隔內點第二下＝點兩下：鎖定（不是取消選取）
                                 let now = Date()
-                                if let (j, t) = lastTap, j == i, now.timeIntervalSince(t) < NSEvent.doubleClickInterval {
+                                if let (j, t) = lastTap, j == i, now.timeIntervalSince(t) < Platform.doubleTapInterval {
                                     lastTap = nil
                                     withAnimation(Motion.snap) { cleared = false; sel = i }
                                     toggleLock(i, chart)
@@ -210,7 +209,7 @@ struct ChartBoard: View, Equatable {
     }
 
     private func toggleLock(_ i: Int, _ chart: Chart) {
-        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+        Platform.haptic(.levelChange)
         withAnimation(Motion.snap) {
             if locked != nil {
                 locked = nil
@@ -976,9 +975,9 @@ enum TextMeasure {
         let key = "\(s)|\(pt)|\(bold)"
         if let v = cache[key] { return v }
         // 跟 ChartType.font 一樣的粗細（粗體實際用 medium）
-        let font = NSFont.systemFont(ofSize: pt, weight: bold ? .medium : .regular)
+        let font = PlatformFont.systemFont(ofSize: pt, weight: bold ? .medium : .regular)
         let r = (s as NSString).boundingRect(with: CGSize(width: 10_000, height: 10_000),
-                                             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font])
+                                             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font], context: nil)
         let v = CGSize(width: ceil(r.width), height: ceil(r.height))
         cache[key] = v
         return v

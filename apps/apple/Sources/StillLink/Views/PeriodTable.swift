@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 /// 文墨天機下方的運限表：大限／流年小限／流月／流日／流時
 struct PeriodTable: View {
@@ -130,6 +132,7 @@ struct PeriodTable: View {
     }
 }
 
+#if os(macOS)
 /// 可以左右捲的一列（運限表用）
 /// - hover 到這一列時左右出現箭頭按鈕：點一下捲 6 成寬，長按持續捲
 /// - 滑鼠按住左右拖；觸控板左右滑、Shift＋滾輪也可以
@@ -276,3 +279,15 @@ struct PanRow<Content: View>: View {
         }
     }
 }
+#else
+/// iOS：可以左右滑的一列就是原生橫向 ScrollView（手指滑、慣性、回彈都交給系統）
+struct PanRow<Content: View>: View {
+    @Binding var panning: Bool
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) { content }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+    }
+}
+#endif

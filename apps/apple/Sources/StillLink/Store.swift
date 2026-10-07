@@ -33,6 +33,9 @@ struct Person: Codable, Identifiable, Hashable {
     var photos: [String]? = nil   // 附件照片檔名（存在 Application Support/StillLink/media）
     var avatar: String? = nil     // 頭貼檔名（裁切壓縮後的 256×256 JPEG）
 
+    /// 「此刻」盤（不存檔）的固定 id
+    static let nowID = UUID(uuidString: "00000000-0000-0000-0000-00000000A0A0")!
+
     var birthYear: Int { Int(solar.split(separator: "-").first ?? "0") ?? 0 }
     var chartKey: String { "\(solar)|\(hour)|\(gender.rawValue)" }
 }
