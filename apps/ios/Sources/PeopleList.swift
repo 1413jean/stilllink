@@ -7,6 +7,7 @@ struct PeopleList: View {
     @State private var adding = false
     @State private var editing: Person?
     @State private var deleting: Person?
+    @State private var routed: UUID?   // 驗證用：ZIWEI_ROUTE=姓名 直接打開那張盤
     @AppStorage("hideBirth") private var hideBirth = false
 
     var body: some View {
@@ -23,6 +24,9 @@ struct PeopleList: View {
         .listStyle(.insetGrouped)
         .navigationTitle("命盤")
         .navigationDestination(for: UUID.self) { id in
+            if let p = store.people.first(where: { $0.id == id }) { ChartView(person: p) }
+        }
+        .navigationDestination(item: $routed) { id in
             if let p = store.people.first(where: { $0.id == id }) { ChartView(person: p) }
         }
         .searchable(text: $query, prompt: "搜尋姓名、分組、命宮主星")
@@ -59,7 +63,9 @@ struct PeopleList: View {
         }
         .onAppear {
             // 驗證用：ZIWEI_NEW=1 直接打開新增命盤
-            if ProcessInfo.processInfo.environment["ZIWEI_NEW"] != nil { adding = true }
+            let env = ProcessInfo.processInfo.environment
+            if env["ZIWEI_NEW"] != nil { adding = true }
+            if let name = env["ZIWEI_ROUTE"], routed == nil { routed = store.people.first { $0.name == name }?.id }
         }
     }
 

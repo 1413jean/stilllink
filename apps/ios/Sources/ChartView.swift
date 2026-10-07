@@ -9,6 +9,10 @@ struct ChartView: View {
     @State private var model: ChartModel?
     @State private var shownLevel: Int
     @State private var editing = false
+    @State private var zoom: CGFloat = 1        // 兩指捏合縮放（1～2.5）
+    @State private var zoomBase: CGFloat = 1
+    /// 盤面實際排版用的倍率：捏合中先用 scaleEffect（順），放手後用這個倍率重排，字才清楚
+    @State private var sharpZoom: CGFloat = 1
 
     init(person: Person) {
         self.person = person
@@ -25,11 +29,11 @@ struct ChartView: View {
         GeometryReader { geo in
             // 手機直拿：盤面左右只留一點邊；iPad／橫放：寬度上限跟 Mac 一樣
             let boardW = min(geo.size.width - 8, 920)
-            ScrollView {
+            ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                 VStack(spacing: 14) {
                     Group {
                         if let model {
-                            ChartBoard(person: person, model: model, level: shownLevel, onResetLevel: { pick.level = 0 })
+                            ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, onResetLevel: { pick.level = 0 })
                                 .equatable()
                                 .transaction(value: pick) { $0.animation = nil }
                                 .transition(.opacity)
@@ -37,11 +41,15 @@ struct ChartView: View {
                             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     }
-                    .frame(width: boardW, height: boardW * 1.12)
+                    .frame(width: boardW * sharpZoom, height: boardW * 1.12 * sharpZoom)
+                    .scaleEffect(zoom / sharpZoom, anchor: .top)
+                    .frame(width: boardW * zoom, height: boardW * 1.12 * zoom, alignment: .top)
+                    .gesture(magnify)
 
                     if let model {
                         PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
                             .padding(.horizontal, 12)
+                            .frame(width: geo.size.width)
                             .transition(.opacity.combined(with: .offset(y: 8)))
                     }
                 }
@@ -54,6 +62,12 @@ struct ChartView: View {
         .navigationTitle(isNow ? "此刻" : person.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if zoom > 1 {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { setZoom(1) } label: { Image(systemName: "arrow.down.right.and.arrow.up.left") }
+                        .accessibilityLabel("還原大小")
+                }
+            }
             if pick.level > 0 {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("本命") { pick.level = 0 }
@@ -83,6 +97,19 @@ struct ChartView: View {
             }
             Engine.shared.prefetch(person, around: target)
         }
+    }
+
+    private var magnify: some Gesture {
+        MagnifyGesture()
+            .onChanged { v in zoom = min(2.5, max(1, zoomBase * v.magnification)) }
+            .onEnded { _ in setZoom(zoom < 1.05 ? 1 : zoom) }
+    }
+
+    private func setZoom(_ z: CGFloat) {
+        withAnimation(Motion.snap) { zoom = z }
+        zoomBase = z
+        var t = Transaction(); t.disablesAnimations = true
+        withTransaction(t) { sharpZoom = z }
     }
 
     private struct LoadKey: Equatable { let chart: String; let pick: Pick }

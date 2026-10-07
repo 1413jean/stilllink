@@ -42,6 +42,14 @@ apps/apple/
 DESIGN.md                  設計規範
 ```
 
+### iOS 版（`apps/ios`，分支 `ios`）
+
+- 外框用系統元件（TabView 此刻／命盤／設定、List、Form、searchable、swipeActions），**盤面 `ChartBoard`、運限表 `PeriodTable`、引擎、`Store`、`Theme` 直接引用 `apps/apple` 同一份檔案**。共用清單在 `apps/ios/build.sh` 和 `project.yml`，兩邊要一起改。
+- 共用檔案不能直接用 AppKit：Mac／iOS 不同的地方收在 `Platform.swift`，或用 `#if os(macOS)`。改完共用檔案，Mac（`./build.sh beta`）和 iOS（`apps/ios/build.sh check`）都要編過。
+- `ZType` 在 iOS 用 Figma Typography 的 iOS 模式字級（粗＝Semibold）。
+- 建置：`apps/ios/build.sh`（`check` 只型別檢查、`run` 裝進模擬器）。用 swiftc 直接編，不需要 Xcode 的 iOS 元件；要上實機才需要 `build.sh xcode`（要先在 Xcode 裝 iOS 平台元件、登入開發者帳號）。
+- 驗證：`SIMCTL_CHILD_ZIWEI_DATA_DIR=<暫存> xcrun simctl launch "iPhone 17 Pro" app.stilllink.ios.beta`，再 `xcrun simctl io … screenshot`。`ZIWEI_TAB=people|settings`、`ZIWEI_ROUTE=姓名`、`ZIWEI_NEW=1`、`ZIWEI_LEVEL` 可用。App 啟動約 5–10 秒（載入排盤引擎），截圖要等。
+
 ## 3. 分支與版本
 
 | 分支 | 用途 |
