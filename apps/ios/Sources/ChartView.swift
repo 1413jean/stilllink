@@ -149,7 +149,7 @@ struct ChartView: View {
     private struct LoadKey: Equatable { let chart: String; let pick: Pick }
 }
 
-/// 此刻：用現在的時間排盤（不存檔），每分鐘更新；性別可切換
+/// 此刻：用現在的時間排盤（不存檔），每分鐘更新（性別不用選，固定用預設）
 struct NowChartView: View {
     @AppStorage("nowGender") private var gender: Gender = .male
     @State private var now = Date()
@@ -161,15 +161,6 @@ struct NowChartView: View {
                        clock: String(format: "%d-%d-%d %02d:%02d", c.year!, c.month!, c.day!, c.hour!, c.minute!))
         ChartView(person: p)
             .id(p.chartKey)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Picker("性別", selection: $gender) {
-                        ForEach(Gender.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .fixedSize()
-                }
-            }
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
     }
 }
