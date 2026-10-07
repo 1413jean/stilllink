@@ -1,19 +1,12 @@
 import SwiftUI
 
-/// 設定：系統 Form。項目和文字跟 Mac 版設定窗一致，只放手機上有意義的
-struct SettingsView: View {
+/// 排盤與盤面：系統 Form。項目和文字跟 Mac 版設定窗一致，只放手機上有意義的
+struct ChartSettingsView: View {
     @EnvironmentObject private var store: Store
-    @AppStorage("appearance") private var appearance: Appearance = .system
 
     var body: some View {
         let s = $store.settings
         Form {
-            Section("外觀") {
-                Picker("主題", selection: $appearance) {
-                    ForEach(Appearance.allCases, id: \.self) { Label($0.label, systemImage: $0.icon).tag($0) }
-                }
-            }
-
             Section {
                 Picker("安星派別", selection: s.algorithm) {
                     Text("斗數全書").tag(ZSettings.Algorithm.standard)
@@ -106,18 +99,9 @@ struct SettingsView: View {
                 }
             }
 
-            Section("關於") {
-                LabeledContent("版本", value: AppInfo.displayVersion)
-                LabeledContent("製作", value: "Jean")
-                Link(destination: URL(string: "mailto:support@jeanui.com")!) {
-                    LabeledContent("問題與建議", value: "support@jeanui.com")
-                }
-                Link(destination: URL(string: "https://github.com/SylarLong/iztro")!) {
-                    LabeledContent("排盤計算", value: "iztro")
-                }
-            }
         }
-        .navigationTitle("設定")
+        .navigationTitle("排盤與盤面")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func stemPicker(_ title: String, _ options: [String: [String]], _ sel: Binding<String>) -> some View {

@@ -3,6 +3,8 @@ import SwiftUI
 /// 新增／編輯命盤：系統 Form。換算邏輯跟 Mac 版 NewChartSheet 一樣（照鐘錶時間排盤，有出生地另算真太陽時）
 struct PersonForm: View {
     var editing: Person? = nil
+    /// 填自己的命盤（個人檔案）：分組固定「自己」，存完設成我的命盤
+    var asSelf = false
     /// 新增完成（例：側欄新增後直接在首頁打開）
     var onCreated: ((Person) -> Void)? = nil
     @EnvironmentObject private var store: Store
@@ -42,14 +44,14 @@ struct PersonForm: View {
         NavigationStack {
             Form {
                 Section("基本資料") {
-                    TextField("姓名", text: $name, prompt: Text("客人的名字或代稱"))
+                    TextField("姓名", text: $name, prompt: Text(asSelf ? "你的名字" : "客人的名字或代稱"))
                         .focused($nameFocused)
                         .textContentType(.name)
                     Picker("性別", selection: $gender) {
                         ForEach(Gender.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    if editing?.id != store.selfID {
+                    if !asSelf && editing?.id != store.selfID {
                         Picker("分組", selection: $group) {
                             ForEach(groupOptions, id: \.self) { Text($0).tag($0) }
                         }
@@ -111,7 +113,7 @@ struct PersonForm: View {
                     }
                 }
             }
-            .navigationTitle(editing == nil ? "新增命盤" : "編輯命主資料")
+            .navigationTitle(asSelf ? "我的命盤" : editing == nil ? "新增命盤" : "編輯命主資料")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
@@ -136,6 +138,7 @@ struct PersonForm: View {
             } message: { Text("刪除後無法復原") }
             .onAppear {
                 load()
+                if asSelf && name.isEmpty { name = store.userName == "我" ? "" : store.userName }
                 if editing == nil { nameFocused = true }
             }
         }
@@ -216,9 +219,10 @@ struct PersonForm: View {
             store.update(p)
             if p.id == store.selfID { store.userName = p.name }
         } else {
-            let p = Person(name: n, gender: gender, solar: r.solar, hour: r.hour, group: group,
+            let p = Person(name: n, gender: gender, solar: r.solar, hour: r.hour, group: asSelf ? "自己" : group,
                            clock: r.clock, trueSolar: r.trueSolar, place: place)
             store.add(p)
+            if asSelf { store.selfIDString = p.id.uuidString; store.userName = p.name }
             onCreated?(p)
         }
         dismiss()
