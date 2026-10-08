@@ -94,6 +94,12 @@ struct ChartView: View {
                             .frame(width: geo.size.width)
                             .transition(.opacity.combined(with: .offset(y: 8)))
                     }
+                    // 運限表底下：這位命主的備註、照片（暫時命盤、此刻盤沒有）
+                    if model != nil && !temporary && !isNow && store.people.contains(where: { $0.id == person.id }) {
+                        ChartRecords(personID: person.id)
+                            .padding(.horizontal, phone ? 16 : 4)
+                            .padding(.top, 14)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 16)

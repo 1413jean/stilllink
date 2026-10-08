@@ -60,12 +60,19 @@ struct RulesSettingsView: View {
 /// 盤面顯示：看盤時會想隨手開關的，命盤右上角的設定直接打開這一頁；「我的」也進得來
 struct DisplaySettingsView: View {
     @EnvironmentObject private var store: Store
+    @AppStorage("hideBirth") private var hideBirth = false
     /// 從命盤打開時，最下面放一個「排盤規則」入口
     var showRulesLink = false
 
     var body: some View {
         let s = $store.settings
         ZForm {
+            Section {
+                Toggle("隱藏生辰", isOn: $hideBirth).zSwitch()
+            } footer: {
+                Text("中宮的姓名、生日、時間改成遮起來，給別人看盤或截圖時用")
+            }
+
             Section("盤面") {
                 Toggle("顯示雜曜", isOn: s.showAdj).zSwitch()
                 Toggle("顯示神煞", isOn: s.showShensha).zSwitch()
