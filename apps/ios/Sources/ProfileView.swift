@@ -99,7 +99,6 @@ struct SettingsView: View {
         }
         .background(Color.zBg)
         .zEdgeFades()
-        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $editingSelf) {
             if let p = store.me { PersonForm(editing: p) } else { PersonForm(asSelf: true) }
         }

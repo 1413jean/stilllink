@@ -5,14 +5,12 @@ import SwiftUI
 @main
 struct StillLinkApp: App {
     @StateObject private var store = Store()
-    @StateObject private var journal = JournalStore()
     @AppStorage("appearance") private var appearance: Appearance = .system
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(store)
-                .environmentObject(journal)
                 .environment(\.zSettings, store.settings)
                 .tint(Color.zText)   // 按鈕、選單一律用主文字色；分頁列、開關用 zAccent
                 .preferredColorScheme(appearance.scheme)
@@ -20,11 +18,10 @@ struct StillLinkApp: App {
     }
 }
 
-/// 外層：左邊側欄（照 Claude App：整個畫面往右推開）＋四個分頁（照 Figma：首頁、命盤、日記、我的）
+/// 外層：左邊側欄（照 Claude App：整個畫面往右推開）＋命盤首頁
 struct RootView: View {
-    enum Tab: String { case home, journal, settings }
     @EnvironmentObject private var store: Store
-    @AppStorage("tab") private var tab: Tab = .home
+    @State private var showProfile = false   // 我的（個人檔案、設定）：從側欄左下角頭像打開
     /// 首頁顯示什麼：空字串＝我的命盤、"all"＝所有命盤、UUID＝那張盤
     @AppStorage("homeChart") private var homeRaw = ""
     @AppStorage("recentCharts") private var recentRaw = ""
@@ -46,11 +43,11 @@ struct RootView: View {
                 let x = drawer ? max(0, w + min(0, drag)) : max(0, min(w, drag))
                 ZStack(alignment: .leading) {
                     SidebarView(current: homeID, showingAll: homeRaw == "all", onPick: show, onAllCharts: {
-                        homeRaw = "all"; homePath = NavigationPath(); tab = .home; closeDrawer()
+                        homeRaw = "all"; homePath = NavigationPath(); closeDrawer()
                     }, onNew: {
                         closeDrawer(); adding = true
                     }, onProfile: {
-                        tab = .settings; closeDrawer()
+                        closeDrawer(); showProfile = true
                     })
                     // 側欄自己避開狀態列和 Home 橫條
                     .padding(.top, inset.top)
@@ -84,7 +81,7 @@ struct RootView: View {
                     }
                     // 首頁：從左緣往右拉打開側欄（避開上方導覽列的按鈕）
                     .overlay(alignment: .leading) {
-                        if !drawer && tab == .home {
+                        if !drawer {
                             Color.clear.frame(width: 14).contentShape(Rectangle())   // 窄一點：不要蓋到盤面左邊那一欄
                                 .padding(.top, inset.top + 80)
                                 .gesture(dragGesture(w))
@@ -102,9 +99,9 @@ struct RootView: View {
         .onAppear {
             let env = ProcessInfo.processInfo.environment
             // 驗證用：ZIWEI_TAB=people 直接開到命盤分頁；ZIWEI_DRAWER=1 打開側欄
-            if env["ZIWEI_TAB"] == "people" { homeRaw = "all"; tab = .home }
+            if env["ZIWEI_TAB"] == "people" { homeRaw = "all" }
             if env["ZIWEI_TAB"] == "home" { homeRaw = "" }
-            if let t = env["ZIWEI_TAB"].flatMap(Tab.init) { tab = t }
+            if env["ZIWEI_TAB"] == "settings" { showProfile = true }
             if env["ZIWEI_DRAWER"] != nil { drawer = true }
             // 驗證用：ZIWEI_DRAWER_CLOSE=秒 幾秒後自動關上（錄關閉動畫）
             if let t = env["ZIWEI_DRAWER_CLOSE"].flatMap(Double.init) {
@@ -113,36 +110,18 @@ struct RootView: View {
         }
     }
 
-    /// 系統分頁列（iOS 26 Liquid Glass；照 Figma Tab Bar 74:206：圖示＋文字）
+    /// 只有一個首頁（命盤），沒有分頁列；我的從側欄頭像進
     private var tabs: some View {
-        TabView(selection: Binding(get: { tab }, set: { t in
-            if t == .home && tab == .home { reselectHome() }
-            tab = t
-        })) {
-            NavigationStack(path: $homePath) {
-                HomeView(mode: homeRaw, openDrawer: openDrawer)
+        NavigationStack(path: $homePath) {
+            HomeView(mode: homeRaw, openDrawer: openDrawer)
+        }
+        .tint(Color.zText)
+        .sheet(isPresented: $showProfile) {
+            NavigationStack {
+                SettingsView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showProfile = false } } }
             }
             .tint(Color.zText)
-            .tabItem { Label("首頁", systemImage: "sun.horizon") }
-            .tag(Tab.home)
-            NavigationStack { JournalView() }
-                .tint(Color.zText)
-                .tabItem { Label("日記", systemImage: "book.closed") }
-                .tag(Tab.journal)
-            NavigationStack { SettingsView() }
-                .tint(Color.zText)
-                .tabItem { Label("我的", systemImage: "person.crop.circle") }
-                .tag(Tab.settings)
-        }
-        .tint(Color.zAccent)   // 分頁列選到的那格用主色；各分頁內容在上面改回主文字色
-    }
-
-    /// 首頁分頁再點一次：有點進去的頁面就退回最上層，已經在最上層就回到我的命盤
-    private func reselectHome() {
-        if !homePath.isEmpty {
-            homePath = NavigationPath()
-        } else if !homeRaw.isEmpty {
-            withAnimation(Motion.base) { homeRaw = "" }
         }
     }
 
@@ -155,7 +134,6 @@ struct RootView: View {
             list.insert(id.uuidString, at: 0)
             recentRaw = list.prefix(20).joined(separator: ",")
         }
-        tab = .home
         closeDrawer()
     }
 
