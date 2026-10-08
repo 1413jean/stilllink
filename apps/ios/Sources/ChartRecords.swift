@@ -162,31 +162,60 @@ struct ChartRecords: View {
     struct PhotoItem: Identifiable { let name: String; var id: String { name } }
 }
 
-/// 看大圖：黑底、兩指縮放、點一下或往下滑關掉
+/// 看大圖：黑底；兩指捏合從手指位置放大、放大後拖曳移動、點兩下放大／還原；沒放大時往下滑關掉
 private struct PhotoViewer: View {
     let name: String
     @Environment(\.dismiss) private var dismiss
     @State private var zoom: CGFloat = 1
     @State private var base: CGFloat = 1
-    @State private var drag: CGSize = .zero
+    @State private var anchor: UnitPoint = .center
+    @State private var pan: CGSize = .zero
+    @State private var panBase: CGSize = .zero
+    @State private var drag: CGSize = .zero   // 沒放大時往下拖（關掉用）
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-            if let img = UIImage(contentsOfFile: ChartRecords.url(name).path) {
-                Image(uiImage: img).resizable().scaledToFit()
-                    .scaleEffect(zoom)
-                    .offset(drag)
-                    .gesture(MagnifyGesture()
-                        .onChanged { zoom = max(1, min(4, base * $0.magnification)) }
-                        .onEnded { _ in base = zoom; if zoom < 1.05 { withAnimation(Motion.snap) { zoom = 1; base = 1 } } })
-                    .simultaneousGesture(DragGesture()
-                        .onChanged { drag = $0.translation }
-                        .onEnded { v in
-                            if zoom == 1 && v.translation.height > 120 { dismiss() } else { withAnimation(Motion.snap) { drag = .zero } }
-                        })
+        GeometryReader { g in
+            ZStack {
+                Color.black.ignoresSafeArea()
+                if let img = UIImage(contentsOfFile: ChartRecords.url(name).path) {
+                    Image(uiImage: img).resizable().scaledToFit()
+                        .scaleEffect(zoom, anchor: anchor)
+                        .offset(x: pan.width + drag.width, y: pan.height + drag.height)
+                        .frame(width: g.size.width, height: g.size.height)
+                        .contentShape(Rectangle())
+                        .gesture(MagnifyGesture()
+                            .onChanged { v in
+                                if base == 1 { anchor = v.startAnchor }   // 從兩指中間那一點放大
+                                zoom = max(1, min(5, base * v.magnification))
+                            }
+                            .onEnded { _ in
+                                base = zoom
+                                if zoom < 1.05 { reset() }
+                            })
+                        .simultaneousGesture(DragGesture()
+                            .onChanged { v in
+                                if zoom > 1 {
+                                    pan = clamp(CGSize(width: panBase.width + v.translation.width, height: panBase.height + v.translation.height), g.size)
+                                } else {
+                                    drag = v.translation
+                                }
+                            }
+                            .onEnded { v in
+                                if zoom > 1 { panBase = pan; return }
+                                if v.translation.height > 120 { dismiss() } else { withAnimation(Motion.snap) { drag = .zero } }
+                            })
+                        .onTapGesture(count: 2, coordinateSpace: .local) { p in
+                            withAnimation(Motion.snap) {
+                                if zoom > 1 { reset() } else {
+                                    anchor = UnitPoint(x: p.x / g.size.width, y: p.y / g.size.height)
+                                    zoom = 2.5; base = 2.5
+                                }
+                            }
+                        }
+                }
             }
         }
+        .ignoresSafeArea()
         .overlay(alignment: .topTrailing) {
             Button { dismiss() } label: {
                 Image(systemName: "xmark").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
@@ -195,5 +224,16 @@ private struct PhotoViewer: View {
             .padding(16)
             .accessibilityLabel("關閉")
         }
+    }
+
+    private func reset() {
+        withAnimation(Motion.snap) { zoom = 1; base = 1; pan = .zero; panBase = .zero; drag = .zero; anchor = .center }
+    }
+
+    /// 放大後能移動的範圍（以錨點算，不拖出照片外）
+    private func clamp(_ p: CGSize, _ size: CGSize) -> CGSize {
+        let minX = -(1 - anchor.x) * size.width * (zoom - 1), maxX = anchor.x * size.width * (zoom - 1)
+        let minY = -(1 - anchor.y) * size.height * (zoom - 1), maxY = anchor.y * size.height * (zoom - 1)
+        return CGSize(width: min(maxX, max(minX, p.width)), height: min(maxY, max(minY, p.height)))
     }
 }

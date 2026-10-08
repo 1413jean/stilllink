@@ -108,6 +108,11 @@ struct ChartView: View {
             }
             // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看捲上去之後頂端的樣子）
             .defaultScrollAnchor(ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] != nil ? .bottom : .top)
+            // 打備註時：捲動或點盤面其他地方就收鍵盤
+            .scrollDismissesKeyboard(.interactively)
+            .simultaneousGesture(TapGesture().onEnded {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            })
         }
         .background(Color.zBg)
         .zEdgeFades()
