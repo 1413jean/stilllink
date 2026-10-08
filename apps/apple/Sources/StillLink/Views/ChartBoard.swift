@@ -1181,8 +1181,8 @@ struct MutagenStrip: View {
             var x: CGFloat
             if starWidth > 0 {
                 x = CGFloat(i) * starWidth
-                // 跟前一顆的方塊疊到時，最多蓋掉它約 4 成：字還露得出來，位置也還在自己那顆星附近
-                if let prev { x = max(x, prev + size * 0.62) }
+                // 跟前一顆的方塊疊到時，最多蓋掉它約一半：字還露得出來，位置也還在自己那顆星附近
+                if let prev { x = max(x, prev + size * 0.52) }
                 x = min(x, max(0, maxWidth - size))
                 prev = x
             } else {
