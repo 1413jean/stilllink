@@ -48,6 +48,7 @@ DESIGN.md                  設計規範
 - 共用檔案不能直接用 AppKit：Mac／iOS 不同的地方收在 `Platform.swift`，或用 `#if os(macOS)`。改完共用檔案，Mac（`./build.sh beta`）和 iOS（`apps/ios/build.sh check`）都要編過。
 - `ZType` 在 iOS 用 Figma Typography 的 iOS 模式字級（粗＝Semibold）。
 - 建置：`apps/ios/build.sh`（`check` 只型別檢查、`run` 裝進模擬器）。用 swiftc 直接編，不需要 Xcode 的 iOS 元件；要上實機才需要 `build.sh xcode`（要先在 Xcode 裝 iOS 平台元件、登入開發者帳號）。
+- **裝新版一律用 `apps/ios/deploy.sh`**（預設裝 iPhone；`sim` 模擬器、`both` 兩個都裝），只印一行結果。小改動不用每次截圖驗證，Jean 會在手機上看。
 - 裝到 Jean 的 iPhone：`cd apps/ios && xcodegen generate && xcodebuild -project StillLink.xcodeproj -scheme StillLink -destination 'id=00008150-001971140A80401C' -derivedDataPath build/dd -allowProvisioningUpdates build`，再 `xcrun devicectl device install app --device 00008150-001971140A80401C build/dd/Build/Products/Debug-iphoneos/StillLink.app`。Team 是 Jean 的 Personal Team（`project.yml` 的 `DEVELOPMENT_TEAM`），免費帳號 **7 天後失效要重裝**。Xcode 27 的模擬器 App 叫 DeviceHub（`Xcode.app/Contents/Applications/DeviceHub.app`）。
 - 驗證：`SIMCTL_CHILD_ZIWEI_DATA_DIR=<暫存> xcrun simctl launch "iPhone 17 Pro" app.stilllink.ios.beta`，再 `xcrun simctl io … screenshot`。`ZIWEI_TAB=people|settings`、`ZIWEI_ROUTE=姓名`、`ZIWEI_NEW=1`、`ZIWEI_LEVEL` 可用。App 啟動約 5–10 秒（載入排盤引擎），截圖要等。
 
