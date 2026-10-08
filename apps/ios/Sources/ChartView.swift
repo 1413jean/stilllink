@@ -244,19 +244,3 @@ struct ChartView: View {
 
     private struct LoadKey: Equatable { let chart: String; let pick: Pick }
 }
-
-/// 此刻：用現在的時間排盤（不存檔），每分鐘更新（性別不用選，固定用預設）
-struct NowChartView: View {
-    @AppStorage("nowGender") private var gender: Gender = .male
-    @State private var now = Date()
-
-    var body: some View {
-        let c = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: now)
-        let p = Person(id: Person.nowID, name: "此刻", gender: gender, solar: "\(c.year!)-\(c.month!)-\(c.day!)",
-                       hour: SolarTime.shichen(c.hour!), group: "此刻",
-                       clock: String(format: "%d-%d-%d %02d:%02d", c.year!, c.month!, c.day!, c.hour!, c.minute!))
-        ChartView(person: p)
-            .id(p.chartKey)
-            .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
-    }
-}

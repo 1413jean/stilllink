@@ -21,7 +21,6 @@ targets:
     sources:
       - path: Sources
       - path: ../apple/Sources/StillLink
-        group: Shared
         includes:
           - "Engine/*.swift"
           - "AppInfo.swift"

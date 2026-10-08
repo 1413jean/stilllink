@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import ImageIO
 
 /// 命盤頁最下面（運限表底下）：算命的人記錄這位命主——備註＋照片。
 /// 資料存在 Person.notes／Person.photos，跟 Mac 右側的「備註」「照片與附件」是同一份
@@ -121,7 +122,7 @@ struct ChartRecords: View {
     }
 
     @ViewBuilder private func thumb(_ name: String) -> some View {
-        if let img = UIImage(contentsOfFile: Self.url(name).path) {
+        if let img = Thumbnails.image(Self.url(name), maxPixel: 360) {
             Image(uiImage: img).resizable().scaledToFill()
         } else {
             Color.zHover
@@ -235,5 +236,24 @@ private struct PhotoViewer: View {
         let minX = -(1 - anchor.x) * size.width * (zoom - 1), maxX = anchor.x * size.width * (zoom - 1)
         let minY = -(1 - anchor.y) * size.height * (zoom - 1), maxY = anchor.y * size.height * (zoom - 1)
         return CGSize(width: min(maxX, max(minX, p.width)), height: min(maxY, max(minY, p.height)))
+    }
+}
+
+/// 縮圖：用 ImageIO 直接讀成小圖（不先解開整張 2000px 原圖），讀過的放快取
+enum Thumbnails {
+    private static let cache = NSCache<NSString, UIImage>()
+
+    static func image(_ url: URL, maxPixel: Int) -> UIImage? {
+        let key = "\(url.lastPathComponent)|\(maxPixel)" as NSString
+        if let hit = cache.object(forKey: key) { return hit }
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+              ] as CFDictionary) else { return nil }
+        let img = UIImage(cgImage: cg)
+        cache.setObject(img, forKey: key)
+        return img
     }
 }

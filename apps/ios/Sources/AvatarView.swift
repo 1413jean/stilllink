@@ -8,7 +8,8 @@ struct AvatarView: View {
 
     var body: some View {
         Group {
-            if let name, let img = UIImage(contentsOfFile: Store.dataDir.appendingPathComponent("media").appendingPathComponent(name).path) {
+            // 列表、側欄每一列都有頭貼：用縮圖快取，不要每次重畫都讀檔解碼
+            if let name, let img = Thumbnails.image(Store.dataDir.appendingPathComponent("media").appendingPathComponent(name), maxPixel: 256) {
                 Image(uiImage: img).resizable().scaledToFill()
             } else {
                 Image(systemName: "person.fill")
