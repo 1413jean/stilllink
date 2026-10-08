@@ -83,8 +83,8 @@ struct ClampOverlay: View {
 /// 從被夾的宮位那一側出發，兩道光像彗星一樣沿外框往兩邊跑（前端亮、尾巴淡、光往內暈一點），在對面會合後淡掉，
 /// 最後只留一條淡淡的靜止框線。只在開頭約 1 秒重畫，跑完就停（不一直動、不耗電）；「減少動態效果」時直接顯示框線
 struct ClampFrameOverlay: View {
-    /// 多邊形每個轉角用切線圓弧修圓（邊太短時半徑自動縮小）
-    static func rounded(_ pts: [CGPoint], radius: CGFloat) -> Path {
+    /// 多邊形轉角用切線圓弧修圓，每個角的半徑由 radius(角的位置) 決定（0＝直角；邊太短時自動縮小）
+    static func rounded(_ pts: [CGPoint], radius: (CGPoint) -> CGFloat) -> Path {
         var path = Path()
         guard pts.count > 2 else { path.addLines(pts); path.closeSubpath(); return path }
         let n = pts.count
@@ -93,7 +93,8 @@ struct ClampFrameOverlay: View {
         for i in 0..<n {
             let a = pts[i], b = pts[(i + 1) % n], prev = pts[(i - 1 + n) % n]
             let shortest = min(hypot(a.x - prev.x, a.y - prev.y), hypot(b.x - a.x, b.y - a.y))
-            path.addArc(tangent1End: a, tangent2End: b, radius: min(radius, shortest / 2))
+            let r = min(radius(a), shortest / 2)
+            if r > 0 { path.addArc(tangent1End: a, tangent2End: b, radius: r) } else { path.addLine(to: a) }
         }
         path.closeSubpath()
         return path
@@ -124,7 +125,11 @@ struct ClampFrameOverlay: View {
                 let t = freeze ?? (done || Motion.reduce ? Self.duration : tl.date.timeIntervalSince(start))
                 let p = min(1, max(0, t / Self.duration))
                 // 靜止的淡框：光跑過去之後才慢慢浮出來
-                let frame = Self.rounded(poly, radius: 6)   // 轉角修圓（跟宮格的圓角一致）
+                // 只有剛好落在宮格外角的轉角修圓（跟 iPhone 宮格外框同半徑），其他轉角維持直角
+                let outer = [CGPoint(x: m, y: m), CGPoint(x: m + cw * 4, y: m), CGPoint(x: m, y: m + ch * 4), CGPoint(x: m + cw * 4, y: m + ch * 4)]
+                let frame = Self.rounded(poly) { pt in
+                    StarLayout.compact && outer.contains { abs($0.x - pt.x) < 0.5 && abs($0.y - pt.y) < 0.5 } ? 12 : 0
+                }
                 // 光跑完留下的框要看得清楚（2026-10 Jean：結束後的線明顯一點）
                 ctx.stroke(frame, with: .color(color.opacity(0.4 * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1.3, lineJoin: .round))
                 guard p < 1 else { return }
