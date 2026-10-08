@@ -9,7 +9,6 @@ struct QuickMenu: View {
     var onTemp: (Person, Int) -> Void
     var onHepan: () -> Void = {}
     @State private var askingNumber = false
-    @State private var number = ""
 
     var body: some View {
         Menu {
@@ -27,7 +26,7 @@ struct QuickMenu: View {
                 } label: {
                     Label("紫占排盤", systemImage: "sparkles")
                 }
-                Button("報數起卦", systemImage: "number") { number = ""; askingNumber = true }
+                Button("報數起卦", systemImage: "number") { askingNumber = true }
                 Button("合盤…", systemImage: "person.2.circle", action: onHepan)
             }
             Section {
@@ -40,15 +39,11 @@ struct QuickMenu: View {
             Image(systemName: "sparkles").frame(width: 22, height: 22)
         }
         .accessibilityLabel("快捷排盤")
-        .alert("報數起卦", isPresented: $askingNumber) {
-            TextField("例如：3721", text: $number).keyboardType(.numberPad)
-            Button("取消", role: .cancel) {}
-            Button("起卦") {
-                guard let n = Int(number.filter(\.isNumber).prefix(4)) else { return }
-                onTemp(TempChart.baoshu(n), ZSettings.stored().openLevel)
-            }
-        } message: {
-            Text("心裡想著問題，隨口報一個 0–9999 的數字")
+        // 報數：底部小卡（alert 裡的輸入框在 iOS 26 會跑版）
+        .sheet(isPresented: $askingNumber) {
+            BaoshuSheet { onTemp(TempChart.baoshu($0), ZSettings.stored().openLevel) }
+                .presentationDetents([.height(250)])
+                .presentationBackground(Color.zBg)
         }
     }
 
@@ -228,5 +223,47 @@ struct HepanSheet: View {
     private var year: Int? {
         guard let y = Int(yearText.trimmingCharacters(in: .whitespaces)), (1...9999).contains(y) else { return nil }
         return y
+    }
+}
+
+/// 報數起卦：輸入 0–9999，鍵盤自動打開
+struct BaoshuSheet: View {
+    var onSubmit: (Int) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    @FocusState private var focused: Bool
+
+    private var value: Int? { Int(text.filter(\.isNumber).prefix(4)) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("報數起卦").zText(.title3).foregroundStyle(Color.zText)
+            Text("心裡想著問題，隨口報一個 0–9999 的數字").zText(.callout).foregroundStyle(Color.zText2)
+            TextField("例如：3721", text: $text)
+                .keyboardType(.numberPad)
+                .focused($focused)
+                .zText(.title3)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity).frame(height: 52)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.zHover))
+                .onChange(of: text) { _, v in let d = String(v.filter(\.isNumber).prefix(4)); if d != v { text = d } }
+            HStack(spacing: 10) {
+                Button { dismiss() } label: {
+                    Text("取消").zText(.bodyStrong).foregroundStyle(Color.zText)
+                        .frame(maxWidth: .infinity).frame(height: 48)
+                        .background(Capsule().fill(Color.zHover))
+                }
+                Button { if let v = value { onSubmit(v); dismiss() } } label: {
+                    Text("起卦").zText(.bodyStrong).foregroundStyle(Color.zBg)
+                        .frame(maxWidth: .infinity).frame(height: 48)
+                        .background(Capsule().fill(Color.zText))
+                }
+                .disabled(value == nil).opacity(value == nil ? 0.4 : 1)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 20).padding(.top, 24)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .onAppear { focused = true }
     }
 }
