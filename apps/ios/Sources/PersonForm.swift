@@ -52,10 +52,12 @@ struct PersonForm: View {
                     TextField("姓名", text: $name, prompt: Text(asSelf ? "你的名字" : "客人的名字或代稱"))
                         .focused($nameFocused)
                         .textContentType(.name)
-                    Picker("性別", selection: $gender) {
-                        ForEach(Gender.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    LabeledContent("性別") {
+                        Picker("性別", selection: $gender) {
+                            ForEach(Gender.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        }
+                        .pickerStyle(.segmented).fixedSize()   // 分段只要內容寬，不撐滿整列
                     }
-                    .pickerStyle(.segmented)
                     if !asSelf && editing?.id != store.selfID {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("分組")
@@ -68,11 +70,13 @@ struct PersonForm: View {
                 }
 
                 Section {
-                    Picker("曆法", selection: $lunar) {
-                        Text("國曆").tag(false)
-                        Text("農曆").tag(true)
+                    LabeledContent("曆法") {
+                        Picker("曆法", selection: $lunar) {
+                            Text("國曆").tag(false)
+                            Text("農曆").tag(true)
+                        }
+                        .pickerStyle(.segmented).fixedSize()
                     }
-                    .pickerStyle(.segmented)
                     if lunar {
                         Picker("年", selection: $ly) {
                             ForEach((1900...2100).reversed(), id: \.self) { Text(String($0) + "年（\(ZW.yearGanzhi($0))）").tag($0) }

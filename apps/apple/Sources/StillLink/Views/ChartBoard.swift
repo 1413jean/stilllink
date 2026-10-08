@@ -63,6 +63,7 @@ struct ChartBoard: View, Equatable {
                                isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
                                taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart, names: scopeNames) },
                                flyStars: cleared ? [:] : Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
+                        .padding(StarLayout.cornerInset(r: r, c: c, rounded: !outerCard))   // 圓角那一角往內收，干支不被切
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipShape(StarLayout.cornerShape(r: r, c: c, rounded: !outerCard))
                         .contentShape(Rectangle())
@@ -1129,6 +1130,13 @@ enum StarLayout {
         return UnevenRoundedRectangle(topLeadingRadius: r == 0 && c == 0 ? k : 0, bottomLeadingRadius: r == 3 && c == 0 ? k : 0,
                                       bottomTrailingRadius: r == 3 && c == 3 ? k : 0, topTrailingRadius: r == 0 && c == 3 ? k : 0,
                                       style: .continuous)
+    }
+    /// 圓角宮位：靠圓角的兩條邊各往內收一點，角落的字（干支、方位、大限歲數）才不會被圓角切到
+    static func cornerInset(r: Int, c: Int, rounded: Bool) -> EdgeInsets {
+        guard rounded else { return EdgeInsets() }
+        let k: CGFloat = 4
+        return EdgeInsets(top: r == 0 && (c == 0 || c == 3) ? k : 0, leading: c == 0 && (r == 0 || r == 3) ? k : 0,
+                          bottom: r == 3 && (c == 0 || c == 3) ? k : 0, trailing: c == 3 && (r == 0 || r == 3) ? k : 0)
     }
     /// iPhone 四化方塊的固定大小（相對宮格基準字級，不跟著星名縮）
     static let boxBase: CGFloat = 1.15
