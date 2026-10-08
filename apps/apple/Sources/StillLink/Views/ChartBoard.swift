@@ -596,8 +596,10 @@ extension PalaceCell {
     /// iPhone：這一宮每顆星的四化方塊（照星曜順序，一層一格），給 MutagenStrip 畫
     func mutagenColumns(_ p: Palace, _ horo: Horoscope, minor: Bool) -> [[(String, Color)?]] {
         let showMinor = minor && settings.showMinorMutagen
+        // 每顆星最多 4 格：開小限、合盤時，運限層少顯示幾層（留最近的），不然一路疊到底看不懂
+        let keep = max(1, min(layers.count, 4 - (showMinor ? 1 : 0) - (hepan != nil ? 1 : 0)))
         return p.stars.map { s in
-            MutagenStrip.boxes(slots: mutagenSlots(s, horo),
+            MutagenStrip.boxes(slots: Array(mutagenSlots(s, horo).suffix(keep)),
                                minor: showMinor ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                                hepan: hepan?.mutagen(star: s.name))
         }
@@ -1214,7 +1216,7 @@ struct MutagenStrip: View {
             var x: CGFloat
             if starWidth > 0 {
                 x = CGFloat(i) * starWidth
-                if let prev { x = max(x, prev + size * 0.52) }
+                if let prev { x = max(x, prev + size * 0.4) }   // 疊多一點，方塊靠近自己的星
                 x = min(x, max(0, maxWidth - size))
                 prev = x
             } else {
