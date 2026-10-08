@@ -27,6 +27,9 @@ struct SidebarView: View {
                         .padding(.bottom, 20)
 
                     row("我的命盤", icon: "person.crop.circle", selected: current == nil && !showingAll) { onPick(nil) }
+                        .contextMenu {
+                            if let me = store.me { Button("編輯命主資料", systemImage: "pencil") { editing = me } }
+                        }
                     row("所有命盤", icon: "person.2", selected: showingAll, action: onAllCharts)
 
                     let pinned = store.people.filter(\.pinned)

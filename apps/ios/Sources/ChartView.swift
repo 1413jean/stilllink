@@ -149,21 +149,7 @@ struct ChartView: View {
                     .disabled(savedTemp)
                     .accessibilityLabel(savedTemp ? "已存入命盤" : "存入命盤")
                 }
-            } else if !isNow {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("編輯命主資料", systemImage: "person.text.rectangle") { editing = true }
-                        Button(current.pinned ? "取消釘選" : "釘選", systemImage: current.pinned ? "pin.slash" : "pin") {
-                            var q = current; q.pinned.toggle(); store.update(q)
-                        }
-                        Divider()
-                        Button("刪除命盤", systemImage: "trash", role: .destructive) { confirmDelete = true }
-                    } label: {
-                        Image(systemName: "ellipsis").frame(width: 22, height: 22)   // 給固定的框，圓按鈕裡才會置中
-                    }
-                    .accessibilityLabel("更多")
-                }
-            }
+            }   // 編輯、釘選、刪除改在側欄長按命主做，這裡只留快捷排盤、設定兩顆
         }
         .confirmationDialog("刪除「\(person.name)」的命盤？", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("刪除", role: .destructive) { store.delete(person.id); dismiss() }
