@@ -257,11 +257,9 @@ private struct NewEntrySheet: View {
         NavigationStack {
             ZForm {
                 Section {
-                    TextField(prompt, text: $text, axis: .vertical)
+                    TextField("請輸入", text: $text, axis: .vertical)
                         .lineLimit(5...12)
                         .focused($focused)
-                } header: {
-                    Text("今日提問 · \(star)")
                 }
                 Section("心情") {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -290,7 +288,7 @@ private struct NewEntrySheet: View {
                     }
                 }
             }
-            .navigationTitle("寫一則")
+            .navigationTitle("日記")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
