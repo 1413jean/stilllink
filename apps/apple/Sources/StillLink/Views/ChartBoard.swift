@@ -350,23 +350,26 @@ private struct PalaceCell: View {
                 fittedStars(p: p, horo: horo, minor: minor)
                 .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
-                // 流曜（大祿、年鸞…）與合祿／合羊／合陀：放右上角，跟本命星曜分開；每排 4 個，由右往左
-                let extra = extraStars(p, horo)
-                if !extra.isEmpty {
-                    VStack(alignment: .trailing, spacing: 3) {
-                        ForEach(Array(stride(from: 0, to: extra.count, by: 4)), id: \.self) { k in
-                            HStack(alignment: .top, spacing: 1) {
-                                ForEach(Array(extra[k..<min(k + 4, extra.count)].reversed()), id: \.0) { name, color in
-                                    VerticalText(name, size: ChartType.adj(fs) * 0.76, color: color)   // 流曜是輔助資訊，比雜曜小一點
-                                }
-                            }
-                        }
-                    }
-                    .fixedSize()
-                }
             }
             .frame(minHeight: fs * 2.4, alignment: .top)   // 星曜區至少留一行主星的高度，不會被下方擠到消失
             .layoutPriority(-1)
+            // 流曜（大祿、年鸞…）與合祿／合羊／合陀：照文墨天機放在運限宮名上面、靠右，
+            // 不跟本命星曜搶同一排（擠在右上角會讓主星被迫換行）；大限的排最右邊，一排 6 個
+            let extra = extraStars(p, horo)
+            if !extra.isEmpty {
+                VStack(alignment: .trailing, spacing: 3) {
+                    let list = Array(extra.reversed())
+                    ForEach(Array(stride(from: 0, to: list.count, by: 6)), id: \.self) { k in
+                        HStack(alignment: .top, spacing: 1) {
+                            ForEach(Array(list[k..<min(k + 6, list.count)]), id: \.0) { name, color in
+                                VerticalText(name, size: ChartType.adj(fs) * 0.76, color: color)   // 流曜是輔助資訊，比雜曜小一點
+                            }
+                        }
+                    }
+                }
+                .fixedSize()
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
                     // 小限宮名、轉宮名疊在流月上面（左下這一欄），不會擠歪中間的宮名
@@ -411,10 +414,15 @@ private struct PalaceCell: View {
                     }
                     // 選到大限以後：改寫「這個大限裡、流年走到這一宮的那一年」（例：2034年38歲），像文墨天機
                     if level >= 1, let ya = decadeYearAge {
+                        #if os(iOS)
+                        // iPhone 宮格窄：照文墨天機不寫（流年、歲數在下面的運限表看得到），把空間留給星曜
+                        EmptyView()
+                        #else
                         Text("\(String(ya.year))年\(ya.age)歲")
                             .font(ChartType.font(ChartType.range(fs)))
                             .foregroundStyle(Color.zText2)
                             .lineLimit(1).fixedSize()
+                        #endif
                     } else {
                         Text("\(p.range[0])~\(p.range[1])")
                             .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
@@ -525,6 +533,8 @@ extension PalaceCell {
         GeometryReader { g in
             let c = fitChoice(p, horo: horo, minor: minor, w: g.size.width, h: g.size.height)
             starFlow(p: p, horo: horo, minor: minor, f: fs * c.0, adjF: ChartType.adj(fs) * c.1, wrap: c.2)
+                // 量出來跟實際排版差一點點時，多出來的寬度往右溢（被裁掉的是最後的雜曜），不要置中把左邊的主星切掉
+                .frame(width: g.size.width, height: g.size.height, alignment: .topLeading)
         }
     }
 

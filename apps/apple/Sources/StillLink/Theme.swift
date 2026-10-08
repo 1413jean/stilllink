@@ -221,7 +221,12 @@ extension Font {
 
 /// 命盤字級：跟著盤面大小縮放，fs 是宮位基準字級（主星大小）
 enum ChartType {
+    #if os(iOS)
+    /// iPhone 宮格窄（約 95pt），用寬度算會落到最小值；照文墨天機手機版主星約 12pt
+    static func base(cellWidth cw: CGFloat) -> CGFloat { max(12, min(15.5, cw / 11.5)) }
+    #else
     static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
+    #endif
 
     static func star(_ fs: CGFloat) -> CGFloat { fs }                       // 主星、輔星
     static func adj(_ fs: CGFloat) -> CGFloat { max(10.5, fs * 0.94) }      // 雜曜：跟主星差一點點就好
@@ -231,7 +236,11 @@ enum ChartType {
     static func ages(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.58) }        // 流年／小限歲數
     static func range(_ fs: CGFloat) -> CGFloat { fs * 0.88 }               // 大限歲數
     static func palace(_ fs: CGFloat) -> CGFloat { fs }                     // 宮名
+    #if os(iOS)
+    static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.12 }              // 宮干支（iPhone 宮格窄，小一階才放得下身宮章）
+    #else
     static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.3 }               // 宮干支
+    #endif
     static func centerTitle(_ fs: CGFloat) -> CGFloat { fs * 1.15 }
     static func centerBody(_ fs: CGFloat) -> CGFloat { fs * 0.9 }
     static func centerSmall(_ fs: CGFloat) -> CGFloat { fs * 0.75 }
