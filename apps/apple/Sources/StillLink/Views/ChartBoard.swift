@@ -334,6 +334,10 @@ private struct PalaceCell: View {
     /// 流月：這一宮是流年的哪個農曆月＋月干。流年斗君＝子斗順數到流年地支，從那宮起正月順排；月干用五虎遁由流年天干推
     private var monthLabel: String? {
         guard level >= 2 else { return nil }   // 選到流年以後才顯示
+        #if os(iOS)
+        // iPhone 宮格窄：選到流月以後，同一個位置改放「月X」宮名（照文墨天機），兩個疊在一起會重疊
+        guard level == 2 else { return nil }
+        #endif
         let b = ZW.branches
         guard let dou = b.firstIndex(of: model.bazi.ziDou),
               let yb = b.firstIndex(of: model.horo.yearly.branch),
@@ -371,6 +375,24 @@ private struct PalaceCell: View {
                 }
                 .lineLimit(1)
             }
+            #if os(iOS)
+            // iPhone 照文墨天機：星曜只看寬度決定字級（一排、同字級、欄距 0），
+            // 四化方塊從星名底下往下掛進宮格中間的空白，不佔版面高度、不會因為高度不夠把整排縮小；
+            // 底部（神煞、運限宮名、干支）固定貼在宮格最下面
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: fs * 2.7)   // 星名兩字＋亮度
+                .zIndex(1)   // 往下掛的四化方塊畫在最上層，不被神煞、運限宮名蓋住
+                .overlay(alignment: .topLeading) {
+                    GeometryReader { g in
+                        let c = fitChoice(p, horo: horo, minor: minor, w: g.size.width, h: .infinity)
+                        starFlow(p: p, horo: horo, minor: minor, f: fs * c.0, adjF: StarLayout.adjBase(fs) * c.1, wrap: c.2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(width: g.size.width, alignment: .topLeading)
+                    }
+                }
+            Spacer(minLength: 0)
+            #else
             HStack(alignment: .top, spacing: 3) {
                 // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
                 // 先試「主星和雜曜同一排」：放不下就先縮雜曜、再一起縮；真的縮到底還放不下才換第二排
@@ -380,6 +402,7 @@ private struct PalaceCell: View {
             }
             .frame(minHeight: fs * 2.4, alignment: .top)   // 星曜區至少留一行主星的高度，不會被下方擠到消失
             .layoutPriority(-1)
+            #endif
             // 流曜（大祿、年鸞…）與合祿／合羊／合陀：照文墨天機放在運限宮名上面、靠右，
             // 不跟本命星曜搶同一排（擠在右上角會讓主星被迫換行）；大限的排最右邊，一排 6 個
             let extra = extraStars(p, horo)
@@ -559,19 +582,25 @@ extension PalaceCell {
     func fittedStars(p: Palace, horo: Horoscope, minor: Bool) -> some View {
         GeometryReader { g in
             let c = fitChoice(p, horo: horo, minor: minor, w: g.size.width, h: g.size.height)
-            starFlow(p: p, horo: horo, minor: minor, f: fs * c.0, adjF: ChartType.adj(fs) * c.1, wrap: c.2)
+            starFlow(p: p, horo: horo, minor: minor, f: fs * c.0, adjF: StarLayout.adjBase(fs) * c.1, wrap: c.2)
                 // 量出來跟實際排版差一點點時，多出來的寬度往右溢（被裁掉的是最後的雜曜），不要置中把左邊的主星切掉
                 .frame(width: g.size.width, height: g.size.height, alignment: .topLeading)
         }
     }
 
+    #if os(iOS)
+    /// iPhone 照文墨天機：所有星曜同一個字級、整排一起縮，縮到很小還放不下才換第二排
+    private static let fitCandidates: [(CGFloat, CGFloat, Bool)] =
+        [1.0, 0.93, 0.86, 0.8, 0.74, 0.68, 0.63, 0.58].map { ($0, $0, false) } + [(0.7, 0.7, true), (0.6, 0.6, true)]
+    #else
     private static let fitCandidates: [(CGFloat, CGFloat, Bool)] =
         [(1.0, 1.0), (1.0, 0.9), (1.0, 0.82), (0.94, 0.76), (0.88, 0.72), (0.82, 0.68)].map { ($0.0, $0.1, false) } +
         [(1.0, 1.0), (0.92, 0.84), (0.84, 0.78), (0.76, 0.72), (0.68, 0.66)].map { ($0.0, $0.1, true) }
+    #endif
 
     private func fitChoice(_ p: Palace, horo: Horoscope, minor: Bool, w: CGFloat, h: CGFloat) -> (CGFloat, CGFloat, Bool) {
         for c in Self.fitCandidates {
-            let items = itemSizes(p, horo: horo, minor: minor, f: fs * c.0, adjF: ChartType.adj(fs) * c.1)
+            let items = itemSizes(p, horo: horo, minor: minor, f: fs * c.0, adjF: StarLayout.adjBase(fs) * c.1)
             if Self.fits(items, w: w, h: h, wrap: c.2) { return c }
         }
         return Self.fitCandidates.last!
@@ -590,15 +619,15 @@ extension PalaceCell {
             }
             if showMinorMutagen, ZW.mutagen(in: horo.age.mutagen, star: star.name) != nil { n += 1 }
             if hepan?.mutagen(star: star.name) != nil { n += 1 }
-            let size: CGFloat = n > 3 ? 1.06 : 1.22
+            let size = StarLayout.boxScale(n)
             let name = TextMeasure.size(VerticalText.join(star.name), ChartType.star(f), bold: star.type == "major")
             let bright = TextMeasure.size(star.brightness.isEmpty ? " " : star.brightness, ChartType.meta(f))
             let boxes = n > 0 ? CGFloat(n) * f * size + CGFloat(n - 1) : 0
-            out.append(CGSize(width: max(f * 1.18, n > 0 ? f * size : 0), height: name.height + 2 + 0.5 + bright.height + 0.5 + boxes))
+            out.append(CGSize(width: max(StarLayout.columnWidth(f), n > 0 ? f * size : 0), height: name.height + 2 + 0.5 + bright.height + 0.5 + boxes))
         }
         let adj = settings.showAdj ? p.adj : []
-        for s in adj where ZW.keyAdjective.contains(s.name) { out.append(TextMeasure.size(VerticalText.join(s.name), ChartType.star(f))) }
-        for s in adj where !ZW.keyAdjective.contains(s.name) { out.append(TextMeasure.size(VerticalText.join(s.name), adjF)) }
+        for s in adj where ZW.keyAdjective.contains(s.name) { out.append(StarLayout.column(TextMeasure.size(VerticalText.join(s.name), ChartType.star(f)), f)) }
+        for s in adj where !ZW.keyAdjective.contains(s.name) { out.append(StarLayout.column(TextMeasure.size(VerticalText.join(s.name), adjF), adjF)) }
         return out
     }
 
@@ -606,14 +635,14 @@ extension PalaceCell {
     private static func fits(_ items: [CGSize], w: CGFloat, h: CGFloat, wrap: Bool) -> Bool {
         let tol: CGFloat = 0.5
         if !wrap {
-            let width = items.reduce(0) { $0 + $1.width } + CGFloat(max(0, items.count - 1))
+            let width = items.reduce(0) { $0 + $1.width } + StarLayout.gap * CGFloat(max(0, items.count - 1))
             return width <= w + tol && (items.map(\.height).max() ?? 0) <= h + tol
         }
         var x: CGFloat = 0, y: CGFloat = 0, lineH: CGFloat = 0
         for it in items {
             if x > 0 && x + it.width > w + tol { x = 0; y += lineH + 4; lineH = 0 }
             if it.width > w + tol { return false }
-            x += it.width + 1; lineH = max(lineH, it.height)
+            x += it.width + StarLayout.gap; lineH = max(lineH, it.height)
         }
         return y + lineH <= h + tol
     }
@@ -621,9 +650,9 @@ extension PalaceCell {
     @ViewBuilder
     func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat, wrap: Bool) -> some View {
         if wrap {
-            FlowLayout(spacing: 1, lineSpacing: 4) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
+            FlowLayout(spacing: StarLayout.gap, lineSpacing: 4) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
         } else {
-            HStack(alignment: .top, spacing: 1) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
+            HStack(alignment: .top, spacing: StarLayout.gap) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
                 .fixedSize()
         }
     }
@@ -647,10 +676,12 @@ extension PalaceCell {
             let adj = settings.showAdj ? p.adj : []
             ForEach(adj.filter { ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
                 VerticalText(s.name, size: ChartType.star(f), color: settings.tone(.misc).color)
+                    .frame(width: StarLayout.columnWidth(f))
                     .starHoverArea(s.name, palace: p.name)
             }
             ForEach(adj.filter { !ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
                 VerticalText(s.name, size: adjF, color: settings.tone(.misc).color)
+                    .frame(width: StarLayout.columnWidth(adjF))
                     .starHoverArea(s.name, palace: p.name)
             }
     }
@@ -670,13 +701,13 @@ private struct StarColumn: View {
     var body: some View {
         let tone = settings.starTone(type: star.type)
         let list = boxes
-        let size: CGFloat = list.count > 3 ? 1.06 : 1.22   // 四化方塊放大一點，比星名更醒目
+        let size = StarLayout.boxScale(list.count)   // Mac 四化方塊放大一點比星名醒目；iPhone 跟一欄一樣寬（照文墨天機）
         // 星名下同一直排：生年 → 大限 → 流年 → 小限 → 流月…（最多三層＋小限）
         VStack(spacing: 0.5) {
             VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,
                          weight: star.type == "major" ? .semibold : .regular)
                 .padding(.vertical, 1)
-                .frame(width: fs * 1.18)
+                .frame(width: StarLayout.columnWidth(fs))
                 .background(fly?.fill ?? .clear)
                 // 滑鼠停在星名上：回報位置給盤面顯示小卡
                 .starHoverArea(star.name, palace: palaceName)
@@ -689,7 +720,7 @@ private struct StarColumn: View {
                 }
             }
         }
-        .frame(minWidth: fs * 1.18)
+        .frame(minWidth: StarLayout.columnWidth(fs))
     }
 
     /// 方塊清單：每一層固定一格（沒有四化的層留空白，最後面的空白不用留），再接小限、合盤
@@ -833,7 +864,8 @@ private struct CenterInfo: View {
                     }
                 }
 
-                // 點選宮位的宮干飛化（一行）
+                // 點選宮位的宮干飛化（一行）；iPhone 中宮窄，照文墨天機不寫
+                if !StarLayout.compact {
                 HStack(spacing: 6) {
                     Text("\(chart.palaces[selected].name)\(chart.palaces[selected].stem)干：")
                         .font(ChartType.font(ChartType.centerSmall(fs))).foregroundStyle(Color.zText2)
@@ -843,6 +875,7 @@ private struct CenterInfo: View {
                     }
                 }
                 .lineLimit(1).minimumScaleFactor(0.7)
+                }
                 HStack(spacing: 4) {
                     ForEach(Mutagen.allCases, id: \.self) { m in
                         Text(m.rawValue).font(ChartType.font(ChartType.centerSmall(fs))).foregroundStyle(Color.zOnColor)
@@ -860,7 +893,7 @@ private struct CenterInfo: View {
                         .buttonStyle(.plain)
                         .padding(.leading, 4)
                     }
-                    if level > 0 {
+                    if level > 0 && !StarLayout.compact {
                         Button(action: onResetLevel) {
                             Label("回本命盤", systemImage: "arrow.uturn.backward")
                                 .font(ChartType.font(ChartType.meta(fs)))
@@ -1045,4 +1078,31 @@ private struct GridCorners: Shape {
         p.addRoundedRect(in: r, cornerSize: CGSize(width: radius, height: radius), style: .continuous)
         return p
     }
+}
+
+/// 星曜一欄的寬度與欄距：Mac 每欄多留一點（1.18 倍字寬、欄距 1）；
+/// iPhone 照文墨天機一欄剛好一個字寬、欄距 0，雜曜跟主星同一個字級
+enum StarLayout {
+    #if os(iOS)
+    /// iPhone：照文墨天機的精簡版面
+    static let compact = true
+    static let gap: CGFloat = 0
+    static func columnWidth(_ f: CGFloat) -> CGFloat { f }   // 一欄剛好一個字寬，主星跟雜曜之間沒有空隙
+    static func adjBase(_ fs: CGFloat) -> CGFloat { ChartType.star(fs) }
+    #else
+    static let compact = false
+    static let gap: CGFloat = 1
+    static func columnWidth(_ f: CGFloat) -> CGFloat { f * 1.18 }
+    static func adjBase(_ fs: CGFloat) -> CGFloat { ChartType.adj(fs) }
+    #endif
+    /// 四化方塊相對字級的大小（n＝這顆星有幾個方塊）
+    static func boxScale(_ n: Int) -> CGFloat {
+        #if os(iOS)
+        1.0
+        #else
+        n > 3 ? 1.06 : 1.22
+        #endif
+    }
+    /// 雜曜量出來的大小換成一欄的寬度（跟畫出來的 frame 一致，量和畫才不會差一點）
+    static func column(_ s: CGSize, _ f: CGFloat) -> CGSize { CGSize(width: max(s.width, columnWidth(f)), height: s.height) }
 }

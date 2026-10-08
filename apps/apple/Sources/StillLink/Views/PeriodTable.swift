@@ -81,8 +81,8 @@ struct PeriodTable: View {
 
     /// 表格字級：Mac 照原本；iPhone 的設計系統字級大一號，表格裡降一階才放得下、不會壓迫
     #if os(iOS)
-    static let headFont = ZType.footnoteStrong.font
-    static let mainFont = ZType.caption1.font
+    static let headFont = ZType.caption1Strong.font
+    static let mainFont = ZType.caption2.font
     static let subFont = ZType.caption2.font
     #else
     static let headFont = Font.zCalloutStrong

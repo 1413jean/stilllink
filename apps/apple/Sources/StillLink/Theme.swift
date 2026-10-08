@@ -222,8 +222,8 @@ extension Font {
 /// 命盤字級：跟著盤面大小縮放，fs 是宮位基準字級（主星大小）
 enum ChartType {
     #if os(iOS)
-    /// iPhone 宮格窄（約 95pt），用寬度算會落到最小值；照文墨天機手機版主星約 12pt
-    static func base(cellWidth cw: CGFloat) -> CGFloat { max(12, min(15.5, cw / 11.5)) }
+    /// iPhone 宮格窄（約 98pt），用寬度算會落到最小值；照文墨天機手機版約 11pt
+    static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
     #else
     static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
     #endif
