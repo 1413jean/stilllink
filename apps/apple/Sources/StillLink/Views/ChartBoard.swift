@@ -911,7 +911,7 @@ private struct CenterInfo: View {
                             .padding(.horizontal, 3).background(m.fill)
                     }
                     Text("自化：↑離心 ↓向心").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
-                    if let taiji {
+                    if let taiji, !StarLayout.compact {
                         Button(action: onClearTaiji) {
                             Label("轉宮：\(chart.palaces[taiji].name)為命", systemImage: "xmark")
                                 .font(ChartType.font(ChartType.meta(fs)))
@@ -932,6 +932,18 @@ private struct CenterInfo: View {
                         .buttonStyle(.plain)
                         .padding(.leading, 4)
                     }
+                }
+                // iPhone 中宮窄：轉宮另起一行（跟四化圖例擠同一排會被擠成直的）
+                if let taiji, StarLayout.compact {
+                    Button(action: onClearTaiji) {
+                        Label("轉宮：\(chart.palaces[taiji].name)為命", systemImage: "xmark")
+                            .font(ChartType.font(ChartType.meta(fs)))
+                            .foregroundStyle(Color.zAccent)
+                            .lineLimit(1).fixedSize()
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .background(Capsule().fill(Color.zAccent.opacity(0.12)))
+                    }
+                    .buttonStyle(.plain)
                 }
                 // 層級開關：本・限・年・月・日・時（最多同時顯示三層），旁邊小限另外開關；跟中宮資訊一起置中
                 if level >= 1 { layerBar.padding(.top, fs * 0.5) }
