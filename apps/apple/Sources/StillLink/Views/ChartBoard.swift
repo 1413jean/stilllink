@@ -14,6 +14,8 @@ struct ChartBoard: View, Equatable {
     var onSelect: (Int?) -> Void = { _ in }
     /// 外圈留給自化箭頭的寬度（iPhone 螢幕窄，傳小一點）
     var margin: CGFloat = 14
+    /// true＝整張盤（含外圈）放在一張卡片裡（Mac）；false＝不要外框卡片，只有十二宮格本身圓角＋細框（iPhone）
+    var outerCard = true
 
     /// 只有資料真的換了才重畫（點運限表時，盤面不會先拿舊資料多畫一次）
     static func == (a: ChartBoard, b: ChartBoard) -> Bool {
@@ -96,6 +98,20 @@ struct ChartBoard: View, Equatable {
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
                     if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
+                // 沒有外框卡片時：宮格四角修成圓角（蓋掉方格露出的角）＋細框
+                if !outerCard {
+                    let gw = geo.size.width - m * 2, gh = geo.size.height - m * 2
+                    GridCorners(radius: 12)
+                        .fill(Color.zBg, style: FillStyle(eoFill: true))
+                        .frame(width: gw, height: gh)
+                        .offset(x: m, y: m)
+                        .allowsHitTesting(false)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.zLine)
+                        .frame(width: gw, height: gh)
+                        .offset(x: m, y: m)
+                        .allowsHitTesting(false)
+                }
                 // 夾宮提示：選到的宮位被左右鄰宮夾時，交界線上各壓一個指向它的雙箭頭；換宮位就重播
                 if !clamps.isEmpty {
                     Group {
@@ -125,8 +141,19 @@ struct ChartBoard: View, Equatable {
             .coordinateSpace(name: "board")
             .environment(\.starHover, { info in setHover(info) })
         }
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
+        .background {
+            if outerCard {
+                RoundedRectangle(cornerRadius: 12).fill(Color.zCard)
+            } else {
+                GeometryReader { g in
+                    let m = margin * zoom
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.zCard)
+                        .frame(width: g.size.width - m * 2, height: g.size.height - m * 2)
+                        .offset(x: m, y: m)
+                }
+            }
+        }
+        .overlay { if outerCard { RoundedRectangle(cornerRadius: 12).stroke(Color.zLine) } }
         .onAppear {
             appeared = true; sel = focusIndex; onSelect(focusIndex)
             // 驗證用：ZIWEI_PICK=宮位編號 直接當成使用者點了那一宮
@@ -1007,5 +1034,15 @@ private struct ClampSqueeze: ViewModifier {
         let isNeighbor = on && (index == (selected + 11) % 12 || index == (selected + 1) % 12)
         let d = isNeighbor ? ClampOverlay.side(selected: selected, neighbor: index) : (dx: 0, dy: 0)
         return content.offset(x: -d.dx * 20 * amount, y: -d.dy * 20 * amount)
+    }
+}
+
+/// 宮格四個角：整個矩形挖掉一個圓角矩形（even-odd 填色），用頁面底色蓋住方格露出的角
+private struct GridCorners: Shape {
+    let radius: CGFloat
+    func path(in r: CGRect) -> Path {
+        var p = Path(r)
+        p.addRoundedRect(in: r, cornerSize: CGSize(width: radius, height: radius), style: .continuous)
+        return p
     }
 }
