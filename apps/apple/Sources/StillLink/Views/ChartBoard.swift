@@ -386,9 +386,16 @@ private struct PalaceCell: View {
                 .overlay(alignment: .topLeading) {
                     GeometryReader { g in
                         let c = fitChoice(p, horo: horo, minor: minor, w: g.size.width, h: .infinity)
-                        starFlow(p: p, horo: horo, minor: minor, f: fs * c.0, adjF: StarLayout.adjBase(fs) * c.1, wrap: c.2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(width: g.size.width, alignment: .topLeading)
+                        let f = fs * c.0
+                        VStack(alignment: .leading, spacing: 2) {
+                            starFlow(p: p, horo: horo, minor: minor, f: f, adjF: StarLayout.adjBase(fs) * c.1, wrap: c.2)
+                                .fixedSize(horizontal: false, vertical: true)
+                            // 四化方塊照文墨天機固定大小（不跟著星名縮），從各自的星底下往下排
+                            MutagenStrip(columns: mutagenColumns(p, horo, minor: minor),
+                                         starWidth: c.2 ? 0 : StarLayout.columnWidth(f),
+                                         size: fs * StarLayout.boxBase, maxWidth: g.size.width)
+                        }
+                        .frame(width: g.size.width, alignment: .topLeading)
                     }
                 }
             Spacer(minLength: 0)
@@ -565,6 +572,24 @@ extension PalaceCell {
         Text(t).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(c).lineLimit(1).fixedSize()
     }
 
+    /// 每一層一個固定位置（沒有四化就空著），一眼看出是疊在第幾層
+    func mutagenSlots(_ s: Star, _ horo: Horoscope) -> [(Mutagen?, Color)] {
+        layers.map { lv in
+            let m: Mutagen? = lv == 0 ? Mutagen(rawValue: s.mutagen) : ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name)
+            return (m, lv == 0 ? Color.fBirth : Color.fScopes[lv - 1])
+        }
+    }
+
+    /// iPhone：這一宮每顆星的四化方塊（照星曜順序），給 MutagenStrip 畫
+    func mutagenColumns(_ p: Palace, _ horo: Horoscope, minor: Bool) -> [[(String, Color)?]] {
+        let showMinor = minor && settings.showMinorMutagen
+        return p.stars.map { s in
+            MutagenStrip.boxes(slots: mutagenSlots(s, horo),
+                               minor: showMinor ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
+                               hepan: hepan?.mutagen(star: s.name))
+        }
+    }
+
     /// 宮內的流曜（大限、流年）和合盤星
     func extraStars(_ p: Palace, _ horo: Horoscope) -> [(String, Color)] {
         var out: [(String, Color)] = []
@@ -667,10 +692,8 @@ extension PalaceCell {
                            minor: showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                            hepanMut: hepan?.mutagen(star: s.name),
                            // 每一層一個固定位置（沒有四化就空著），一眼看出是疊在第幾層
-                           slots: layers.map { lv in
-                               let m: Mutagen? = lv == 0 ? Mutagen(rawValue: s.mutagen) : ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name)
-                               return (m, lv == 0 ? Color.fBirth : Color.fScopes[lv - 1])
-                           })
+                           slots: mutagenSlots(s, horo),
+                           showBoxes: !StarLayout.compact)
             }
             // 重要雜曜（紅鸞、天喜、咸池、天姚、天刑）用主星字級排在前面，其他雜曜小字
             let adj = settings.showAdj ? p.adj : []
@@ -697,6 +720,7 @@ private struct StarColumn: View {
     let minor: Mutagen?  // 小限四化
     var hepanMut: Mutagen? = nil   // 合盤：對方年干的四化
     let slots: [(Mutagen?, Color)]  // 目前顯示的每一層（由小到大）：這顆星在那一層的四化，沒有就 nil
+    var showBoxes = true            // false：只畫星名＋亮度，四化方塊由 MutagenStrip 統一畫（iPhone）
 
     var body: some View {
         let tone = settings.starTone(type: star.type)
@@ -714,23 +738,18 @@ private struct StarColumn: View {
             Text(star.brightness.isEmpty ? " " : star.brightness)
                 .font(ChartType.font(ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
+            if showBoxes {
             VStack(spacing: 1) {
                 ForEach(Array(list.enumerated()), id: \.offset) { _, b in
                     if let b { box(b.0, fill: b.1, size: size) } else { Color.clear.frame(width: fs * size, height: fs * size) }
                 }
             }
+            }
         }
         .frame(minWidth: StarLayout.columnWidth(fs))
     }
 
-    /// 方塊清單：每一層固定一格（沒有四化的層留空白，最後面的空白不用留），再接小限、合盤
-    private var boxes: [(String, Color)?] {
-        var b: [(String, Color)?] = slots.map { m, c in m.map { ($0.rawValue, c) } }
-        while let last = b.last, last == nil { b.removeLast() }
-        if let minor { b.append((minor.rawValue, .fMinor)) }
-        if let hepanMut { b.append((hepanMut.rawValue, .fHepan)) }   // 合四化放最後（方塊用 fHepan，比文字用的 wmEarth 沉）
-        return b
-    }
+    private var boxes: [(String, Color)?] { MutagenStrip.boxes(slots: slots, minor: minor, hepan: hepanMut) }
 
     private func box(_ t: String, fill: Color, size: CGFloat = 1.12) -> some View {
         Text(t)
@@ -1095,6 +1114,8 @@ enum StarLayout {
     static func columnWidth(_ f: CGFloat) -> CGFloat { f * 1.18 }
     static func adjBase(_ fs: CGFloat) -> CGFloat { ChartType.adj(fs) }
     #endif
+    /// iPhone 四化方塊的固定大小（相對宮格基準字級，不跟著星名縮）
+    static let boxBase: CGFloat = 1.15
     /// 四化方塊相對字級的大小（n＝這顆星有幾個方塊）
     static func boxScale(_ n: Int) -> CGFloat {
         #if os(iOS)
@@ -1105,4 +1126,64 @@ enum StarLayout {
     }
     /// 雜曜量出來的大小換成一欄的寬度（跟畫出來的 frame 一致，量和畫才不會差一點）
     static func column(_ s: CGSize, _ f: CGFloat) -> CGSize { CGSize(width: max(s.width, columnWidth(f)), height: s.height) }
+}
+
+/// 四化方塊列（iPhone，照文墨天機）：方塊固定大小、不跟著星名縮小。
+/// 每顆星的方塊從那顆星的位置往下疊（一層一格，沒有四化的層留空）；
+/// 前一顆星的方塊比欄寬、會擋到時，往右挪到它後面，不重疊；超出宮格寬度就換到下一段。
+struct MutagenStrip: View {
+    let columns: [[(String, Color)?]]   // 每顆星（照星曜順序）的方塊；空陣列＝這顆星沒有
+    let starWidth: CGFloat              // 一顆星的欄寬（0＝星曜換行了，方塊直接從左邊依序排）
+    let size: CGFloat
+    let maxWidth: CGFloat
+
+    /// 方塊清單：每一層固定一格（沒有四化的層留空白，最後面的空白不用留），再接小限、合盤
+    static func boxes(slots: [(Mutagen?, Color)], minor: Mutagen?, hepan: Mutagen?) -> [(String, Color)?] {
+        var b: [(String, Color)?] = slots.map { m, c in m.map { ($0.rawValue, c) } }
+        while let last = b.last, last == nil { b.removeLast() }
+        if let minor { b.append((minor.rawValue, .fMinor)) }
+        if let hepan { b.append((hepan.rawValue, .fHepan)) }   // 合四化放最後（方塊用 fHepan，比文字用的 wmEarth 沉）
+        return b
+    }
+
+    var body: some View {
+        let placed = placement
+        let height = placed.map { $0.y + CGFloat($0.boxes.count) * (size + 1) }.max() ?? 0
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(placed.enumerated()), id: \.offset) { _, it in
+                VStack(spacing: 1) {
+                    ForEach(Array(it.boxes.enumerated()), id: \.offset) { _, b in
+                        if let b {
+                            Text(b.0)
+                                .font(ChartType.font(size * 0.8))
+                                .foregroundStyle(Color.zOnColor)
+                                .frame(width: size, height: size)
+                                .background(b.1)
+                        } else {
+                            Color.clear.frame(width: size, height: size)
+                        }
+                    }
+                }
+                .offset(x: it.x, y: it.y)
+            }
+        }
+        .frame(width: maxWidth, height: height, alignment: .topLeading)
+        .allowsHitTesting(false)
+    }
+
+    /// 每顆星方塊的位置：盡量對齊自己的星，擋到前一顆就往右挪；放不下這一段就往下開新的一段
+    private var placement: [(x: CGFloat, y: CGFloat, boxes: [(String, Color)?])] {
+        var out: [(x: CGFloat, y: CGFloat, boxes: [(String, Color)?])] = []
+        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
+        for (i, col) in columns.enumerated() where !col.isEmpty {
+            var cx = max(CGFloat(i) * starWidth, x)
+            if cx + size > maxWidth + 0.5, cx > 0 {   // 這一段放不下：換下一段，從左邊開始
+                y += rowH + 2; rowH = 0; cx = 0
+            }
+            out.append((cx, y, col))
+            x = cx + size + 1
+            rowH = max(rowH, CGFloat(col.count) * (size + 1))
+        }
+        return out
+    }
 }
