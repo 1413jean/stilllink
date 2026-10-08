@@ -83,6 +83,22 @@ struct ClampOverlay: View {
 /// 從被夾的宮位那一側出發，兩道光像彗星一樣沿外框往兩邊跑（前端亮、尾巴淡、光往內暈一點），在對面會合後淡掉，
 /// 最後只留一條淡淡的靜止框線。只在開頭約 1 秒重畫，跑完就停（不一直動、不耗電）；「減少動態效果」時直接顯示框線
 struct ClampFrameOverlay: View {
+    /// 多邊形每個轉角用切線圓弧修圓（邊太短時半徑自動縮小）
+    static func rounded(_ pts: [CGPoint], radius: CGFloat) -> Path {
+        var path = Path()
+        guard pts.count > 2 else { path.addLines(pts); path.closeSubpath(); return path }
+        let n = pts.count
+        let mid = CGPoint(x: (pts[n - 1].x + pts[0].x) / 2, y: (pts[n - 1].y + pts[0].y) / 2)
+        path.move(to: mid)
+        for i in 0..<n {
+            let a = pts[i], b = pts[(i + 1) % n], prev = pts[(i - 1 + n) % n]
+            let shortest = min(hypot(a.x - prev.x, a.y - prev.y), hypot(b.x - a.x, b.y - a.y))
+            path.addArc(tangent1End: a, tangent2End: b, radius: min(radius, shortest / 2))
+        }
+        path.closeSubpath()
+        return path
+    }
+
     let clamps: [Clamp]
     let selected: Int
     let m: CGFloat, cw: CGFloat, ch: CGFloat
@@ -108,9 +124,9 @@ struct ClampFrameOverlay: View {
                 let t = freeze ?? (done || Motion.reduce ? Self.duration : tl.date.timeIntervalSince(start))
                 let p = min(1, max(0, t / Self.duration))
                 // 靜止的淡框：光跑過去之後才慢慢浮出來
-                var frame = Path(); frame.addLines(poly); frame.closeSubpath()
+                let frame = Self.rounded(poly, radius: 6)   // 轉角修圓（跟宮格的圓角一致）
                 // 光跑完留下的框要看得清楚（2026-10 Jean：結束後的線明顯一點）
-                ctx.stroke(frame, with: .color(color.opacity(0.4 * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1.3, lineJoin: .miter))
+                ctx.stroke(frame, with: .color(color.opacity(0.4 * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1.3, lineJoin: .round))
                 guard p < 1 else { return }
                 let track = Track(poly)
                 let s0 = track.nearest(to: center)                       // 從被夾的宮位那一側出發
@@ -128,8 +144,8 @@ struct ClampFrameOverlay: View {
                         // 光比靜止框亮很多：外層寬光暈往兩側暈開，內層亮線
                         var glow = ctx
                         glow.addFilter(.blur(radius: 6))
-                        glow.stroke(seg, with: .color(color.opacity(0.45 * w * fade)), style: StrokeStyle(lineWidth: 8, lineCap: .round))   // 特效收斂一點
-                        ctx.stroke(seg, with: .color(color.opacity(0.85 * w * fade)), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                        glow.stroke(seg, with: .color(color.opacity(0.45 * w * fade)), style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))   // 特效收斂一點
+                        ctx.stroke(seg, with: .color(color.opacity(0.85 * w * fade)), style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
                     }
                 }
             }
