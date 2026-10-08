@@ -53,7 +53,13 @@ struct PeopleList: View {
                 } description: {
                     Text("新增客人或家人的生辰，就能排盤、記錄")
                 } actions: {
-                    Button("新增命盤") { adding = true }.buttonStyle(.borderedProminent)
+                    Button { adding = true } label: {
+                        Text("新增命盤").zText(.bodyStrong)
+                            .foregroundStyle(Color.zBg)
+                            .padding(.horizontal, 22).frame(height: 44)
+                            .background(Capsule().fill(Color.zText))
+                    }
+                    .buttonStyle(.plain)
                 }
             } else if !query.isEmpty && sections.isEmpty {
                 ContentUnavailableView.search(text: query)

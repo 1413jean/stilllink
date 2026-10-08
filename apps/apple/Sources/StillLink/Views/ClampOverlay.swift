@@ -86,8 +86,7 @@ struct ClampFrameOverlay: View {
 
     // 動態參數
     static let duration: Double = 0.95       // 兩道光跑到對面會合的秒數
-    static let tail: CGFloat = 0.2           // 彗星尾巴長度（外框周長的比例）
-    static let strength: Double = 0.55       // 整體濃淡（越小越淡）
+    static let tail: CGFloat = 0.15          // 彗星尾巴長度（外框周長的比例）
 
     @State private var start = Date()
     @State private var done = false
@@ -103,10 +102,10 @@ struct ClampFrameOverlay: View {
                 let freeze = ProcessInfo.processInfo.environment["ZIWEI_CLAMP_T"].flatMap(Double.init)   // 驗證用：定格在第幾秒
                 let t = freeze ?? (done || Motion.reduce ? Self.duration : tl.date.timeIntervalSince(start))
                 let p = min(1, max(0, t / Self.duration))
-                let k = Self.strength
                 // 靜止的淡框：光跑過去之後才慢慢浮出來
                 var frame = Path(); frame.addLines(poly); frame.closeSubpath()
-                ctx.stroke(frame, with: .color(color.opacity(0.4 * k * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1, lineJoin: .miter))
+                // 光跑完留下的框要看得清楚（2026-10 Jean：結束後的線明顯一點）
+                ctx.stroke(frame, with: .color(color.opacity(0.4 * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1.3, lineJoin: .miter))
                 guard p < 1 else { return }
                 let track = Track(poly)
                 let s0 = track.nearest(to: center)                       // 從被夾的宮位那一側出發
@@ -124,8 +123,8 @@ struct ClampFrameOverlay: View {
                         // 光比靜止框亮很多：外層寬光暈往兩側暈開，內層亮線
                         var glow = ctx
                         glow.addFilter(.blur(radius: 6))
-                        glow.stroke(seg, with: .color(color.opacity(0.7 * w * fade)), style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                        ctx.stroke(seg, with: .color(color.opacity(w * fade)), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+                        glow.stroke(seg, with: .color(color.opacity(0.45 * w * fade)), style: StrokeStyle(lineWidth: 8, lineCap: .round))   // 特效收斂一點
+                        ctx.stroke(seg, with: .color(color.opacity(0.85 * w * fade)), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
                     }
                 }
             }

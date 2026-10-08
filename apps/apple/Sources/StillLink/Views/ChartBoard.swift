@@ -140,7 +140,7 @@ struct ChartBoard: View, Equatable {
                   !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0, hepan: hepan).isEmpty else { return }
             withAnimation(.easeIn(duration: 0.09)) { squeeze = 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
-                withAnimation(.spring(response: 0.36, dampingFraction: 0.28)) { squeeze = 0 }   // 阻尼低：碰到後往外彈過頭再晃回來
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.36)) { squeeze = 0 }   // 碰到後往外彈一點再回來（2026-10 Jean：彈跳小一點）
             }
         }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
@@ -984,7 +984,7 @@ enum TextMeasure {
     }
 }
 
-/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 24pt 再彈回；被夾的宮位本身不動
+/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 20pt 再彈回；被夾的宮位本身不動
 private struct ClampSqueeze: ViewModifier {
     let on: Bool
     let index: Int
@@ -994,6 +994,6 @@ private struct ClampSqueeze: ViewModifier {
     func body(content: Content) -> some View {
         let isNeighbor = on && (index == (selected + 11) % 12 || index == (selected + 1) % 12)
         let d = isNeighbor ? ClampOverlay.side(selected: selected, neighbor: index) : (dx: 0, dy: 0)
-        return content.offset(x: -d.dx * 24 * amount, y: -d.dy * 24 * amount)
+        return content.offset(x: -d.dx * 20 * amount, y: -d.dy * 20 * amount)
     }
 }

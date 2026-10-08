@@ -3,6 +3,8 @@ import SwiftUI
 /// 命盤頁：上面十二宮盤面、下面運限表（兩個都跟 Mac 版共用），外框是系統導覽列
 struct ChartView: View {
     let person: Person
+    /// 暫時命盤（紫占、報數、四柱反查）：不存檔，右上角改成「存入命盤」
+    var temporary = false
     @EnvironmentObject private var store: Store
     @Environment(\.zSettings) private var settings
     @State private var pick: Pick
@@ -16,11 +18,19 @@ struct ChartView: View {
     @State private var zoomBase: CGFloat = 1
     /// 盤面實際排版用的倍率：捏合中先用 scaleEffect（順），放手後用這個倍率重排，字才清楚
     @State private var sharpZoom: CGFloat = 1
+    @State private var adding = false
+    @State private var showPillars = false
+    @State private var tempChart: TempItem?
+    @State private var savedTemp = false
 
-    init(person: Person) {
+    /// 推到下一頁的暫時命盤
+    struct TempItem: Identifiable, Hashable { let id = UUID(); let person: Person; let level: Int }
+
+    init(person: Person, level: Int? = nil, temporary: Bool = false) {
         self.person = person
+        self.temporary = temporary
         // 驗證用：ZIWEI_LEVEL=2 直接開到流年
-        let lv = ProcessInfo.processInfo.environment["ZIWEI_LEVEL"].flatMap(Int.init) ?? ZSettings.stored().openLevel
+        let lv = ProcessInfo.processInfo.environment["ZIWEI_LEVEL"].flatMap(Int.init) ?? level ?? ZSettings.stored().openLevel
         var p = Pick.today(); p.level = lv
         _pick = State(initialValue: p)
         _shownLevel = State(initialValue: lv)
@@ -85,10 +95,22 @@ struct ChartView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
+                QuickMenu(pick: $pick, onNew: { adding = true }, onPillars: { showPillars = true },
+                          onTemp: { tempChart = TempItem(person: $0, level: $1) })
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button { showSettings = true } label: { Image(systemName: "slider.horizontal.3").frame(width: 22, height: 22) }
                     .accessibilityLabel("命盤設定")
             }
-            if !isNow {
+            if temporary {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { saveTemp() } label: {
+                        Image(systemName: savedTemp ? "checkmark" : "tray.and.arrow.down").frame(width: 22, height: 22)
+                    }
+                    .disabled(savedTemp)
+                    .accessibilityLabel(savedTemp ? "已存入命盤" : "存入命盤")
+                }
+            } else if !isNow {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("編輯命主資料", systemImage: "person.text.rectangle") { editing = true }
@@ -113,6 +135,13 @@ struct ChartView: View {
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showSettings = false } } }
             }
             .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $adding) { PersonForm() }
+        .sheet(isPresented: $showPillars) {
+            PillarSearchSheet { tempChart = TempItem(person: $0, level: 0) }
+        }
+        .navigationDestination(item: $tempChart) { t in
+            ChartView(person: t.person, level: t.level, temporary: true)
         }
         .sheet(isPresented: $editing) {
             PersonForm(editing: person)
@@ -144,6 +173,13 @@ struct ChartView: View {
         zoomBase = z
         var t = Transaction(); t.disablesAnimations = true
         withTransaction(t) { sharpZoom = z }
+    }
+
+    /// 暫時命盤存進命盤列表（分組「占卜」），之後在所有命盤裡找得到
+    private func saveTemp() {
+        store.add(person)
+        Platform.haptic(.levelChange)
+        withAnimation(Motion.base) { savedTemp = true }
     }
 
     private struct LoadKey: Equatable { let chart: String; let pick: Pick }
