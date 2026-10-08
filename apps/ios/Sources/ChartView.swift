@@ -48,7 +48,7 @@ struct ChartView: View {
             let boardW = min(geo.size.width - (phone ? 24 : 8), 920)
             // iPhone 直拿：盤面拉長一點，宮格裡疊三層四化、流年歲數才不擠（iPad 照 Mac 比例）
             let aspect: CGFloat = geo.size.width < 600 ? 1.45 : 1.12
-            ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
+            ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical, showsIndicators: false) {
                 VStack(spacing: 14) {
                     Group {
                         if let model {

@@ -81,9 +81,12 @@ struct PeriodTable: View {
 
     /// 表格字級：Mac 照原本；iPhone 的設計系統字級大一號，表格裡降一階才放得下、不會壓迫
     #if os(iOS)
-    static let headFont = ZType.caption1Strong.font
-    static let mainFont = ZType.caption2.font
-    static let subFont = ZType.caption2.font
+    /// iPhone：比設計系統最小字再小一階（11／10／9），一樣跟著動態字體放大；放大到格子放不下就「…」
+    static let headFont = Font(UIFontMetrics(forTextStyle: .caption2).scaledFont(for: .systemFont(ofSize: 11, weight: .semibold)))
+    static let mainFont = Font(UIFontMetrics(forTextStyle: .caption2).scaledFont(for: .systemFont(ofSize: 10)))
+    static let subFont = Font(UIFontMetrics(forTextStyle: .caption2).scaledFont(for: .systemFont(ofSize: 9)))
+    /// 格子寬度固定（字變大時不撐寬，改成截斷）
+    static let cellWidth: CGFloat = 52
     #else
     static let headFont = Font.zCalloutStrong
     static let mainFont = Font.zCaption
@@ -93,7 +96,7 @@ struct PeriodTable: View {
     /// 流日格子：Mac 一排 10 天；iPhone 字級大一號放不下，照寬度自動分欄（約 6 欄 × 5 行），一樣填滿整列
     private var dayColumns: [GridItem] {
         #if os(iOS)
-        [GridItem(.adaptive(minimum: 50), spacing: 0)]
+        [GridItem(.adaptive(minimum: 44), spacing: 0)]
         #else
         Array(repeating: GridItem(.flexible(), spacing: 0), count: 10)
         #endif
@@ -107,7 +110,11 @@ struct PeriodTable: View {
         Text(t)
             .font(PeriodTable.headFont)
             .multilineTextAlignment(.center)
+            #if os(iOS)
+            .frame(width: 40)
+            #else
             .frame(width: 52)
+            #endif
             .frame(maxHeight: .infinity)
             .background(Color.zHover)
     }
@@ -135,12 +142,17 @@ struct PeriodTable: View {
             action()   // 選取底色直接跳過去：盤面同時要重畫，滑動動畫會被卡住，看起來反而頓
         } label: {
             VStack(spacing: 1) {
-                Text(main).font(PeriodTable.mainFont)
-                if let sub { Text(sub).font(PeriodTable.subFont).opacity(0.7) }
-                if let extra { Text(extra).font(PeriodTable.subFont).foregroundStyle(on ? Color.zBg : Color.minorColor) }
+                Text(main).font(PeriodTable.mainFont).lineLimit(1)
+                if let sub { Text(sub).font(PeriodTable.subFont).opacity(0.7).lineLimit(1) }
+                if let extra { Text(extra).font(PeriodTable.subFont).lineLimit(1).foregroundStyle(on ? Color.zBg : Color.minorColor) }
             }
             .foregroundStyle(on ? Color.zBg : Color.zText)
+            #if os(iOS)
+            .frame(width: minW == 0 ? nil : PeriodTable.cellWidth)
+            .frame(maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 26 : 32)
+            #else
             .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)
+            #endif
             .padding(.horizontal, 4)
             .background {
                 if on { Rectangle().fill(Color.zText) }

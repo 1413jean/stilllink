@@ -1129,8 +1129,8 @@ enum StarLayout {
 }
 
 /// 四化方塊列（iPhone，照文墨天機）：方塊固定大小、不跟著星名縮小。
-/// 每顆星的方塊從那顆星的位置往下疊（一層一格，沒有四化的層留空）；
-/// 前一顆星的方塊比欄寬、會擋到時，往右挪到它後面，不重疊；超出宮格寬度就換到下一段。
+/// 每顆星的方塊一律從那顆星的正下方往下疊（一層一格，沒有四化的層留空）；
+/// 方塊比欄寬、相鄰兩顆都有時就疊在一起（後面的蓋在上面），不往旁邊挪——挪過去會看起來像別顆星的四化。
 struct MutagenStrip: View {
     let columns: [[(String, Color)?]]   // 每顆星（照星曜順序）的方塊；空陣列＝這顆星沒有
     let starWidth: CGFloat              // 一顆星的欄寬（0＝星曜換行了，方塊直接從左邊依序排）
@@ -1171,18 +1171,19 @@ struct MutagenStrip: View {
         .allowsHitTesting(false)
     }
 
-    /// 每顆星方塊的位置：盡量對齊自己的星，擋到前一顆就往右挪；放不下這一段就往下開新的一段
+    /// 每顆星方塊的位置：對齊自己的星（方塊置中在那一欄上，貼邊時往內收，不超出宮格）；
+    /// 星曜換行了（starWidth＝0）才從左邊依序排
     private var placement: [(x: CGFloat, y: CGFloat, boxes: [(String, Color)?])] {
         var out: [(x: CGFloat, y: CGFloat, boxes: [(String, Color)?])] = []
-        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
+        var seq: CGFloat = 0
         for (i, col) in columns.enumerated() where !col.isEmpty {
-            var cx = max(CGFloat(i) * starWidth, x)
-            if cx + size > maxWidth + 0.5, cx > 0 {   // 這一段放不下：換下一段，從左邊開始
-                y += rowH + 2; rowH = 0; cx = 0
+            let x: CGFloat
+            if starWidth > 0 {
+                x = min(max(0, CGFloat(i) * starWidth + (starWidth - size) / 2), max(0, maxWidth - size))
+            } else {
+                x = seq; seq += size + 1
             }
-            out.append((cx, y, col))
-            x = cx + size + 1
-            rowH = max(rowH, CGFloat(col.count) * (size + 1))
+            out.append((x, 0, col))
         }
         return out
     }
