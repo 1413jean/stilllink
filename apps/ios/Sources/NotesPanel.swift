@@ -55,12 +55,19 @@ struct NotesSheet: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
             .navigationDestination(for: Detail.self) { d in
                 ScrollView {
-                    StarDetailView(key: d.key, palaceName: d.palace, onBack: { _ = path.popLast() })
-                        .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 32)
+                    StarDetailView(key: d.key, palaceName: d.palace, onBack: { _ = path.popLast() }, showHeader: false)
+                        .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 32)
                 }
                 .background(Color.zBg)
-                .navigationBarBackButtonHidden(true)   // StarDetailView 自己有返回鍵
-                .toolbar(.hidden, for: .navigationBar)
+                // 系統導覽列：返回、標題（星名）、右上編輯
+                .navigationTitle(d.key)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { editing = d.key } label: { Image(systemName: "square.and.pencil") }
+                            .accessibilityLabel("編輯筆記")
+                    }
+                }
             }
         }
         .tint(Color.zText)
