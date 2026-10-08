@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 側欄（照 Claude App）：上面是此刻、所有命盤，下面是釘選與最近看過的紀錄；
+/// 側欄（照 Claude App）：上面是我的命盤、所有命盤，下面是釘選與最近看過的紀錄；
 /// 左下角頭像（到設定）、右下角黑色「新增命盤」
 struct SidebarView: View {
     let current: UUID?
@@ -26,7 +26,7 @@ struct SidebarView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 20)
 
-                    row("此刻", icon: "clock", selected: current == nil && !showingAll) { onPick(nil) }
+                    row("我的命盤", icon: "person.crop.circle", selected: current == nil && !showingAll) { onPick(nil) }
                     row("所有命盤", icon: "person.2", selected: showingAll, action: onAllCharts)
 
                     let pinned = store.people.filter(\.pinned)
@@ -62,7 +62,7 @@ struct SidebarView: View {
         let byID = Dictionary(store.people.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         var out = recentRaw.split(separator: ",").compactMap { UUID(uuidString: String($0)).flatMap { byID[$0] } }
         for p in store.people.sorted(by: { $0.createdAt > $1.createdAt }) where out.count < 12 && !out.contains(p) { out.append(p) }
-        return out.filter { !$0.pinned }.prefix(12).map { $0 }
+        return out.filter { !$0.pinned && $0.id != store.selfID }.prefix(12).map { $0 }   // 自己的盤在最上面「我的命盤」
     }
 
     private func section(_ t: String) -> some View {
@@ -91,7 +91,7 @@ struct SidebarView: View {
     private func row(_ title: String, icon: String?, selected: Bool, detail: String? = nil, loading: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                // 命盤列不放圖示，只有功能列（此刻、所有命盤）有
+                // 命盤列不放圖示，只有功能列（我的命盤、所有命盤）有
                 if let icon {
                     Image(systemName: icon)
                         .font(.system(size: 18, weight: .regular))

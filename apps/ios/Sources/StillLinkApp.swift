@@ -25,7 +25,7 @@ struct RootView: View {
     enum Tab: String { case home, journal, settings }
     @EnvironmentObject private var store: Store
     @AppStorage("tab") private var tab: Tab = .home
-    /// 首頁顯示什麼：空字串＝此刻、"all"＝所有命盤、UUID＝那張盤
+    /// 首頁顯示什麼：空字串＝我的命盤、"all"＝所有命盤、UUID＝那張盤
     @AppStorage("homeChart") private var homeRaw = ""
     @AppStorage("recentCharts") private var recentRaw = ""
     @State private var drawer = false
@@ -137,7 +137,7 @@ struct RootView: View {
         .tint(Color.zAccent)   // 分頁列選到的那格用主色；各分頁內容在上面改回主文字色
     }
 
-    /// 首頁分頁再點一次：有點進去的頁面就退回最上層，已經在最上層就回到此刻盤
+    /// 首頁分頁再點一次：有點進去的頁面就退回最上層，已經在最上層就回到我的命盤
     private func reselectHome() {
         if !homePath.isEmpty {
             homePath = NavigationPath()
@@ -146,7 +146,7 @@ struct RootView: View {
         }
     }
 
-    /// 首頁換成某張盤（nil＝此刻），記進最近紀錄
+    /// 首頁換成某張盤（nil＝我的命盤），記進最近紀錄
     private func show(_ id: UUID?) {
         homeRaw = id?.uuidString ?? ""
         homePath = NavigationPath()
@@ -190,7 +190,7 @@ struct RootView: View {
 
 }
 
-/// 首頁：預設是此刻盤；從側欄點「所有命盤」換成命盤列表，點某張命盤就換成那張
+/// 首頁：預設是自己的命盤（還沒填就請他填）；從側欄點「所有命盤」換成命盤列表，點某張命盤就換成那張
 struct HomeView: View {
     let mode: String
     var openDrawer: () -> Void
@@ -202,8 +202,11 @@ struct HomeView: View {
                 PeopleList()
             } else if let id = UUID(uuidString: mode), let p = store.people.first(where: { $0.id == id }) {
                 ChartView(person: p).id(p.id)
+            } else if let me = store.me {
+                // 首頁預設就是自己的命盤
+                ChartView(person: me).id(me.id)
             } else {
-                NowChartView()
+                SelfOnboarding()
             }
         }
         .toolbar {
@@ -212,5 +215,36 @@ struct HomeView: View {
                     .accessibilityLabel("側欄")
             }
         }
+    }
+}
+
+/// 還沒填自己的命盤：首頁請他先填（填完首頁就是他的盤）
+struct SelfOnboarding: View {
+    @State private var filling = false
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            Image(systemName: "person.crop.circle.badge.plus")
+                .font(.system(size: 52, weight: .light))
+                .foregroundStyle(Color.zText3)
+            Text("先填你的命盤").zText(.title2).foregroundStyle(Color.zText)
+            Text("輸入你的出生日期、時間和地點，\n打開 App 就會看到自己的命盤").zText(.callout)
+                .foregroundStyle(Color.zText2).multilineTextAlignment(.center)
+            Button { filling = true } label: {
+                Text("填寫我的命盤").zText(.bodyStrong)
+                    .foregroundStyle(Color.zBg)
+                    .padding(.horizontal, 26).frame(height: 50)
+                    .background(Capsule().fill(Color.zText))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 8)
+            Spacer()
+            Spacer()
+        }
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity)
+        .background(Color.zBg)
+        .sheet(isPresented: $filling) { PersonForm(asSelf: true) }
     }
 }
