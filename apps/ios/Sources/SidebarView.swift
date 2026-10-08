@@ -108,8 +108,10 @@ struct SidebarView: View {
             }
             .padding(.horizontal, 12)
             .frame(height: 48)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(selected ? Color.zSel : .clear))
+            // 底色用側欄色（不是透明）：長按浮起來的預覽才是一整列圓角卡片，不會只剩幾個字飄著、看起來錯位
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(selected ? Color.zSel : Color.zSide))
             .contentShape(Rectangle())
+            .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
     }
