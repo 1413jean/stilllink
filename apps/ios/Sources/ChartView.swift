@@ -26,6 +26,7 @@ struct ChartView: View {
     @State private var savedTemp = false
     @State private var selPalace: Int?      // 盤上點選的宮位（底部星曜筆記用）
     @State private var showNotes = false
+    @AppStorage("hideBirth") private var hideBirth = false
     @State private var hepanYear: Int?        // 合盤：對方出生年
     @State private var hepanName: String?     // 合盤對象的名字（從命盤選時）
     @State private var showHepan = false
@@ -136,7 +137,7 @@ struct ChartView: View {
                     .presentationBackground(Color.zBg)
             }
         }
-        .navigationTitle(isNow ? "此刻" : person.name)
+        .navigationTitle(isNow ? "此刻" : hideBirth ? person.name.maskedName : person.name)   // 隱藏生辰時標題也遮名字
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if zoom > 1 {
