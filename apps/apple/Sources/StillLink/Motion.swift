@@ -145,17 +145,26 @@ struct BackdropBlur: UIViewRepresentable {
 
     final class View: UIVisualEffectView {
         var fadeFromTop: Bool?
-        private let gradient = CAGradientLayer()
+        // UIVisualEffectView 不能直接用 layer.mask（模糊會整塊照畫、邊緣變成一條硬線）；要用 mask view
+        private let maskHost = GradientMask()
         override func layoutSubviews() {
             super.layoutSubviews()
-            guard let top = fadeFromTop else { layer.mask = nil; return }
-            gradient.frame = bounds
-            // 漸進模糊：邊緣最模糊、線性淡到 0（Figma Background blur · Progressive 24 → 0）
-            gradient.colors = [1, 0].map { UIColor.black.withAlphaComponent($0).cgColor }
-            gradient.locations = [0, 1]
-            gradient.startPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
-            gradient.endPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
-            layer.mask = gradient
+            guard let top = fadeFromTop else { mask = nil; return }
+            maskHost.frame = bounds
+            maskHost.set(top: top)
+            if mask !== maskHost { mask = maskHost }
+        }
+    }
+
+    /// 漸層遮罩：邊緣 100% → 往內 0%（緩和曲線，看不出分界）
+    final class GradientMask: UIView {
+        override class var layerClass: AnyClass { CAGradientLayer.self }
+        func set(top: Bool) {
+            let g = layer as! CAGradientLayer
+            g.colors = [1, 0.85, 0.55, 0.25, 0].map { UIColor.black.withAlphaComponent($0).cgColor }
+            g.locations = [0, 0.3, 0.6, 0.85, 1]
+            g.startPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
+            g.endPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
         }
     }
 

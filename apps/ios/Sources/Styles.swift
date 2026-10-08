@@ -18,7 +18,7 @@ struct ZForm<Content: View>: View {
 extension View {
     /// 上下邊緣：跟 Mac 版一樣的 TopFade（同底色漸層＋背景模糊），取代系統的捲動邊緣效果
     /// （系統的在深色模式會整片變黑）。導覽列、分頁列都不要自己的底色
-    func zEdgeFades(top: CGFloat = 20, bottom: CGFloat = 20) -> some View {
+    func zEdgeFades(top: CGFloat = 36, bottom: CGFloat = 20) -> some View {
         modifier(EdgeFades(top: top, bottom: bottom))
     }
 
@@ -62,7 +62,10 @@ struct EdgeFade: View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
         ZStack {
             BackdropBlur(fadeFromTop: edge == .top, radius: 24)
-            LinearGradient(colors: [Color.zBg, Color.zBg.opacity(0)], startPoint: start, endPoint: end)
+            // 底色漸層用緩和曲線（線性的在 0% 那一端看得出一條界線）
+            LinearGradient(stops: [.init(color: Color.zBg, location: 0), .init(color: Color.zBg.opacity(0.85), location: 0.3),
+                                   .init(color: Color.zBg.opacity(0.45), location: 0.6), .init(color: Color.zBg.opacity(0.12), location: 0.85),
+                                   .init(color: Color.zBg.opacity(0), location: 1)], startPoint: start, endPoint: end)
         }
         .frame(height: height)
         .allowsHitTesting(false)
