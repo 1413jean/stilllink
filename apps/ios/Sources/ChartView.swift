@@ -45,12 +45,13 @@ struct ChartView: View {
             // 手機直拿：盤面左右只留一點邊；iPad／橫放：寬度上限跟 Mac 一樣
             let boardW = min(geo.size.width - 8, 920)
             // iPhone 直拿：盤面拉長一點，宮格裡疊三層四化、流年歲數才不擠（iPad 照 Mac 比例）
-            let aspect: CGFloat = geo.size.width < 600 ? 1.3 : 1.12
+            let aspect: CGFloat = geo.size.width < 600 ? 1.45 : 1.12
             ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                 VStack(spacing: 14) {
                     Group {
                         if let model {
-                            ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, onResetLevel: { pick.level = 0 })
+                            ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, onResetLevel: { pick.level = 0 },
+                                       margin: geo.size.width < 600 ? 10 : 14)
                                 .equatable()
                                 .transaction(value: pick) { $0.animation = nil }
                                 .transition(.opacity)
@@ -65,13 +66,13 @@ struct ChartView: View {
 
                     if model == nil {
                         PeriodTableSkeleton()
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 4)   // 跟盤面卡片同一條邊
                             .frame(width: geo.size.width)
                             .transition(.opacity)
                     }
                     if let model {
                         PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 4)   // 跟盤面卡片同一條邊
                             .frame(width: geo.size.width)
                             .transition(.opacity.combined(with: .offset(y: 8)))
                     }

@@ -30,7 +30,8 @@ struct RootView: View {
     @AppStorage("recentCharts") private var recentRaw = ""
     @State private var drawer = false
     @State private var homePath = NavigationPath()
-    @State private var drag: CGFloat = 0
+    /// 拖曳中的位移：用 GestureState，手勢被取消（例如被點宮位搶走）時系統會自動歸零，畫面不會卡在推開一半
+    @GestureState private var drag: CGFloat = 0
     @State private var adding = false
 
     private var homeID: UUID? { UUID(uuidString: homeRaw) }
@@ -84,7 +85,7 @@ struct RootView: View {
                     // 首頁：從左緣往右拉打開側欄（避開上方導覽列的按鈕）
                     .overlay(alignment: .leading) {
                         if !drawer && tab == .home {
-                            Color.clear.frame(width: 24).contentShape(Rectangle())
+                            Color.clear.frame(width: 14).contentShape(Rectangle())   // 窄一點：不要蓋到盤面左邊那一欄
                                 .padding(.top, inset.top + 80)
                                 .gesture(dragGesture(w))
                         }
@@ -162,30 +163,31 @@ struct RootView: View {
     static let drawerAnim = Animation.snappy(duration: 0.3, extraBounce: 0)
 
     private func openDrawer() {
-        withAnimation(RootView.drawerAnim) { drawer = true; drag = 0 }
+        withAnimation(RootView.drawerAnim) { drawer = true }
     }
     private func closeDrawer() {
-        withAnimation(RootView.drawerAnim) { drawer = false; drag = 0 }
+        withAnimation(RootView.drawerAnim) { drawer = false }
     }
 
     /// 用整個螢幕當座標量位移：手勢掛在會跟著手指移動的主畫面上，用自己的座標量的話，
     /// 畫面一動位移就被抵銷，越拉越黏、放手時以為只拉了一點點，會彈回去
     private func dragGesture(_ w: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 8, coordinateSpace: .global)
-            .onChanged { v in
-                // 上下為主的滑動不歸側欄管（側欄裡的清單照常捲）
-                guard drag != 0 || abs(v.translation.width) > abs(v.translation.height) else { return }
-                drag = v.translation.width
+        DragGesture(minimumDistance: 10, coordinateSpace: .global)
+            .updating($drag) { v, state, _ in
+                // 上下為主的滑動不歸側欄管（清單照常捲、點宮位不會推動畫面）
+                guard state != 0 || abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
+                state = v.translation.width
             }
             .onEnded { v in
-                guard drag != 0 else { return }
+                guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
                 // 放手時看實際拉的距離＋甩的速度：拉過三分之一，或往那個方向甩，就照那個方向
                 let moved = v.translation.width
                 let fling = v.predictedEndTranslation.width - moved
                 let open = drawer ? !(moved < -w / 3 || fling < -120) : (moved > w / 3 || fling > 120)
-                withAnimation(RootView.drawerAnim) { drawer = open; drag = 0 }
+                withAnimation(RootView.drawerAnim) { drawer = open }
             }
     }
+
 }
 
 /// 首頁：預設是此刻盤；從側欄點「所有命盤」換成命盤列表，點某張命盤就換成那張

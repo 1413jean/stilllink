@@ -12,6 +12,8 @@ struct ChartBoard: View, Equatable {
     var onResetLevel: () -> Void = {}
     /// 選取的宮位變了（nil＝取消選取），給右側星曜筆記用
     var onSelect: (Int?) -> Void = { _ in }
+    /// 外圈留給自化箭頭的寬度（iPhone 螢幕窄，傳小一點）
+    var margin: CGFloat = 14
 
     /// 只有資料真的換了才重畫（點運限表時，盤面不會先拿舊資料多畫一次）
     static func == (a: ChartBoard, b: ChartBoard) -> Bool {
@@ -46,7 +48,7 @@ struct ChartBoard: View, Equatable {
         let sf = cleared ? [] : ZW.sanFang(selected)
         let clamps = settings.showClamp && !cleared ? ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0, hepan: hepan) : []
         GeometryReader { geo in
-            let m: CGFloat = 14 * zoom   // 外圈留給自化箭頭；縮小一點讓宮格大一點
+            let m: CGFloat = margin * zoom   // 外圈留給自化箭頭；縮小一點讓宮格大一點
             let cw = (geo.size.width - m * 2) / 4
             let ch = (geo.size.height - m * 2) / 4
             let fs = ChartType.base(cellWidth: cw / zoom) * zoom
