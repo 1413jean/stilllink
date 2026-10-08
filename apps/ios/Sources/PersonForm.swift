@@ -11,6 +11,7 @@ struct PersonForm: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
+    @State private var avatar: String?
     @State private var gender: Gender = .female
     @State private var group = "客人"
     @State private var lunar = false
@@ -43,6 +44,10 @@ struct PersonForm: View {
     var body: some View {
         NavigationStack {
             ZForm {
+                Section {
+                    HStack { Spacer(); AvatarPicker(name: $avatar, size: 84); Spacer() }
+                        .listRowBackground(Color.clear)
+                }
                 Section("基本資料") {
                     TextField("姓名", text: $name, prompt: Text(asSelf ? "你的名字" : "客人的名字或代稱"))
                         .focused($nameFocused)
@@ -160,7 +165,7 @@ struct PersonForm: View {
         guard !loaded else { return }
         loaded = true
         guard let p = editing else { return }
-        name = p.name; gender = p.gender; group = p.group
+        name = p.name; gender = p.gender; group = p.group; avatar = p.avatar
         let src = p.clock ?? "\(p.solar) \(String(format: "%02d", max(0, p.hour * 2 - (p.hour == 12 ? 1 : 0)))):00"
         let n = src.split(whereSeparator: { " -:".contains($0) }).compactMap { Int($0) }
         if n.count >= 5 {
@@ -217,13 +222,14 @@ struct PersonForm: View {
         let r = resolved()
         let n = name.trimmingCharacters(in: .whitespaces)
         if var p = editing {
-            p.name = n; p.gender = gender; p.group = group
+            p.name = n; p.gender = gender; p.group = group; p.avatar = avatar
             p.solar = r.solar; p.hour = r.hour; p.clock = r.clock; p.trueSolar = r.trueSolar; p.place = place
             store.update(p)
             if p.id == store.selfID { store.userName = p.name }
         } else {
-            let p = Person(name: n, gender: gender, solar: r.solar, hour: r.hour, group: asSelf ? "自己" : group,
+            var p = Person(name: n, gender: gender, solar: r.solar, hour: r.hour, group: asSelf ? "自己" : group,
                            clock: r.clock, trueSolar: r.trueSolar, place: place)
+            p.avatar = avatar
             store.add(p)
             if asSelf { store.selfIDString = p.id.uuidString; store.userName = p.name }
             onCreated?(p)

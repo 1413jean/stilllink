@@ -117,7 +117,7 @@ struct SettingsView: View {
 
     private var meRow: some View {
         HStack(spacing: 16) {
-            AvatarView(name: store.userAvatar, size: 68)
+            AvatarPicker(name: Binding(get: { store.userAvatar }, set: { store.userAvatar = $0 }), size: 68)
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.userName).zText(.title2).foregroundStyle(Color.zText)
                 Text(subtitle).zText(.subheadline).foregroundStyle(Color.zText3)
