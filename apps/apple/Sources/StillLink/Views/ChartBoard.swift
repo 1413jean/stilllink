@@ -454,7 +454,8 @@ private struct PalaceCell: View {
                     }
                     // 流月（同文墨天機，例：冬月庚）：寫在神煞欄最上面
                     if let monthLabel { Text(monthLabel).foregroundStyle(Color.wmEarth) }
-                    if settings.showShensha {
+                    // iPhone 選到大限以後：神煞（將軍、劫煞…）收起來，空間留給運限宮名、小限
+                    if settings.showShensha && !(StarLayout.compact && level >= 1) {
                     Text(p.boshi).foregroundStyle(Color.wmGreen)
                     Text(p.jiangqian)
                     Text(p.suiqian)
@@ -539,7 +540,7 @@ private struct PalaceCell: View {
                     }
                     VStack(spacing: 0) {
                         // 長生十二神：自己一個開關（預設關）
-                        if settings.showChangsheng {
+                        if settings.showChangsheng && !(StarLayout.compact && level >= 1) {
                             VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
                                 .padding(.bottom, 2)
                         }
