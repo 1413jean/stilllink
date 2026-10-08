@@ -74,7 +74,7 @@ struct ChartView: View {
                     }
                     if let model {
                         PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
-                            .padding(.horizontal, phone ? 8 : 4)   // 跟宮格同一條邊
+                            .padding(.horizontal, phone ? 16 : 4)   // 跟宮格同一條邊
                             .frame(width: geo.size.width)
                             .transition(.opacity.combined(with: .offset(y: 8)))
                     }
