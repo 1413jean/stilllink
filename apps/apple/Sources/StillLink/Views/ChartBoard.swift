@@ -366,8 +366,11 @@ private struct PalaceCell: View {
             // 第一行：左上合盤宮名（合命、合兄…）、右上地理方位
             // 來因也放這一行（放底部會跟運限宮名、干支擠在一起）
             let hn = hepan?.palaceName(at: p.branch)
-            if hn != nil || settings.showCompass || laiyin {
+            // iPhone 小限疊盤：小限宮名放第一行左上（放左下會跟往左疊的月X、日X 擠在一起、歪掉）
+            let minorTop = minor && StarLayout.compact
+            if hn != nil || settings.showCompass || laiyin || minorTop {
                 HStack(spacing: 3) {
+                    if minorTop { tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor) }
                     if let hn { Text(hn).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmEarth) }
                     if laiyin {
                         Text("來因").font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zOnColor)
@@ -437,7 +440,7 @@ private struct PalaceCell: View {
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
                     // 小限宮名、轉宮名疊在流月上面（左下這一欄），不會擠歪中間的宮名
-                    if minor {
+                    if minor && !StarLayout.compact {
                         tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
                     }
                     // 小限疊盤關著時：小限命宮標一個橫的小框「小限」，放在轉宮名上面
