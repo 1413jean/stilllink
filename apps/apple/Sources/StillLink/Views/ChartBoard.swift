@@ -96,7 +96,6 @@ struct ChartBoard: View, Equatable {
                         .enterFromBelow(appeared, index: r * 4 + c)
                         .modifier(ClampSqueeze(on: !clamps.isEmpty, index: i, selected: selected, amount: squeeze))
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
-                    if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
                 }
                 // 沒有外框卡片時：宮格四角修成圓角（蓋掉方格露出的角）＋細框
                 if !outerCard {
@@ -111,6 +110,14 @@ struct ChartBoard: View, Equatable {
                         .frame(width: gw, height: gh)
                         .offset(x: m, y: m)
                         .allowsHitTesting(false)
+                }
+                // 自化箭頭蓋在宮位上面（壓在宮格邊上時不被隔壁宮位擋住）
+                if settings.showSelf {
+                    ForEach(0..<12, id: \.self) { i in
+                        let (r, c) = ZW.grid[i]
+                        selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m)
+                    }
+                    .allowsHitTesting(false)
                 }
                 // 夾宮提示：選到的宮位被左右鄰宮夾時，交界線上各壓一個指向它的雙箭頭；換宮位就重播
                 if !clamps.isEmpty {
@@ -451,6 +458,7 @@ private struct PalaceCell: View {
                     Text(p.suiqian)
                     }
                 }
+                .padding(.bottom, StarLayout.compact ? CGFloat(min(3, max(0, level - 2))) * TextMeasure.size("月", ChartType.tag(fs), bold: true).height : 0)
                 .fixedSize()   // 這一欄不被右邊的宮名擠扁
                 .font(ChartType.font(ChartType.gods(fs)))
                 .foregroundStyle(Color.zText)

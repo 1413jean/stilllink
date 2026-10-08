@@ -14,6 +14,7 @@ struct ClampOverlay: View {
     @State private var shown = false     // 衝到交界線上了
     @State private var snapped = false   // 吸附：變色、彈一下、震波
     @State private var ring = false      // 震波擴散
+    @State private var rest = false      // 撞完一陣子：iPhone 上淡下來，不擋字
 
     private var color: Color { clamps.contains { !$0.good } ? Color.mJi : Color.mLu }
 
@@ -33,6 +34,9 @@ struct ClampOverlay: View {
                 withAnimation(.spring(response: 0.28, dampingFraction: 0.45)) { snapped = true }
                 withAnimation(.easeOut(duration: 0.55)) { ring = true }
             }
+            if StarLayout.compact {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { withAnimation(.easeOut(duration: 0.4)) { rest = true } }
+            }
         }
     }
 
@@ -51,7 +55,8 @@ struct ClampOverlay: View {
         let cy = d.dy < 0 ? s.minY : d.dy > 0 ? s.maxY : s.midY
         // 箭頭方向：從鄰宮指向被夾的宮位（右＝0°）
         let angle = atan2(-d.dy, -d.dx) * 180 / .pi
-        let h = max(16, fs * 1.2), w = h * 1.55
+        // iPhone 宮格窄：箭頭小一點（約七成），撞完淡成半透明、底色也拿掉，下面的字透得出來
+        let h = StarLayout.compact ? max(12, fs * 0.9) : max(16, fs * 1.2), w = h * 1.55
         let slide: CGFloat = shown ? 0 : (d.dx != 0 ? cw : ch) * 0.18    // 從鄰宮裡面衝過來
         let tint = snapped ? color : Color.zText3                          // 吸附前是灰的
         return ZStack {
@@ -64,12 +69,12 @@ struct ClampOverlay: View {
                 .font(.system(size: h * 0.55, weight: .bold))
                 .foregroundStyle(tint)
                 .frame(width: w, height: h)
-                .background(Capsule().fill(Color.zCard))
-                .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 1))
+                .background(Capsule().fill(Color.zCard).opacity(rest ? 0 : 1))
+                .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 1).opacity(rest ? 0 : 1))
                 .scaleEffect(snapped ? 1 : 0.86)
         }
         .rotationEffect(.degrees(angle))
-        .opacity(shown ? 1 : 0)
+        .opacity(shown ? (rest ? 0.45 : 1) : 0)
         .offset(x: cx - w / 2 + d.dx * slide, y: cy - h / 2 + d.dy * slide)
     }
 }
