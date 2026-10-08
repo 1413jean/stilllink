@@ -44,8 +44,8 @@ struct ChartView: View {
         GeometryReader { geo in
             // 手機直拿：盤面左右只留一點邊；iPad／橫放：寬度上限跟 Mac 一樣
             let phone = geo.size.width < 600
-            // iPhone：宮格離螢幕左右各 4（外圈 4，自化箭頭壓在宮格邊上，跟文墨天機一樣）
-            let boardW = min(geo.size.width - (phone ? 0 : 8), 920)
+            // iPhone：宮格離螢幕左右各 16（外圈 4 放自化箭頭，盤面本身左右各留 12）
+            let boardW = min(geo.size.width - (phone ? 24 : 8), 920)
             // iPhone 直拿：盤面拉長一點，宮格裡疊三層四化、流年歲數才不擠（iPad 照 Mac 比例）
             let aspect: CGFloat = geo.size.width < 600 ? 1.45 : 1.12
             ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
@@ -68,7 +68,7 @@ struct ChartView: View {
 
                     if model == nil {
                         PeriodTableSkeleton()
-                            .padding(.horizontal, 4)   // 跟宮格同一條邊
+                            .padding(.horizontal, phone ? 16 : 4)   // 跟宮格同一條邊
                             .frame(width: geo.size.width)
                             .transition(.opacity)
                     }
