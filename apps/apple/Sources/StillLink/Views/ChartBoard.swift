@@ -398,7 +398,9 @@ private struct PalaceCell: View {
                             starFlow(p: p, horo: horo, minor: minor, f: f, adjF: StarLayout.adjBase(fs) * c.1, wrap: c.2)
                                 .fixedSize(horizontal: false, vertical: true)
                             // 四化方塊照文墨天機固定大小（不跟著星名縮），從各自的星底下往下排
-                            MutagenStrip(rows: mutagenRows(p, horo, minor: minor), size: fs * StarLayout.boxBase)
+                            MutagenStrip(columns: mutagenColumns(p, horo, minor: minor),
+                                         starWidth: c.2 ? 0 : StarLayout.columnWidth(f),
+                                         size: fs * StarLayout.boxBase, maxWidth: g.size.width)
                         }
                         .frame(width: g.size.width, alignment: .topLeading)
                     }
@@ -587,17 +589,14 @@ extension PalaceCell {
         }
     }
 
-    /// iPhone：這一宮的四化方塊，一層一排（生年 → 大限 → 流年…→ 小限 → 合盤），每排照星曜順序
-    func mutagenRows(_ p: Palace, _ horo: Horoscope, minor: Bool) -> [[(String, Color)]] {
+    /// iPhone：這一宮每顆星的四化方塊（照星曜順序，一層一格），給 MutagenStrip 畫
+    func mutagenColumns(_ p: Palace, _ horo: Horoscope, minor: Bool) -> [[(String, Color)?]] {
         let showMinor = minor && settings.showMinorMutagen
-        var rows: [[(String, Color)]] = layers.map { _ in [] } + [[], []]
-        for s in p.stars {
-            for (k, slot) in mutagenSlots(s, horo).enumerated() { if let m = slot.0 { rows[k].append((m.rawValue, slot.1)) } }
-            if showMinor, let m = ZW.mutagen(in: horo.age.mutagen, star: s.name) { rows[layers.count].append((m.rawValue, .fMinor)) }
-            if let m = hepan?.mutagen(star: s.name) { rows[layers.count + 1].append((m.rawValue, .fHepan)) }
+        return p.stars.map { s in
+            MutagenStrip.boxes(slots: mutagenSlots(s, horo),
+                               minor: showMinor ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
+                               hepan: hepan?.mutagen(star: s.name))
         }
-        while let last = rows.last, last.isEmpty { rows.removeLast() }   // 最後面的空排不用留；中間沒有四化的層留空，一眼看出第幾層
-        return rows
     }
 
     /// 宮內的流曜（大限、流年）和合盤星
@@ -1145,11 +1144,14 @@ enum StarLayout {
     static func column(_ s: CGSize, _ f: CGFloat) -> CGSize { CGSize(width: max(s.width, columnWidth(f)), height: s.height) }
 }
 
-/// 四化方塊列（iPhone，照文墨天機）：方塊固定大小、不跟著星名縮小；
-/// 一層一排（生年、大限、流年…），每排由左往右照星曜順序緊貼著排，不會互相蓋住
+/// 四化方塊列（iPhone，照文墨天機）：方塊固定大小、不跟著星名縮小。
+/// 每顆星的方塊從那顆星底下往下疊（一層一格，沒有四化的層留空）；
+/// 方塊比欄寬、相鄰兩顆都有時稍微疊在一起（最多蓋掉前一個約一半，字要露得出來），不整個挪到別顆星底下。
 struct MutagenStrip: View {
-    let rows: [[(String, Color)]]
+    let columns: [[(String, Color)?]]   // 每顆星（照星曜順序）的方塊；空陣列＝這顆星沒有
+    let starWidth: CGFloat              // 一顆星的欄寬（0＝星曜換行了，方塊直接從左邊依序排）
     let size: CGFloat
+    let maxWidth: CGFloat
 
     /// 方塊清單：每一層固定一格（沒有四化的層留空白，最後面的空白不用留），再接小限、合盤
     static func boxes(slots: [(Mutagen?, Color)], minor: Mutagen?, hepan: Mutagen?) -> [(String, Color)?] {
@@ -1161,21 +1163,47 @@ struct MutagenStrip: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 1) {
-                    ForEach(Array(row.enumerated()), id: \.offset) { _, b in
-                        Text(b.0)
-                            .font(ChartType.font(size * 0.8))
-                            .foregroundStyle(Color.zOnColor)
-                            .frame(width: size, height: size)
-                            .background(b.1)
+        let placed = placement
+        let height = placed.map { CGFloat($0.boxes.count) * (size + 1) }.max() ?? 0
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(placed.enumerated()), id: \.offset) { _, it in
+                VStack(spacing: 1) {
+                    ForEach(Array(it.boxes.enumerated()), id: \.offset) { _, b in
+                        if let b {
+                            Text(b.0)
+                                .font(ChartType.font(size * 0.8))
+                                .foregroundStyle(Color.zOnColor)
+                                .frame(width: size, height: size)
+                                .background(b.1)
+                        } else {
+                            Color.clear.frame(width: size, height: size)
+                        }
                     }
                 }
-                .frame(height: size)   // 沒有四化的層也留一排高度
+                .offset(x: it.x)
             }
         }
-        .fixedSize()
+        .frame(width: maxWidth, height: height, alignment: .topLeading)
         .allowsHitTesting(false)
+    }
+
+    /// 每顆星方塊的 x：對齊自己的星；疊到前一顆時往右挪到最多蓋掉它一半；不超出宮格
+    private var placement: [(x: CGFloat, boxes: [(String, Color)?])] {
+        var out: [(x: CGFloat, boxes: [(String, Color)?])] = []
+        var seq: CGFloat = 0
+        var prev: CGFloat?
+        for (i, col) in columns.enumerated() where !col.isEmpty {
+            var x: CGFloat
+            if starWidth > 0 {
+                x = CGFloat(i) * starWidth
+                if let prev { x = max(x, prev + size * 0.52) }
+                x = min(x, max(0, maxWidth - size))
+                prev = x
+            } else {
+                x = seq; seq += size + 1
+            }
+            out.append((x, col))
+        }
+        return out
     }
 }
