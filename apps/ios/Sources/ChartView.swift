@@ -14,7 +14,12 @@ struct ChartView: View {
     @State private var confirmDelete = false
     @State private var showSettings = false
     @Environment(\.dismiss) private var dismiss
-    @State private var zoom: CGFloat = 1   // 盤面縮放倍率（ZoomableBoard 管手勢）
+    // 盤面縮放（照 Mac）：整張盤在頁面裡變大，頁面上下左右捲；捏合中先整張放大，放手後用新尺寸重排（字清楚）
+    @State private var zoom: CGFloat = 1        // 排版用的倍率（1～3）
+    @State private var live: CGFloat = 1        // 捏合中、還沒放手的額外倍率
+    @State private var pinchAt: CGPoint = .zero // 捏的那一點（盤面上的位置，放手前的倍率）
+    @State private var scrollOffset: CGPoint = .zero
+    @State private var scrollPos = ScrollPosition()
     @State private var adding = false
     @State private var showPillars = false
     @State private var tempChart: TempItem?
@@ -53,12 +58,12 @@ struct ChartView: View {
             let boardW = min(geo.size.width - (phone ? 24 : 8), 920)
             // iPhone 直拿：盤面拉長一點，宮格裡疊三層四化、流年歲數才不擠（iPad 照 Mac 比例）
             let aspect: CGFloat = geo.size.width < 600 ? 1.45 : 1.12
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical, showsIndicators: false) {
                 VStack(spacing: 14) {
                     if let y = hepanYear { hepanChip(y) }
-                    ZoomableBoard(size: CGSize(width: boardW, height: boardW * aspect), zoom: $zoom) { z in
+                    Group {
                         if let model {
-                            ChartBoard(person: person, model: model, level: shownLevel, zoom: z, hepan: hepanYear.map(Hepan.init),
+                            ChartBoard(person: person, model: model, level: shownLevel, zoom: zoom, hepan: hepanYear.map(Hepan.init),
                                        onResetLevel: { pick.level = 0 },
                                        onSelect: { selPalace = $0 },
                                        margin: phone ? 4 : 14, outerCard: !phone)
@@ -69,6 +74,15 @@ struct ChartView: View {
                             BoardSkeleton().transition(.opacity)
                         }
                     }
+                    .frame(width: boardW * zoom, height: boardW * aspect * zoom)
+                    .scaleEffect(live, anchor: UnitPoint(x: pinchAt.x / (boardW * zoom), y: pinchAt.y / (boardW * aspect * zoom)))
+                    .zIndex(1)   // 捏合中放大的盤面蓋在運限表上面
+                    .gesture(MagnifyGesture()
+                        .onChanged { v in
+                            if live == 1 { pinchAt = v.startLocation }
+                            live = min(3 / zoom, max(1 / zoom, v.magnification))
+                        }
+                        .onEnded { _ in commitZoom() })
 
                     if model == nil {
                         PeriodTableSkeleton()
@@ -89,11 +103,14 @@ struct ChartView: View {
                             .padding(.top, 14)
                     }
                 }
-                .frame(maxWidth: .infinity)
+                // 放大時內容比螢幕寬：寬度跟著盤面撐開，左右留一樣的邊（盤面左上角位置不變，縮放後捲動才算得準）
+                .frame(width: max(geo.size.width, boardW * zoom + (geo.size.width - boardW)))
                 .padding(.top, 16)
                 .padding(.bottom, 24)
             }
             // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看捲上去之後頂端的樣子）
+            .scrollPosition($scrollPos)
+            .onScrollGeometryChange(for: CGPoint.self) { $0.contentOffset } action: { _, p in scrollOffset = p }
             .defaultScrollAnchor(ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] != nil ? .bottom : .top)
             // 打備註時：捲動或點盤面其他地方就收鍵盤
             .scrollDismissesKeyboard(.interactively)
@@ -202,7 +219,24 @@ struct ChartView: View {
         withAnimation(Motion.base) { savedTemp = true }
     }
 
-    private func setZoom(_ z: CGFloat) { zoom = z }
+    private func setZoom(_ z: CGFloat) {
+        var t = Transaction(); t.disablesAnimations = true
+        withTransaction(t) { zoom = z; live = 1 }
+        if z == 1 { scrollPos.scrollTo(x: 0, y: scrollOffset.y) }
+    }
+
+    /// 放手：倍率寫進排版；捲動位置調成捏的那一點還留在手指下面
+    /// （盤面在內容裡的左上角固定，所以只要把那一點放大後多出來的距離加到捲動量上）
+    private func commitZoom() {
+        let old = zoom
+        var z = old * live
+        if z < 1.05 { z = 1 }
+        let k = z / old
+        let target = CGPoint(x: max(0, scrollOffset.x + pinchAt.x * (k - 1)), y: max(0, scrollOffset.y + pinchAt.y * (k - 1)))
+        var t = Transaction(); t.disablesAnimations = true
+        withTransaction(t) { zoom = z; live = 1 }
+        DispatchQueue.main.async { scrollPos.scrollTo(x: z > 1 ? target.x : 0, y: target.y) }
+    }
 
 
     /// 合盤中：盤面上方一顆膠囊（對象、年干支），× 取消

@@ -146,13 +146,14 @@ struct ChartRecords: View {
 
     static func url(_ name: String) -> URL { Store.dataDir.appendingPathComponent("media").appendingPathComponent(name) }
 
-    /// 長邊縮到 2000、存成 JPEG
+    /// 一律壓縮：長邊縮到 1600、JPEG 品質 0.72（手機拍的 4000px 照片約 12MB → 300KB 上下）
     static func savePhoto(_ data: Data) -> String? {
         guard let img = UIImage(data: data) else { return nil }
-        let scale = min(1, 2000 / max(img.size.width, img.size.height))
+        let scale = min(1, 1600 / max(img.size.width, img.size.height))
         let size = CGSize(width: img.size.width * scale, height: img.size.height * scale)
-        let out = UIGraphicsImageRenderer(size: size).image { _ in img.draw(in: CGRect(origin: .zero, size: size)) }
-        guard let jpg = out.jpegData(compressionQuality: 0.85) else { return nil }
+        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1   // 不乘螢幕倍率（3x 會變成 4800px）
+        let out = UIGraphicsImageRenderer(size: size, format: fmt).image { _ in img.draw(in: CGRect(origin: .zero, size: size)) }
+        guard let jpg = out.jpegData(compressionQuality: 0.72) else { return nil }
         let dir = Store.dataDir.appendingPathComponent("media", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let name = "photo-" + UUID().uuidString + ".jpg"

@@ -57,11 +57,12 @@ struct AvatarPicker: View {
         guard let img = UIImage(data: data) else { return nil }
         let side = min(img.size.width, img.size.height)
         let crop = CGRect(x: (img.size.width - side) / 2, y: (img.size.height - side) / 2, width: side, height: side)
-        let out = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { _ in
+        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1   // 真的 256px（不乘螢幕倍率）
+        let out = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256), format: fmt).image { _ in
             img.draw(in: CGRect(x: -crop.minX * 256 / side, y: -crop.minY * 256 / side,
                                 width: img.size.width * 256 / side, height: img.size.height * 256 / side))
         }
-        guard let jpg = out.jpegData(compressionQuality: 0.85) else { return nil }
+        guard let jpg = out.jpegData(compressionQuality: 0.8) else { return nil }
         let dir = Store.dataDir.appendingPathComponent("media", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let file = "avatar-" + UUID().uuidString + ".jpg"
