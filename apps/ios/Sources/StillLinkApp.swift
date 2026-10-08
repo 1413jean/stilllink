@@ -58,6 +58,7 @@ struct RootView: View {
                     // 主畫面蓋回來時側欄逐漸變暗（照 Claude），拖的時候跟著手指
                     .overlay(Color.black.opacity(0.28 * (1 - x / w)).allowsHitTesting(false))
                     .offset(x: (x - w) * 0.25)   // 側欄跟著慢一點滑進來，有層次
+                    .simultaneousGesture(drawer ? dragGesture(w) : nil)   // 在側欄上往左滑也能關（跟 Claude 一樣）
 
                     // 分頁列（系統原生）在主畫面裡，跟著一起被推開
                     tabs
@@ -167,12 +168,21 @@ struct RootView: View {
         withAnimation(RootView.drawerAnim) { drawer = false; drag = 0 }
     }
 
+    /// 用整個螢幕當座標量位移：手勢掛在會跟著手指移動的主畫面上，用自己的座標量的話，
+    /// 畫面一動位移就被抵銷，越拉越黏、放手時以為只拉了一點點，會彈回去
     private func dragGesture(_ w: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 8)
-            .onChanged { drag = $0.translation.width }
+        DragGesture(minimumDistance: 8, coordinateSpace: .global)
+            .onChanged { v in
+                // 上下為主的滑動不歸側欄管（側欄裡的清單照常捲）
+                guard drag != 0 || abs(v.translation.width) > abs(v.translation.height) else { return }
+                drag = v.translation.width
+            }
             .onEnded { v in
-                let end = v.predictedEndTranslation.width
-                let open = drawer ? end > -w / 3 : end > w / 3
+                guard drag != 0 else { return }
+                // 放手時看實際拉的距離＋甩的速度：拉過三分之一，或往那個方向甩，就照那個方向
+                let moved = v.translation.width
+                let fling = v.predictedEndTranslation.width - moved
+                let open = drawer ? !(moved < -w / 3 || fling < -120) : (moved > w / 3 || fling > 120)
                 withAnimation(RootView.drawerAnim) { drawer = open; drag = 0 }
             }
     }
