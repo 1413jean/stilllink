@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// 所有命盤（從側欄進）：跟「我的」「日記」同一套樣式——小標＋大標、暖白底、淺灰圓角卡片；
-/// 底下還是系統 List，左滑刪除、右滑釘選、長按選單都照用
+/// 所有命盤（從側欄進）：照 Claude App 的 Chats——導覽列中間標題、單純一列一列（頭貼＋姓名＋生日），
+/// 右下角浮著「新增命盤」；左滑刪除、右滑釘選、長按選單照用
 struct PeopleList: View {
     @EnvironmentObject private var store: Store
     @State private var query = ""
@@ -13,24 +13,28 @@ struct PeopleList: View {
 
     var body: some View {
         List {
-            let showMe = query.isEmpty && store.showSelfInSidebar && store.me != nil
-            if showMe, let me = store.me {
-                Section { link(me) } header: { header("我", first: true) }
-            }
-            ForEach(Array(sections.enumerated()), id: \.element.0) { i, sec in
-                Section {
-                    ForEach(sec.1) { link($0) }
-                } header: { header(sec.0, first: !showMe && i == 0) }
-            }
+            ForEach(rows) { link($0) }
         }
-        .listStyle(.insetGrouped)
-        .listSectionSpacing(20)
+        .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.zBg)
         .environment(\.defaultMinListRowHeight, 64)
-        .navigationTitle("")
+        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 64) }   // 右下角的新增按鈕不蓋到最後一列
+        .overlay(alignment: .bottomTrailing) {
+            Button { adding = true } label: {
+                Label("新增命盤", systemImage: "plus")
+                    .zText(.body)
+                    .foregroundStyle(Color.zBg)
+                    .padding(.horizontal, 20).frame(height: 48)
+                    .background(Capsule().fill(Color.zText))
+                    .shadow(color: Color.zShadow, radius: 10, y: 3)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 16).padding(.bottom, 8)
+        }
+        .navigationTitle("所有命盤")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜尋姓名、分組、命宮主星")
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜尋")
         // 搜尋框跟著內容：往上滑收走、往下滑回頂端才出現；導覽列沒有底色，捲到上面用漸層霧化
         .zEdgeFades()
         .navigationDestination(for: UUID.self) { id in
@@ -40,11 +44,7 @@ struct PeopleList: View {
             if let p = store.people.first(where: { $0.id == id }) { ChartView(person: p) }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                sortMenu
-                Button { adding = true } label: { Image(systemName: "plus").foregroundStyle(Color.zText) }
-                    .accessibilityLabel("新增命盤")
-            }
+            ToolbarItem(placement: .topBarTrailing) { sortMenu }
         }
         .overlay {
             if store.people.isEmpty {
@@ -61,7 +61,7 @@ struct PeopleList: View {
                     }
                     .buttonStyle(.plain)
                 }
-            } else if !query.isEmpty && sections.isEmpty {
+            } else if !query.isEmpty && rows.isEmpty {
                 ContentUnavailableView.search(text: query)
             }
         }
@@ -84,36 +84,23 @@ struct PeopleList: View {
         }
     }
 
-    /// 分組（釘選在最前面）；搜尋時比對姓名、分組、命宮主星
-    private var sections: [(String, [Person])] {
+    /// 一列一列：我（側欄有顯示時）→ 釘選 → 其他照排序；搜尋時比對姓名、分組、命宮主星
+    private var rows: [Person] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        let hide = store.showSelfInSidebar ? store.selfID : nil
-        return store.groups.compactMap { g, list in
-            let shown = store.sorted(list).filter { p in
-                if q.isEmpty { return p.id != hide }
-                return p.name.contains(q) || p.group.contains(q) || (store.soulStars[p.id] ?? "").contains(q)
-            }
-            return shown.isEmpty ? nil : (g, shown)
+        let me = query.isEmpty && store.showSelfInSidebar ? store.me : nil
+        let rest = store.groups.flatMap { store.sorted($0.1) }.filter { p in
+            if p.id == me?.id { return false }
+            if q.isEmpty { return true }
+            return p.name.contains(q) || p.group.contains(q) || (store.soulStars[p.id] ?? "").contains(q)
         }
-    }
-
-    /// 分組標題；第一個分組上面再放頁面的小標＋大標
-    private func header(_ t: String, first: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if first {
-                Text("CHARTS · 命盤").zText(.eyebrow).foregroundStyle(Color.zAccent).padding(.bottom, 4)
-                Text("所有命盤").zText(.titleLarge).foregroundStyle(Color.zText).padding(.bottom, 20)
-            }
-            Text(t).zText(.eyebrow).foregroundStyle(Color.zText3)
-        }
-        .textCase(nil)
-        .padding(.leading, first ? 0 : -16)
+        return (me.map { [$0] } ?? []) + rest
     }
 
     private func link(_ p: Person) -> some View {
-        NavigationLink(value: p.id) { PersonRow(person: p, soul: store.soulStars[p.id], hideBirth: hideBirth) }
-            .listRowBackground(Color.zHover)
-            .listRowSeparatorTint(Color.zLine)
+        NavigationLink(value: p.id) { PersonRow(person: p, hideBirth: hideBirth) }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 16))
             .swipeActions(edge: .trailing) {
                 Button("刪除", systemImage: "trash", role: .destructive) { deleting = p }
                 Button("編輯", systemImage: "pencil") { editing = p }.tint(.gray)
@@ -146,39 +133,32 @@ struct PeopleList: View {
             Divider()
             Toggle("隱藏生辰", isOn: $hideBirth)
         } label: {
-            Image(systemName: "arrow.up.arrow.down").foregroundStyle(Color.zText)
+            Image(systemName: "slider.horizontal.3").foregroundStyle(Color.zText)
         }
         .accessibilityLabel("排序")
     }
 }
 
-/// 列表的一列：頭貼（沒有就用姓的第一個字）＋姓名、命宮主星、生日
+/// 列表的一列（照 Claude Chats）：頭貼＋姓名（性別同字級）＋生日
 struct PersonRow: View {
     let person: Person
-    let soul: String?
     var hideBirth = false
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             AvatarView(name: person.avatar, size: 40)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(hideBirth ? person.name.maskedName : person.name).font(.zHeadline).foregroundStyle(Color.zText)
-                    Text(person.gender.rawValue).zText(.footnote).foregroundStyle(Color.zText3)
+                    Text(hideBirth ? person.name.maskedName : person.name).foregroundStyle(Color.zText)
+                    Text(person.gender.rawValue).foregroundStyle(Color.zText3)
                     if person.pinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(Color.zAccent) }
                 }
-                HStack(spacing: 6) {
-                    // 主星用次要灰，「命」再淡一階：名字才是主角
-                    if soul == nil { SkeletonBar(width: 56, height: 11) }
-                    if let soul {
-                        if soul.isEmpty { Text("命無主星").foregroundStyle(Color.zText3) }
-                        else { Text("命 ").foregroundStyle(Color.zText3) + Text(soul).foregroundStyle(Color.zText2) }
-                    }
-                    if !hideBirth { Text(person.clock ?? person.solar).foregroundStyle(Color.zText3) }
+                .zText(.body)
+                .lineLimit(1)
+                if !hideBirth {
+                    Text(person.clock ?? person.solar).zText(.subheadline).foregroundStyle(Color.zText3)
                 }
-                .zText(.footnote)
             }
         }
-        .padding(.vertical, 2)
     }
 }
