@@ -655,7 +655,7 @@ extension PalaceCell {
             if hepan?.mutagen(star: star.name) != nil { n += 1 }
             let size = StarLayout.boxScale(n)
             let name = TextMeasure.size(VerticalText.join(star.name), ChartType.star(f), bold: star.type == "major")
-            let bright = TextMeasure.size(star.brightness.isEmpty ? " " : star.brightness, ChartType.meta(f))
+            let bright = TextMeasure.size(star.brightness.isEmpty ? " " : star.brightness, StarLayout.compact ? f * 0.68 : ChartType.meta(f))
             let boxes = n > 0 ? CGFloat(n) * f * size + CGFloat(n - 1) : 0
             out.append(CGSize(width: max(StarLayout.columnWidth(f), n > 0 ? f * size : 0), height: name.height + 2 + 0.5 + bright.height + 0.5 + boxes))
         }
@@ -745,8 +745,10 @@ private struct StarColumn: View {
                 // 滑鼠停在星名上：回報位置給盤面顯示小卡
                 .starHoverArea(star.name, palace: palaceName)
             Text(star.brightness.isEmpty ? " " : star.brightness)
-                .font(ChartType.font(ChartType.meta(fs)))
+                // iPhone：亮度跟著星名一起縮（meta 有最小 8pt，星多縮小時亮度會把主星那欄撐寬、間距不一致）
+                .font(ChartType.font(StarLayout.compact ? fs * 0.68 : ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
+                .lineLimit(1)
             if showBoxes {
             VStack(spacing: 1) {
                 ForEach(Array(list.enumerated()), id: \.offset) { _, b in
