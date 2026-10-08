@@ -21,7 +21,7 @@ struct ChartPager: View {
             GeometryReader { geo in
                 let row = LazyHStack(spacing: 0) {
                     ForEach(Array(pages.enumerated()), id: \.element.id) { i, p in
-                        ChartScreen(person: p, level: i == 0 ? level : nil, chrome: false, onAdd: { picking = true })
+                        ChartScreen(person: p.resolved(), level: i == 0 ? level : nil, chrome: false, isCurrent: i == current, onAdd: { picking = true })
                             .padding(.top, top)
                             .frame(width: geo.size.width, height: geo.size.height)
                             .id(i)
