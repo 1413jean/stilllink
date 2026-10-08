@@ -7,6 +7,7 @@ struct QuickMenu: View {
     var onNew: () -> Void
     var onPillars: () -> Void
     var onTemp: (Person, Int) -> Void
+    var onHepan: () -> Void = {}
     @State private var askingNumber = false
     @State private var number = ""
 
@@ -27,6 +28,7 @@ struct QuickMenu: View {
                     Label("紫占排盤", systemImage: "sparkles")
                 }
                 Button("報數起卦", systemImage: "number") { number = ""; askingNumber = true }
+                Button("合盤…", systemImage: "person.2.circle", action: onHepan)
             }
             Section {
                 Button("今年流盤", systemImage: "calendar") { flow(2) }
@@ -181,5 +183,50 @@ struct PillarSearchSheet: View {
             searching = false
             withAnimation(Motion.base) { searched = true }
         }
+    }
+}
+
+/// 合盤：選一張命盤（用他的出生年），或直接輸入對方的出生年；疊到目前這張盤上（跟 Mac 一樣只看年干支）
+struct HepanSheet: View {
+    let current: UUID
+    var onPick: (Int, String?) -> Void
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    @State private var yearText = ""
+
+    var body: some View {
+        NavigationStack {
+            ZForm {
+                Section {
+                    HStack {
+                        TextField("對方出生年，例如 1995", text: $yearText).keyboardType(.numberPad)
+                        Button("合盤") { if let y = year { onPick(y, nil); dismiss() } }.disabled(year == nil)
+                    }
+                } footer: {
+                    Text("合盤只用對方的出生年（天干地支）：合命等宮名、合祿合羊合陀、合四化會疊在盤上")
+                }
+                Section("從命盤選") {
+                    ForEach(store.people.filter { $0.id != current }) { p in
+                        Button { onPick(p.birthYear, p.name); dismiss() } label: {
+                            HStack(spacing: 12) {
+                                AvatarView(name: p.avatar, size: 32)
+                                Text(p.name).foregroundStyle(Color.zText)
+                                Spacer()
+                                Text("\(String(p.birthYear)) \(ZW.yearGanzhi(p.birthYear))").foregroundStyle(Color.zText3)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("合盤")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } } }
+        }
+        .tint(Color.zText)
+    }
+
+    private var year: Int? {
+        guard let y = Int(yearText.trimmingCharacters(in: .whitespaces)), (1...9999).contains(y) else { return nil }
+        return y
     }
 }

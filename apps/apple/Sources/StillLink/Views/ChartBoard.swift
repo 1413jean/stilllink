@@ -624,9 +624,9 @@ extension PalaceCell {
     }
 
     #if os(iOS)
-    /// iPhone 照文墨天機：所有星曜同一個字級、整排一起縮，縮到很小還放不下才換第二排
+    /// iPhone 照文墨天機：所有星曜同一個字級、整排一起縮，永遠不換行（Jean：寧願字窄一點小一點）
     private static let fitCandidates: [(CGFloat, CGFloat, Bool)] =
-        [1.0, 0.93, 0.86, 0.8, 0.74, 0.68, 0.63, 0.58].map { ($0, $0, false) } + [(0.7, 0.7, true), (0.6, 0.6, true)]
+        [1.0, 0.93, 0.86, 0.8, 0.74, 0.68, 0.63, 0.58, 0.54, 0.5, 0.46].map { ($0, $0, false) }
     #else
     private static let fitCandidates: [(CGFloat, CGFloat, Bool)] =
         [(1.0, 1.0), (1.0, 0.9), (1.0, 0.82), (0.94, 0.76), (0.88, 0.72), (0.82, 0.68)].map { ($0.0, $0.1, false) } +

@@ -24,6 +24,9 @@ struct ChartView: View {
     @State private var savedTemp = false
     @State private var selPalace: Int?      // 盤上點選的宮位（底部星曜筆記用）
     @State private var showNotes = false
+    @State private var hepanYear: Int?        // 合盤：對方出生年
+    @State private var hepanName: String?     // 合盤對象的名字（從命盤選時）
+    @State private var showHepan = false
 
     /// 推到下一頁的暫時命盤
     struct TempItem: Identifiable, Hashable { let id = UUID(); let person: Person; let level: Int }
@@ -36,6 +39,8 @@ struct ChartView: View {
         var p = Pick.today(); p.level = lv
         _pick = State(initialValue: p)
         _shownLevel = State(initialValue: lv)
+        // 驗證用：ZIWEI_HEPAN=1995 直接合盤
+        _hepanYear = State(initialValue: ProcessInfo.processInfo.environment["ZIWEI_HEPAN"].flatMap(Int.init))
     }
 
     /// 釘選狀態要看 store 裡最新的那份
@@ -52,9 +57,11 @@ struct ChartView: View {
             let aspect: CGFloat = geo.size.width < 600 ? 1.45 : 1.12
             ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical, showsIndicators: false) {
                 VStack(spacing: 14) {
+                    if let y = hepanYear { hepanChip(y) }
                     Group {
                         if let model {
-                            ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, onResetLevel: { pick.level = 0 },
+                            ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, hepan: hepanYear.map(Hepan.init),
+                                       onResetLevel: { pick.level = 0 },
                                        onSelect: { selPalace = $0 },
                                        margin: phone ? 4 : 14, outerCard: !phone)
                                 .equatable()
@@ -128,7 +135,7 @@ struct ChartView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 QuickMenu(pick: $pick, onNew: { adding = true }, onPillars: { showPillars = true },
-                          onTemp: { tempChart = TempItem(person: $0, level: $1) })
+                          onTemp: { tempChart = TempItem(person: $0, level: $1) }, onHepan: { showHepan = true })
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showSettings = true } label: { Image(systemName: "slider.horizontal.3").frame(width: 22, height: 22) }
@@ -169,6 +176,9 @@ struct ChartView: View {
             .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $adding) { PersonForm() }
+        .sheet(isPresented: $showHepan) {
+            HepanSheet(current: person.id) { y, name in withAnimation(Motion.base) { hepanYear = y; hepanName = name } }
+        }
         .sheet(isPresented: $showPillars) {
             PillarSearchSheet { tempChart = TempItem(person: $0, level: 0) }
         }
@@ -214,6 +224,25 @@ struct ChartView: View {
         withAnimation(Motion.base) { savedTemp = true }
     }
 
+    /// 合盤中：盤面上方一顆膠囊（對象、年干支），× 取消
+    private func hepanChip(_ y: Int) -> some View {
+        HStack(spacing: 8) {
+            Text("合盤").zText(.footnoteStrong).foregroundStyle(Color.zOnColor)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(RoundedRectangle(cornerRadius: 4).fill(Color.fHepan))
+            Text([hepanName, "\(String(y)) \(ZW.yearGanzhi(y))年"].compactMap { $0 }.joined(separator: " · "))
+                .zText(.footnote).foregroundStyle(Color.zText)
+            Button { withAnimation(Motion.base) { hepanYear = nil; hepanName = nil } } label: {
+                Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.zText3)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("取消合盤")
+        }
+        .padding(.leading, 10)
+        .background(Capsule().fill(Color.zHover))
+    }
+
     /// 宮位名稱：選到運限時用那一層的宮名（年疾厄…），跟盤面一樣
     private func palaceTitle(_ m: ChartModel, _ i: Int) -> String {
         shownLevel >= 1 ? ZW.scopeTags[shownLevel - 1] + m.horo.scope(shownLevel).palaceNames[i] : m.chart.palaces[i].name
@@ -229,7 +258,7 @@ struct ChartView: View {
     /// 筆記的夾宮段落：跟盤面框線同一套判斷（設定關掉夾宮提示就不列）
     private func notesClamps(_ m: ChartModel, _ i: Int) -> [Clamp] {
         guard settings.showClamp else { return [] }
-        return ZW.clamps(m.chart, horo: m.horo, center: i, level: settings.clampByScope ? shownLevel : 0, hepan: nil)
+        return ZW.clamps(m.chart, horo: m.horo, center: i, level: settings.clampByScope ? shownLevel : 0, hepan: hepanYear.map(Hepan.init))
     }
 
     private struct LoadKey: Equatable { let chart: String; let pick: Pick }
