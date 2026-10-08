@@ -22,6 +22,8 @@ struct ChartView: View {
     @State private var showPillars = false
     @State private var tempChart: TempItem?
     @State private var savedTemp = false
+    @State private var selPalace: Int?      // 盤上點選的宮位（底部星曜筆記用）
+    @State private var showNotes = false
 
     /// 推到下一頁的暫時命盤
     struct TempItem: Identifiable, Hashable { let id = UUID(); let person: Person; let level: Int }
@@ -53,6 +55,7 @@ struct ChartView: View {
                     Group {
                         if let model {
                             ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, onResetLevel: { pick.level = 0 },
+                                       onSelect: { selPalace = $0 },
                                        margin: phone ? 4 : 14, outerCard: !phone)
                                 .equatable()
                                 .transaction(value: pick) { $0.animation = nil }
@@ -88,6 +91,32 @@ struct ChartView: View {
         }
         .background(Color.zBg)
         .zEdgeFades()
+        // 底部浮著選到宮位的摘要：點了拉出星曜筆記
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if let model, let i = selPalace, StarNotes.enabled {
+                NotesBar(title: palaceTitle(model, i), stars: model.chart.palaces[i].major.map(\.name).joined()) { showNotes = true }
+                    .padding(.bottom, 4)
+                    .transition(.opacity.combined(with: .offset(y: 8)))
+            }
+        }
+        .onAppear {
+            // 驗證用：ZIWEI_NOTES_SHEET=1 一打開就拉出星曜筆記
+            if ProcessInfo.processInfo.environment["ZIWEI_NOTES_SHEET"] != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showNotes = true }
+            }
+        }
+        .sheet(isPresented: $showNotes) {
+            if let model, let i = selPalace {
+                NotesSheet(chart: model.chart, index: i, includeBirth: max(0, shownLevel - 2) == 0, scopes: activeScopes(model),
+                           clamps: notesClamps(model, i),
+                           names: shownLevel >= 1 ? model.horo.scope(shownLevel).palaceNames : nil,
+                           prefix: shownLevel >= 1 ? ZW.scopeTags[shownLevel - 1] : "")
+                    .presentationDetents([.fraction(0.5), .large])
+                    // 半頁時還能點盤面上半部換宮位，筆記跟著換（像 Apple 地圖）
+                    .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.5)))
+                    .presentationBackground(Color.zBg)
+            }
+        }
         .navigationTitle(isNow ? "此刻" : person.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -183,6 +212,24 @@ struct ChartView: View {
         store.add(person)
         Platform.haptic(.levelChange)
         withAnimation(Motion.base) { savedTemp = true }
+    }
+
+    /// 宮位名稱：選到運限時用那一層的宮名（年疾厄…），跟盤面一樣
+    private func palaceTitle(_ m: ChartModel, _ i: Int) -> String {
+        shownLevel >= 1 ? ZW.scopeTags[shownLevel - 1] + m.horo.scope(shownLevel).palaceNames[i] : m.chart.palaces[i].name
+    }
+
+    /// 盤面上目前顯示的運限四化（跟盤面一樣最多三層）：星曜筆記挑三方四正有四化的星
+    private func activeScopes(_ m: ChartModel) -> [(String, [String])] {
+        guard shownLevel >= 1 else { return [] }
+        let names = ["大限", "流年", "流月", "流日", "流時"]
+        return (max(1, shownLevel - 2)...shownLevel).map { (names[$0 - 1], m.horo.scope($0).mutagen) }
+    }
+
+    /// 筆記的夾宮段落：跟盤面框線同一套判斷（設定關掉夾宮提示就不列）
+    private func notesClamps(_ m: ChartModel, _ i: Int) -> [Clamp] {
+        guard settings.showClamp else { return [] }
+        return ZW.clamps(m.chart, horo: m.horo, center: i, level: settings.clampByScope ? shownLevel : 0, hepan: nil)
     }
 
     private struct LoadKey: Equatable { let chart: String; let pick: Pick }
