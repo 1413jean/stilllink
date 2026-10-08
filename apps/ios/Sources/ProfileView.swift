@@ -113,24 +113,25 @@ struct SettingsView: View {
     // MARK: 區塊
 
     private var me: some View {
+        Button { editingSelf = true } label: { meRow }.buttonStyle(.plain)
+    }
+
+    private var meRow: some View {
         HStack(spacing: 16) {
             AvatarView(name: store.userAvatar, size: 68)
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.userName).zText(.title2).foregroundStyle(Color.zText)
-                if let p = store.me, store.soulStars[p.id] == nil {
-                    SkeletonBar(width: 110, height: 12).padding(.top, 4)
-                } else {
-                    Text(subtitle).zText(.subheadline).foregroundStyle(Color.zText3)
-                }
+                Text(subtitle).zText(.subheadline).foregroundStyle(Color.zText3)
             }
         }
     }
 
+    /// 名字下面：性別＋出生日期（隱藏生辰時只留性別）
     private var subtitle: String {
-        guard let p = store.me else { return "還沒填自己的命盤" }
-        let soul = store.soulStars[p.id] ?? ""
-        return soul.isEmpty ? "命無主星" : "命宮主星 · \(soul)"
+        guard let p = store.me else { return "點這裡填寫你的命盤" }
+        return hideBirth ? p.gender.rawValue : "\(p.gender.rawValue) · \(birthDate(p))"
     }
+
 
     private var saveCard: some View {
         VStack(alignment: .leading, spacing: 0) {
