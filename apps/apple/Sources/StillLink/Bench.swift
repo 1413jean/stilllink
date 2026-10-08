@@ -87,7 +87,14 @@ enum Bench {
                 let p = TempChart.make(n[0], n[1], n[2], n[3], n[4], f.last == "f" ? .female : .male, name: "測試")
                 let c = await Engine.shared.chart(for: p)
                 let lines = c.palaces.map { q in "\(q.branch) \(q.name)｜主：\(q.major.map(\.name).joined(separator: " "))｜輔：\(q.minor.map(\.name).joined(separator: " "))｜雜：\(q.adj.map(\.name).joined(separator: " "))｜長生：\(q.changsheng)" }
-                try? ("\(c.lunarDate) \(c.time)\n" + lines.joined(separator: "\n")).write(toFile: path, atomically: true, encoding: .utf8)
+                var scopes: [String] = []
+                if let mdl = await Engine.shared.model(for: p, pick: Pick.today()) {
+                    for lv in 1...5 {
+                        let sc = mdl.horo.scope(lv)
+                        scopes.append("層級\(lv)：宮名 \(sc.palaceNames.count) 個（\(sc.palaceNames.prefix(3).joined(separator: " "))…）四化 \(sc.mutagen.joined(separator: " "))")
+                    }
+                }
+                try? ("\(c.lunarDate) \(c.time)\n" + lines.joined(separator: "\n") + "\n" + scopes.joined(separator: "\n")).write(toFile: path, atomically: true, encoding: .utf8)
                 exit(0)
             }
             return
