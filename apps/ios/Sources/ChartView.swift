@@ -14,12 +14,7 @@ struct ChartView: View {
     @State private var confirmDelete = false
     @State private var showSettings = false
     @Environment(\.dismiss) private var dismiss
-    // 兩指捏合縮放：像看照片一樣整張盤放大（1～3），放大後單指拖曳移動；不重新排版
-    @State private var zoom: CGFloat = 1
-    @State private var zoomBase: CGFloat = 1
-    @State private var zoomAnchor: UnitPoint = .center
-    @State private var pan: CGSize = .zero
-    @State private var panBase: CGSize = .zero
+    @State private var zoom: CGFloat = 1   // 盤面縮放倍率（ZoomableBoard 管手勢）
     @State private var adding = false
     @State private var showPillars = false
     @State private var tempChart: TempItem?
@@ -61,9 +56,9 @@ struct ChartView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 14) {
                     if let y = hepanYear { hepanChip(y) }
-                    Group {
+                    ZoomableBoard(size: CGSize(width: boardW, height: boardW * aspect), zoom: $zoom) { z in
                         if let model {
-                            ChartBoard(person: person, model: model, level: shownLevel, hepan: hepanYear.map(Hepan.init),
+                            ChartBoard(person: person, model: model, level: shownLevel, zoom: z, hepan: hepanYear.map(Hepan.init),
                                        onResetLevel: { pick.level = 0 },
                                        onSelect: { selPalace = $0 },
                                        margin: phone ? 4 : 14, outerCard: !phone)
@@ -74,14 +69,6 @@ struct ChartView: View {
                             BoardSkeleton().transition(.opacity)
                         }
                     }
-                    .frame(width: boardW, height: boardW * aspect)
-                    .scaleEffect(zoom, anchor: zoomAnchor)
-                    .offset(pan)
-                    .frame(width: boardW, height: boardW * aspect)
-                    .clipped()
-                    .contentShape(Rectangle())
-                    .gesture(magnify)
-                    .simultaneousGesture(zoom > 1 ? panGesture(boardW, boardW * aspect) : nil)
 
                     if model == nil {
                         PeriodTableSkeleton()
@@ -208,30 +195,6 @@ struct ChartView: View {
         }
     }
 
-    private var magnify: some Gesture {
-        MagnifyGesture()
-            .onChanged { v in
-                if zoom == 1 && zoomBase == 1 { zoomAnchor = v.startAnchor }   // 從兩指中間放大
-                zoom = min(3, max(1, zoomBase * v.magnification))
-            }
-            .onEnded { _ in zoom < 1.05 ? setZoom(1) : (zoomBase = zoom) }
-    }
-
-    /// 放大後單指拖曳移動（不超出盤面）
-    private func panGesture(_ w: CGFloat, _ h: CGFloat) -> some Gesture {
-        DragGesture()
-            .onChanged { v in pan = clampPan(CGSize(width: panBase.width + v.translation.width, height: panBase.height + v.translation.height), w, h) }
-            .onEnded { _ in panBase = pan }
-    }
-
-    private func clampPan(_ p: CGSize, _ w: CGFloat, _ h: CGFloat) -> CGSize {
-        // 以縮放錨點算出往左右上下還能移多少
-        let ax = zoomAnchor.x, ay = zoomAnchor.y
-        let minX = -(1 - ax) * w * (zoom - 1), maxX = ax * w * (zoom - 1)
-        let minY = -(1 - ay) * h * (zoom - 1), maxY = ay * h * (zoom - 1)
-        return CGSize(width: min(maxX, max(minX, p.width)), height: min(maxY, max(minY, p.height)))
-    }
-
     /// 暫時命盤存進命盤列表（分組「占卜」），之後在所有命盤裡找得到
     private func saveTemp() {
         store.add(person)
@@ -239,11 +202,8 @@ struct ChartView: View {
         withAnimation(Motion.base) { savedTemp = true }
     }
 
-    private func setZoom(_ z: CGFloat) {
-        withAnimation(Motion.snap) { zoom = z; if z == 1 { pan = .zero } }
-        zoomBase = z
-        if z == 1 { panBase = .zero; zoomAnchor = .center }
-    }
+    private func setZoom(_ z: CGFloat) { zoom = z }
+
 
     /// 合盤中：盤面上方一顆膠囊（對象、年干支），× 取消
     private func hepanChip(_ y: Int) -> some View {
