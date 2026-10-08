@@ -28,7 +28,8 @@ struct RootView: View {
     @State private var drawer = false
     @State private var homePath = NavigationPath()
     /// 拖曳中的位移：用 GestureState，手勢被取消（例如被點宮位搶走）時系統會自動歸零，畫面不會卡在推開一半
-    @GestureState private var drag: CGFloat = 0
+    // 放手時位移歸零也要跟開關同一個動畫：不然先「跳」回原位再滑，看起來卡一下
+    @GestureState(resetTransaction: Transaction(animation: RootView.drawerAnim)) private var drag: CGFloat = 0
     @State private var adding = false
 
     private var homeID: UUID? { UUID(uuidString: homeRaw) }
