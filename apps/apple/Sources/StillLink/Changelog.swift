@@ -14,6 +14,12 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.3.4", date: "2026 年 10 月 9 日",
+            improved: [
+                "流曜（年祿、年鸞、大喜…）與合盤的合祿、合羊、合陀，移到每宮右下角長生十二神的上面，星曜區整排留給本命星曜",
+                "星曜不再換行：放不下時先縮雜曜，主星保持清楚",
+                "夾宮動畫微調：雙箭頭吸附時晃動減少；框線樣式跑完留下的框更明顯",
+            ]),
         ReleaseNote(version: "2.3.3", date: "2026 年 10 月 7 日",
             new: [
                 "夾宮把合盤也算進來：合盤時對方年干的四化、合祿一起判斷四化夾",
