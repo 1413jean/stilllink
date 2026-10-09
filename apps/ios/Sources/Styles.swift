@@ -53,7 +53,7 @@ private struct EdgeFades: ViewModifier {
     }
 }
 
-/// 狀態列、導覽列、分頁列後面：背景色（backgroundPrimary）漸層 100%→0%，疊漸進背景模糊（邊緣 24 → 0）
+/// 狀態列、導覽列、分頁列後面：背景色（backgroundPrimary）漸層 100%→0%；頂部再疊漸進背景模糊（邊緣 24 → 0），底部只有漸層
 struct EdgeFade: View {
     let edge: VerticalEdge
     var height: CGFloat = 20
@@ -61,7 +61,8 @@ struct EdgeFade: View {
     var body: some View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
         ZStack {
-            BackdropBlur(fadeFromTop: edge == .top, radius: 24)
+            // 底部只用背景色漸層（Jean：底部模糊看起來不自然），頂部才疊模糊
+            if edge == .top { BackdropBlur(fadeFromTop: true, radius: 24) }
             // 底色漸層用緩和曲線（線性的在 0% 那一端看得出一條界線）
             LinearGradient(stops: [.init(color: Color.zBg, location: 0), .init(color: Color.zBg.opacity(0.85), location: 0.3),
                                    .init(color: Color.zBg.opacity(0.45), location: 0.6), .init(color: Color.zBg.opacity(0.12), location: 0.85),

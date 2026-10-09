@@ -12,6 +12,7 @@ struct PeopleList: View {
     @State private var routed: UUID?   // 驗證用：ZIWEI_ROUTE=姓名 直接打開那張盤
     @State private var filter: String?  // 分類膠囊：nil＝全部
     @State private var chipsShown = true
+    @State private var scrollDir = ScrollDirection()
     @AppStorage("hideBirth") private var hideBirth = false
 
     var body: some View {
@@ -23,23 +24,28 @@ struct PeopleList: View {
         .background(Color.zBg)
         .environment(\.defaultMinListRowHeight, 64)
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 64) }   // 右下角的新增按鈕不蓋到最後一列
+        // 分類列佔的位置固定不變，收起只是往上滑出＋淡出：
+        // 要是收起時連位置一起拿掉，列表內容會被推一下，又被當成反方向滑動而來回切換（會卡住）
         .safeAreaInset(edge: .top, spacing: 0) {
-            if chipsShown && query.isEmpty && groupList.count > 1 {
+            if query.isEmpty && groupList.count > 1 {
                 chips.padding(.bottom, 2)
-                    .background(alignment: .top) { EdgeFade(edge: .top, height: 64) }   // 名單捲到分類列底下時一樣霧化淡出
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .background(alignment: .top) { EdgeFade(edge: .top, height: 64) }   // 名單捲到分類列底下時一樣淡出
+                    .offset(y: chipsShown ? 0 : -48)
+                    .opacity(chipsShown ? 1 : 0)
+                    .allowsHitTesting(chipsShown)
             }
         }
-        // 滑動方向：手指往上推（內容往上）收起分類列，往下拉就出現；回到頂端一定出現
-        .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y + $0.contentInsets.top }) { old, new in
-            let show = new <= 4 ? true : new - old > 6 ? false : new - old < -6 ? true : chipsShown
-            if show != chipsShown { withAnimation(Motion.fast) { chipsShown = show } }
+        // 滑動方向：手指往上推收起、往下拉出現；要同方向累積滑過 24pt 才切換，回到頂端一定出現
+        .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y + $0.contentInsets.top }) { _, y in
+            if let show = scrollDir.update(y, shown: chipsShown), show != chipsShown {
+                withAnimation(Motion.fast) { chipsShown = show }
+            }
         }
         .navigationTitle("所有命盤")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜尋")
         // 搜尋框跟著內容：往上滑收走、往下滑回頂端才出現；導覽列沒有底色，捲到上面用漸層霧化
-        .zEdgeFades()
+        .zEdgeFades(bottom: 72)   // 底部漸層蓋到新增按鈕那一帶，名單淡出得比較自然
         // 新增按鈕要浮在底部漸層霧化上面，所以放在 zEdgeFades 之後
         .overlay(alignment: .bottomTrailing) {
             Button { adding = true } label: { Label("新增命盤", systemImage: "plus") }
@@ -188,5 +194,19 @@ struct PersonRow: View {
                 }
             }
         }
+    }
+}
+
+/// 判斷捲動方向（不是 ObservableObject：每一格捲動都會更新，不要觸發重畫）
+final class ScrollDirection {
+    private var anchor: CGFloat = 0
+    /// 回傳要不要顯示；nil＝不變
+    func update(_ y: CGFloat, shown: Bool, threshold: CGFloat = 24) -> Bool? {
+        if y <= 4 { anchor = y; return true }
+        // 順著目前狀態繼續滑就把起點跟著移，反方向要累積滿 threshold 才切換
+        if shown ? y < anchor : y > anchor { anchor = y; return nil }
+        if shown && y - anchor > threshold { anchor = y; return false }
+        if !shown && anchor - y > threshold { anchor = y; return true }
+        return nil
     }
 }

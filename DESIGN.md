@@ -139,7 +139,7 @@
 | `FilterChip` | `Components.swift` | 篩選膠囊（分類、標籤）：選到是主文字色底反白字、沒選淺灰底，可帶數量；高 34、觸控補到 44 |
 | `ZForm` | `Styles.swift` | 系統 Form 換成 App 色系（暖白底、淺灰卡片）；設定、表單一律用它 |
 | `.zSwitch()` | `Styles.swift` | 開關用主色（按鈕、選單是主文字色） |
-| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 狀態列、導覽列下緣：底色漸層 100%→0%＋漸進模糊；會順便關掉系統捲動邊緣效果 |
+| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 狀態列、導覽列下緣：底色漸層 100%→0%＋漸進模糊；底部只有底色漸層（不加模糊）；會順便關掉系統捲動邊緣效果 |
 | `AvatarView`／`AvatarPicker` | `AvatarView.swift` | 頭貼（沒有就預設人像）；可點的版本從相簿選、裁正方形 256px |
 | `Thumbnails.image(_:maxPixel:)` | `ChartRecords.swift` | ImageIO 讀縮圖＋快取；列表、格子裡的圖一律用它，不要整張解碼 |
 | `PersonRow` | `PeopleList.swift` | 命盤列表的一列（頭貼、姓名性別、生日） |
