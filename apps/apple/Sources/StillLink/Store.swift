@@ -69,9 +69,17 @@ enum Appearance: String, Codable, CaseIterable {
 /// 命盤資料：先存在本機 JSON（~/Library/Application Support/StillLink），之後換 SQLite＋雲端同步
 @MainActor
 final class Store: ObservableObject {
+    /// 會跟著備份、雲端同步走的偏好設定（名字、哪張是自己、設定、排序、外觀…）
+    nonisolated static let backupKeys = ["settings", "userName", "selfID", "userAvatar", "showSelfInSidebar",
+                                         "groupOrder", "sortMode", "appearance", "hideBirth", "nowGender"]
+
+    /// 雲端同步正在套用別台裝置的資料：這次的變動不算本機修改（不用再推上去）
+    var applyingRemote = false
+
     @Published var people: [Person] = [] {
         didSet {
             save()
+            if !applyingRemote { CloudSync.shared.noteLocal(old: oldValue, new: people) }
             // 只有影響排盤的資料（生辰、性別、人數）變了才重算側欄主星；改備註、照片不用
             if people.map(\.chartKey) != oldValue.map(\.chartKey) || people.map(\.id) != oldValue.map(\.id) { refreshSoulStars() }
         }
@@ -108,6 +116,7 @@ final class Store: ObservableObject {
     @Published var settings: ZSettings = Store.loadSettings() {
         didSet {
             guard settings != oldValue else { return }
+            CloudSync.shared.notePrefsChanged()
             if let d = try? JSONEncoder().encode(settings) { UserDefaults.standard.set(d, forKey: "settings") }
             Motion.userEnabled = settings.motion
             if settings.calcKey != oldValue.calcKey {
@@ -154,6 +163,8 @@ final class Store: ObservableObject {
             selfIDString = mine.id.uuidString
             userName = mine.name
         }
+        // 已登入：開 App 就同步一次（之後回到前景、改資料時也會自己同步）
+        CloudSync.shared.start()
     }
 
     private func refreshSoulStars() {

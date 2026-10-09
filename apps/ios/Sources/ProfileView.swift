@@ -7,7 +7,6 @@ struct SettingsView: View {
     @AppStorage("appearance") private var appearance: Appearance = .system
     @AppStorage("hideBirth") private var hideBirth = false
     @State private var editingSelf = false
-    @State private var soon = false
 
     var body: some View {
         ScrollView {
@@ -19,7 +18,7 @@ struct SettingsView: View {
                 .padding(.bottom, 16)
 
                 me.padding(.bottom, 24)
-                saveCard.padding(.bottom, 28)
+                AccountCard().padding(.bottom, 28)
 
                 group("出生資料") {
                     if let p = store.me {
@@ -102,11 +101,6 @@ struct SettingsView: View {
         .sheet(isPresented: $editingSelf) {
             if let p = store.me { PersonForm(editing: p) } else { PersonForm(asSelf: true) }
         }
-        .alert("即將推出", isPresented: $soon) {
-            Button("好", role: .cancel) {}
-        } message: {
-            Text("登入後命盤和紀錄可以在不同裝置同步。目前資料只存在這台裝置。")
-        }
     }
 
     // MARK: 區塊
@@ -131,26 +125,6 @@ struct SettingsView: View {
         return hideBirth ? p.gender.rawValue : "\(p.gender.rawValue) · \(birthDate(p))"
     }
 
-
-    private var saveCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("保存你的命盤").zText(.title3).foregroundStyle(Color.zText).padding(.bottom, 10)
-            Text("命盤和紀錄可以在不同裝置同步。不用填表單，也不用密碼。")
-                .zText(.callout).foregroundStyle(Color.zText2).padding(.bottom, 14)
-            Button { soon = true } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
-                .buttonStyle(.capsule(fill: true))
-                .padding(.bottom, 12)
-            Button { soon = true } label: {
-                HStack(spacing: 10) {
-                    Text("G").font(.system(size: 18, weight: .bold))
-                    Text("使用 Google 登入")
-                }
-            }
-            .buttonStyle(.capsule(.outline, fill: true))
-        }
-        .padding(20)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.zHover))
-    }
 
     // MARK: 列
 

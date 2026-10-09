@@ -42,6 +42,7 @@ targets:
           - "Views/GroupDial.swift"
           - "Views/Skeleton.swift"
           - "Platform.swift"
+          - "Sync/*.swift"
       - path: ../apple/Resources/iztro.min.js
         buildPhase: resources
       - path: ../apple/Resources/bridge.js

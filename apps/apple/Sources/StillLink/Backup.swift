@@ -12,10 +12,6 @@ struct BackupFile: Codable {
 
 @MainActor
 extension Store {
-    /// 會跟著備份走的偏好設定（名字、哪張是自己、設定、排序、外觀…）
-    static let backupKeys = ["settings", "userName", "selfID", "userAvatar", "showSelfInSidebar",
-                             "groupOrder", "sortMode", "appearance", "hideBirth", "nowGender"]
-
     func makeBackup() throws -> Data {
         let d = UserDefaults.standard
         var prefs: [String: Any] = [:]
@@ -44,6 +40,8 @@ extension Store {
 
     /// 清空：命盤、照片／頭貼、個人檔案與設定全部刪掉，回到第一次打開的樣子
     func eraseAll() {
+        // 登入中清空會被同步當成「全部刪除」推上雲端：先登出，雲端那份保留
+        if Account.shared.isSignedIn { Account.shared.signOut() }
         let files = (try? FileManager.default.contentsOfDirectory(at: Media.dir, includingPropertiesForKeys: nil)) ?? []
         for f in files { try? FileManager.default.removeItem(at: f) }
         let d = UserDefaults.standard
