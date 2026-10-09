@@ -235,7 +235,11 @@ enum ChartType {
     static func tag(_ fs: CGFloat) -> CGFloat { max(9, fs * 0.8) }         // 四化方塊、運限宮名、自化
     static func gods(_ fs: CGFloat) -> CGFloat { fs * 0.74 }                // 博士／將前／歲前
     static func ages(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.58) }        // 流年／小限歲數
+    #if os(iOS)
+    static func range(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.74) }      // 大限歲數（iPhone 宮格窄：三位數歲數會把天干地支擠出去，小一階）
+    #else
     static func range(_ fs: CGFloat) -> CGFloat { fs * 0.88 }               // 大限歲數
+    #endif
     static func palace(_ fs: CGFloat) -> CGFloat { fs }                     // 宮名
     #if os(iOS)
     static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.12 }              // 宮干支（iPhone 宮格窄，小一階才放得下身宮章）

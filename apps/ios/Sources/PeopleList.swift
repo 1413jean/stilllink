@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// 所有命盤（從側欄進）：照 Claude App 的 Chats——導覽列中間標題、單純一列一列（頭貼＋姓名＋生日），
+/// 所有命盤（從側欄進）：照 Claude App 的 Chats——導覽列中間標題、一列一列（頭貼＋姓名＋生日），
+/// 最上面一排分類膠囊（全部／釘選／朋友／家人…），「全部」時依分類分段；
 /// 右下角浮著「新增命盤」；左滑刪除、右滑釘選、長按選單照用
 struct PeopleList: View {
     @EnvironmentObject private var store: Store
@@ -9,11 +10,25 @@ struct PeopleList: View {
     @State private var editing: Person?
     @State private var deleting: Person?
     @State private var routed: UUID?   // 驗證用：ZIWEI_ROUTE=姓名 直接打開那張盤
+    @State private var filter: String?  // 分類膠囊：nil＝全部
     @AppStorage("hideBirth") private var hideBirth = false
 
     var body: some View {
         List {
-            ForEach(rows) { link($0) }
+            if query.isEmpty && store.groups.count > 1 {
+                chips
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
+            }
+            ForEach(sections, id: \.0) { title, list in
+                Section {
+                    ForEach(list) { link($0) }
+                } header: {
+                    if let title { sectionHeader(title, list.count) }
+                }
+                .listSectionSeparator(.hidden)
+            }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -48,7 +63,7 @@ struct PeopleList: View {
                 } actions: {
                     Button("新增命盤") { adding = true }.buttonStyle(.capsule())
                 }
-            } else if !query.isEmpty && rows.isEmpty {
+            } else if !query.isEmpty && sections.isEmpty {
                 ContentUnavailableView.search(text: query)
             }
         }
@@ -71,16 +86,57 @@ struct PeopleList: View {
         }
     }
 
-    /// 一列一列：我（側欄有顯示時）→ 釘選 → 其他照排序；搜尋時比對姓名、分組、命宮主星
-    private var rows: [Person] {
+    /// 分類（照側欄的順序：釘選在前，其他照資料夾順序），各帶張數
+    private var groupList: [(String, [Person])] {
+        let order = store.groupOrder
+        return store.groups.enumerated().sorted { a, b in
+            if a.element.0 == "釘選" || b.element.0 == "釘選" { return a.element.0 == "釘選" && b.element.0 != "釘選" }
+            let ia = order.firstIndex(of: a.element.0) ?? Int.max, ib = order.firstIndex(of: b.element.0) ?? Int.max
+            return ia != ib ? ia < ib : a.offset < b.offset
+        }.map { ($0.element.0, store.sorted($0.element.1)) }
+    }
+
+    /// 分段：搜尋時一段不分組（比對姓名、分組、命宮主星）；選了分類只剩那一段；
+    /// 全部時：我（側欄有顯示時）放最上面不加標題，其他依分類分段
+    private var sections: [(String?, [Person])] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        let me = query.isEmpty && store.showSelfInSidebar ? store.me : nil
-        let rest = store.groups.flatMap { store.sorted($0.1) }.filter { p in
-            if p.id == me?.id { return false }
-            if q.isEmpty { return true }
-            return p.name.contains(q) || p.group.contains(q) || (store.soulStars[p.id] ?? "").contains(q)
+        if !q.isEmpty {
+            let hits = groupList.flatMap(\.1).filter { p in
+                p.name.contains(q) || p.group.contains(q) || (store.soulStars[p.id] ?? "").contains(q)
+            }
+            return hits.isEmpty ? [] : [(nil, hits)]
         }
-        return (me.map { [$0] } ?? []) + rest
+        if let filter, let g = groupList.first(where: { $0.0 == filter }) { return [(nil, g.1)] }
+        let me = store.showSelfInSidebar ? store.me : nil
+        var out: [(String?, [Person])] = me.map { [(nil, [$0])] } ?? []
+        for (title, list) in groupList {
+            let rest = list.filter { $0.id != me?.id }
+            if !rest.isEmpty { out.append((title, rest)) }
+        }
+        return out
+    }
+
+    private var chips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                FilterChip(title: "全部", selected: filter == nil) { withAnimation(Motion.fast) { filter = nil } }
+                ForEach(groupList, id: \.0) { g, list in
+                    FilterChip(title: g, count: list.count, selected: filter == g) {
+                        withAnimation(Motion.fast) { filter = filter == g ? nil : g }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func sectionHeader(_ title: String, _ count: Int) -> some View {
+        HStack(spacing: 6) {
+            Text(title).zText(.footnoteStrong).foregroundStyle(Color.zText2)
+            Text("\(count)").zText(.footnote).foregroundStyle(Color.zText3)
+        }
+        .padding(.leading, 4)
+        .padding(.top, 8)
     }
 
     private func link(_ p: Person) -> some View {

@@ -34,6 +34,32 @@ extension ButtonStyle where Self == CapsuleButtonStyle {
     }
 }
 
+/// 篩選膠囊（分類、標籤）：選到是主文字色底＋反白字，沒選是淺灰底。字後面可帶一個數量
+struct FilterChip: View {
+    let title: String
+    var count: Int? = nil
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(title).zText(.subheadlineStrong)
+                if let count { Text("\(count)").zText(.subheadline).opacity(0.6) }
+            }
+            .foregroundStyle(selected ? Color.zBg : Color.zText)
+            .padding(.horizontal, 14)
+            .frame(height: 34)
+            .background(Capsule().fill(selected ? Color.zText : Color.zHover))
+            .padding(.vertical, 5)            // 觸控範圍補到 44
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .animation(Motion.fast, value: selected)
+        .sensoryFeedback(.selection, trigger: selected)
+    }
+}
+
 extension View {
     /// 浮在盤面上的膠囊（底部筆記入口這類）：浮起卡片色＋細框＋陰影，深色模式也分得出層次
     func zFloatingCapsule() -> some View {
