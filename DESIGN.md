@@ -44,11 +44,12 @@
 - 中宮：`centerTitle`、`centerBody`、`centerSmall`、`pillar`
 
 ## 顏色（`Color.z*`，每個都有淺色和深色兩組值）
+- Mac 和 iOS 共用同一套（`Theme.swift`）。來源：App 圖示（B 發光紫微藍版）。中性色是照 Moonly 的近中性炭灰 `🎨/night`（100–1000，只帶一點冷調、不要藍；900＝`#222328`、1000＝`#18191D`），藍色只留在圖示上，主色是四角星橘延伸的 `🎨/star`（400＝`#F59457`、500＝`#E8743F`、600＝`#C95A2A`）。舊的 `ink`／`terracotta` 色階留在 Figma，語意 token 已不再指向它們。
 - 底色：`zBg` 主區、`zSide` 側欄、`zCard` 卡片。
 - 線條：`zLine` 一般邊線、`zGrid` 盤面格線。
 - 文字：`zText` 主要、`zText2` 次要、`zText3` 輔助。
 - 狀態：`zHover` 滑過、`zSel` 選取。
-- 強調：`zAccent`，陶土橘（淺色 `#D36540`／深色 `#E08458`）。整個 app 的 tint 也是它，主要按鈕、開關、送出鈕、選取色都用同一個顏色。
+- 強調：`zAccent`，星橘（淺色 `#C95A2A` star/600／深色 `#F59457` star/400）。整個 app 的 tint 也是它，主要按鈕、開關、送出鈕、選取色都用同一個顏色。
 - `zOnColor` 是色塊上的文字顏色，`zShadow` 是浮層陰影。
 
 ### 命盤用色
