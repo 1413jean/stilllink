@@ -18,19 +18,19 @@ extension Color {
         #endif
     }
 
-    // 外框色：從 App 圖示延伸（夜空深藍 night ＋ 四角星橘 star），對應 Figma Stillink DS 的 🎨/night、🎨/star
-    static let zBg = dynamic(0xF7F9FC, 0x0B1220)        // night/100；深色是圖示的夜空底
-    static let zCard = dynamic(0xFFFFFF, 0x152036)
-    static let zSide = dynamic(0xF2F5FA, 0x080E1A)      // 側欄：比主區再淺／深一階
-    static let zLine = dynamic(0xE2E7EF, 0x26324A)
-    static let zRaised = dynamic(0xFFFFFF, 0x1F2B44)    // 浮在盤面上的卡片（備註）：深色模式比 zCard 亮一階才分得出來
-    static let zRaisedLine = dynamic(0xDCE2EC, 0x34415C) // 浮起卡片的細框
-    static let zGrid = dynamic(0xC9D1DE, 0x3A4762)
-    static let zText = dynamic(0x1A2944, 0xE9EEF6)      // 主文字：night/900（圖示的深藍）
-    static let zText2 = dynamic(0x4E5A72, 0xA2AEC3)     // night/700／500
-    static let zText3 = dynamic(0x8B96AB, 0x6F7C95)
-    static let zHover = dynamic(0xEEF2F8, 0x1C2740)
-    static let zSel = dynamic(0xE8EDF5, 0x243049)       // 選取列：淺藍灰
+    // 外框色：照 Moonly 的近中性炭灰（只帶一點冷調，不要藍）＋圖示的四角星橘，對應 Figma Stillink DS 的 🎨/night、🎨/star
+    static let zBg = dynamic(0xF8F8FA, 0x18191D)        // night/100／1000
+    static let zCard = dynamic(0xFFFFFF, 0x222328)
+    static let zSide = dynamic(0xF3F3F6, 0x131417)      // 側欄：比主區再淺／深一階
+    static let zLine = dynamic(0xE6E6EA, 0x2E2F35)
+    static let zRaised = dynamic(0xFFFFFF, 0x2A2B31)    // 浮在盤面上的卡片（備註）：深色模式比 zCard 亮一階才分得出來
+    static let zRaisedLine = dynamic(0xDEDEE3, 0x3A3B42) // 浮起卡片的細框
+    static let zGrid = dynamic(0xCBCCD2, 0x404148)
+    static let zText = dynamic(0x1D1E22, 0xECECEF)      // 主文字：近黑／近白
+    static let zText2 = dynamic(0x55575F, 0xA9AAB2)     // night/700／500
+    static let zText3 = dynamic(0x8E9098, 0x74767E)
+    static let zHover = dynamic(0xF0F0F3, 0x26272C)
+    static let zSel = dynamic(0xEAEAEE, 0x2D2E34)       // 選取列：淺灰
     static let zAccent = dynamic(0xC95A2A, 0xF59457)   // 星橘：淺色用 star/600（淺底上 star/500 太亮看不清楚），深色用圖示的星色 star/400
     static let zToastAction = dynamic(0xFBBF97, 0xC95A2A)   // 提示條上的按鈕：提示條是反色（淺色模式深底、深色模式淺底），橘色要跟著反過來挑才看得清楚
 
@@ -41,8 +41,8 @@ extension Color {
     static let wmGreen = dynamic(0x1F8A3A, 0x5BCB8A)
     static let wmBlack = dynamic(0x1C1B19, 0xECEAE4)
     static let wmEarth = dynamic(0xB5701A, 0xE0A84A)
-    static let wmSF = dynamic(0xEEF2F8, 0x222E47)       // 三方四正：淺藍灰（跟側欄同一家）
-    static let wmSel = dynamic(0xFCEFE7, 0x2A2530)      // 選取宮：主色 10% 淡底
+    static let wmSF = dynamic(0xEFEFF2, 0x25262B)       // 三方四正：淺灰（跟側欄同一家）
+    static let wmSel = dynamic(0xFCEFE7, 0x2E2523)      // 選取宮：主色 10% 淡底
 
     static let mLu = dynamic(0x1F8A3A, 0x4FBF7E)
     static let mQuan = dynamic(0x7B48C8, 0xA987EC)
@@ -55,7 +55,7 @@ extension Color {
     /// 運限四化色：大限綠、流年藍、流月琥珀、流日洋紅、流時灰
     static let scopeColors: [Color] = [
         dynamic(0x1F8A3A, 0x4FBF7E), dynamic(0x1F5FBF, 0x6AA2F5), dynamic(0xC27A12, 0xE8A84A),
-        dynamic(0xB8357A, 0xE877B4), dynamic(0x5E6A82, 0xA2AEC3),
+        dynamic(0xB8357A, 0xE877B4), dynamic(0x66686F, 0xA9AAB2),
     ]
 }
 
@@ -77,7 +77,7 @@ extension Color {
     /// 運限四化方塊底色：大限、流年、流月、流日、流時
     static let fScopes: [Color] = [
         dynamic(0x1F8A3A, 0x2F6B45), dynamic(0x1F5FBF, 0x335B99), dynamic(0xC27A12, 0x8E6224),
-        dynamic(0xB8357A, 0x8A3C66), dynamic(0x5E6A82, 0x4E5A72),
+        dynamic(0xB8357A, 0x8A3C66), dynamic(0x66686F, 0x55575F),
     ]
 }
 
