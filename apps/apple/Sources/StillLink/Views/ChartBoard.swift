@@ -37,6 +37,8 @@ struct ChartBoard: View, Equatable {
     @State private var hoverTask: Task<Void, Never>?
     @State private var hoverKey: (String, String)?   // 目前滑鼠停的星與宮（同一顆星上移動不重設計時）
     @State private var lastTap: (Int, Date)?   // 上一次點的宮位與時間（判斷點兩下）
+    @State private var press: (index: Int, work: DispatchWorkItem)?   // 按住中的宮位：滿 0.45 秒還沒放開就鎖定
+    @State private var pressFired = false   // 這次按住已經觸發鎖定（放開時不再當成點一下）
     @State private var cleared = false      // 再點一次已選的宮位＝取消選取（不顯示三方四正、飛化）
     @State private var squeeze: CGFloat = 0 // 夾宮：點到被夾的宮位時，兩個鄰宮輕輕撞進來再彈回（0～1，撞完回 0）；本宮不動
     @Environment(\.zSettings) private var settings
@@ -64,22 +66,24 @@ struct ChartBoard: View, Equatable {
                         .clipped()
                         .contentShape(Rectangle())
                         // 長按或點兩下：鎖定／解除；點一下：選宮位（單擊不等雙擊判定，選取不會慢半拍）
-                        .gesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in toggleLock(i, chart) }
-                            .exclusively(before: TapGesture().onEnded {
-                                // 同一宮在系統雙擊間隔內點第二下＝點兩下：鎖定（不是取消選取）
-                                let now = Date()
-                                if let (j, t) = lastTap, j == i, now.timeIntervalSince(t) < NSEvent.doubleClickInterval {
-                                    lastTap = nil
-                                    withAnimation(Motion.snap) { cleared = false; sel = i }
-                                    toggleLock(i, chart)
-                                    return
+                        // 用 DragGesture 自己計時：原本 LongPressGesture.exclusively(before: TapGesture) 在新版 macOS 上
+                        // 鬆開時長按不會「失敗」，點一下永遠輪不到（只剩長按有反應）
+                        .gesture(DragGesture(minimumDistance: 0)
+                            .onChanged { v in
+                                if press == nil && !pressFired {
+                                    let work = DispatchWorkItem { pressFired = true; press = nil; toggleLock(i, chart) }
+                                    press = (i, work)
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: work)
                                 }
-                                lastTap = (i, now)
-                                Sound.tap(settings); userPicked = true
-                                withAnimation(Motion.snap) {
-                                    if !cleared && selected == i { cleared = true } else { cleared = false; sel = i }
-                                }
-                            }))
+                                // 按住後拖開（超過 6pt）就不算點也不算長按
+                                if hypot(v.translation.width, v.translation.height) > 6 { press?.work.cancel(); press = nil; pressFired = true }
+                            }
+                            .onEnded { _ in
+                                defer { pressFired = false }
+                                guard let p = press, !pressFired else { return }
+                                p.work.cancel(); press = nil
+                                tapPalace(i, selected: selected, chart: chart)
+                            })
                         .contextMenu {
                             // 轉宮中（右鍵指定或點宮位產生的 X之Y）都可以取消
                             let transferring = effectiveTaiji(selected, chart) != nil
@@ -171,6 +175,22 @@ struct ChartBoard: View, Equatable {
     private var layers: [Int] {
         let base = pickedLayers ?? Array(max(0, level - 2)...level)
         return base.filter { $0 <= level }.sorted()
+    }
+
+    /// 點一下宮位：選取；同一宮在系統雙擊間隔內點第二下＝鎖定；再點一次已選的宮位＝取消選取
+    private func tapPalace(_ i: Int, selected: Int, chart: Chart) {
+        let now = Date()
+        if let (j, t) = lastTap, j == i, now.timeIntervalSince(t) < NSEvent.doubleClickInterval {
+            lastTap = nil
+            withAnimation(Motion.snap) { cleared = false; sel = i }
+            toggleLock(i, chart)
+            return
+        }
+        lastTap = (i, now)
+        Sound.tap(settings); userPicked = true
+        withAnimation(Motion.snap) {
+            if !cleared && selected == i { cleared = true } else { cleared = false; sel = i }
+        }
     }
 
     /// 點層級開關：開過的關掉；沒開的打開，超過三層就把最早開的那層關掉
