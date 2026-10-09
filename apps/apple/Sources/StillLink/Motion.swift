@@ -80,10 +80,8 @@ struct TopFade: View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
         ZStack {
             BackdropBlur(fadeFromTop: edge == .top)
-            // 照 Figma Navbar - Morning：上面 30% 實心底色，往下 70% 線性淡到 0
-            LinearGradient(stops: [.init(color: color, location: 0), .init(color: color, location: 0.3),
-                                   .init(color: color.opacity(0), location: 1)],
-                           startPoint: start, endPoint: end)
+            // 100% → 0% 整段線性淡出（原本上面 30% 實心，Jean 覺得有一條硬邊不自然）
+            LinearGradient(colors: [color, color.opacity(0)], startPoint: start, endPoint: end)
         }
             .frame(height: height)
             .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
