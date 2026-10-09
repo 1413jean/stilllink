@@ -188,6 +188,8 @@ struct RootView: View {
             .frame(minWidth: 640)
             // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
             .transaction(value: route) { $0.animation = nil }
+            // 標題列底下墊背景色：系統標題列是比 zBg 亮的灰藍（#323536），TopFade 淡出時會從下半段透出來、在標題列底部硬切成一條亮帶
+            .background(Color.zBg.ignoresSafeArea(edges: .top))
             .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }
         }
         .toolbarBackground(.hidden, for: .windowToolbar)

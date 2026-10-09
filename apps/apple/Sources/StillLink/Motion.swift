@@ -80,8 +80,9 @@ struct TopFade: View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
         ZStack {
             BackdropBlur(fadeFromTop: edge == .top)
-            // 100% → 0% 整段線性淡出（原本上面 30% 實心，Jean 覺得有一條硬邊不自然）
-            LinearGradient(colors: [color, color.opacity(0)], startPoint: start, endPoint: end)
+            // 底色跟背景模糊用同一條緩和曲線一起淡出（BackdropBlur 的 fadeStops），兩層同步、沒有交界
+            LinearGradient(stops: zip(BackdropBlur.fadeAlphas, BackdropBlur.fadeStops).map { .init(color: color.opacity($0), location: $1) },
+                           startPoint: start, endPoint: end)
         }
             .frame(height: height)
             .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
@@ -93,6 +94,9 @@ struct TopFade: View {
 /// fadeFromTop：true＝上面 100% 往下淡到 0；false＝上面 0 往下到 100%；nil＝整片
 /// 漸層用圖層遮罩（CAGradientLayer）；maskImage 和 SwiftUI .mask 都會讓模糊整片消失
 struct BackdropBlur: NSViewRepresentable {
+    /// 淡出曲線（ease-out）：TopFade 的底色漸層也用同一組，模糊和顏色一起消失
+    static let fadeAlphas: [CGFloat] = [1, 0.8, 0.45, 0.15, 0]
+    static let fadeStops: [CGFloat] = [0, 0.25, 0.55, 0.8, 1]
     var fadeFromTop: Bool? = nil
     var material: NSVisualEffectView.Material = .headerView
 
@@ -106,8 +110,8 @@ struct BackdropBlur: NSViewRepresentable {
             gradient.frame = bounds
             // 圖層座標原點在左下：startPoint y=1 是上面
             // 緩和曲線（ease-out）：邊緣不會有一條明顯的界線
-            gradient.colors = [1, 0.8, 0.45, 0.15, 0].map { NSColor.black.withAlphaComponent($0).cgColor }
-            gradient.locations = [0, 0.25, 0.55, 0.8, 1]
+            gradient.colors = BackdropBlur.fadeAlphas.map { NSColor.black.withAlphaComponent($0).cgColor }
+            gradient.locations = BackdropBlur.fadeStops.map { NSNumber(value: Double($0)) }
             gradient.startPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
             gradient.endPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
             layer?.mask = gradient
