@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 所有命盤（從側欄進）：照 Claude App 的 Chats——導覽列中間標題、一列一列（頭貼＋姓名＋生日），
-/// 最上面一排分類膠囊（全部／釘選／朋友／家人…），「全部」時依分類分段；
+/// 導覽列下面一排分類膠囊（全部／釘選／朋友／家人…）：往下滑出現、往上滑收起（像 Safari 的工具列）；
 /// 右下角浮著「新增命盤」；左滑刪除、右滑釘選、長按選單照用
 struct PeopleList: View {
     @EnvironmentObject private var store: Store
@@ -11,40 +11,41 @@ struct PeopleList: View {
     @State private var deleting: Person?
     @State private var routed: UUID?   // 驗證用：ZIWEI_ROUTE=姓名 直接打開那張盤
     @State private var filter: String?  // 分類膠囊：nil＝全部
+    @State private var chipsShown = true
     @AppStorage("hideBirth") private var hideBirth = false
 
     var body: some View {
         List {
-            if query.isEmpty && store.groups.count > 1 {
-                chips
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
-            }
-            ForEach(sections, id: \.0) { title, list in
-                Section {
-                    ForEach(list) { link($0) }
-                } header: {
-                    if let title { sectionHeader(title, list.count) }
-                }
-                .listSectionSeparator(.hidden)
-            }
+            ForEach(rows) { link($0) }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.zBg)
         .environment(\.defaultMinListRowHeight, 64)
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 64) }   // 右下角的新增按鈕不蓋到最後一列
-        .overlay(alignment: .bottomTrailing) {
-            Button { adding = true } label: { Label("新增命盤", systemImage: "plus") }
-                .buttonStyle(.capsule(floating: true))
-            .padding(.trailing, 16).padding(.bottom, 8)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if chipsShown && query.isEmpty && groupList.count > 1 {
+                chips.padding(.bottom, 2)
+                    .background(alignment: .top) { EdgeFade(edge: .top, height: 64) }   // 名單捲到分類列底下時一樣霧化淡出
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        // 滑動方向：手指往上推（內容往上）收起分類列，往下拉就出現；回到頂端一定出現
+        .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y + $0.contentInsets.top }) { old, new in
+            let show = new <= 4 ? true : new - old > 6 ? false : new - old < -6 ? true : chipsShown
+            if show != chipsShown { withAnimation(Motion.fast) { chipsShown = show } }
         }
         .navigationTitle("所有命盤")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜尋")
         // 搜尋框跟著內容：往上滑收走、往下滑回頂端才出現；導覽列沒有底色，捲到上面用漸層霧化
         .zEdgeFades()
+        // 新增按鈕要浮在底部漸層霧化上面，所以放在 zEdgeFades 之後
+        .overlay(alignment: .bottomTrailing) {
+            Button { adding = true } label: { Label("新增命盤", systemImage: "plus") }
+                .buttonStyle(.capsule(floating: true))
+            .padding(.trailing, 16).padding(.bottom, 8)
+        }
         .navigationDestination(for: UUID.self) { id in
             if let p = store.people.first(where: { $0.id == id }) { ChartView(person: p) }
         }
@@ -63,7 +64,7 @@ struct PeopleList: View {
                 } actions: {
                     Button("新增命盤") { adding = true }.buttonStyle(.capsule())
                 }
-            } else if !query.isEmpty && sections.isEmpty {
+            } else if !query.isEmpty && rows.isEmpty {
                 ContentUnavailableView.search(text: query)
             }
         }
@@ -96,24 +97,17 @@ struct PeopleList: View {
         }.map { ($0.element.0, store.sorted($0.element.1)) }
     }
 
-    /// 分段：搜尋時一段不分組（比對姓名、分組、命宮主星）；選了分類只剩那一段；
-    /// 全部時：我（側欄有顯示時）放最上面不加標題，其他依分類分段
-    private var sections: [(String?, [Person])] {
+    /// 一整條（不分段）：我（側欄有顯示時）→ 照分類順序；選了分類只剩那一類；搜尋時比對姓名、分組、命宮主星
+    private var rows: [Person] {
         let q = query.trimmingCharacters(in: .whitespaces)
         if !q.isEmpty {
-            let hits = groupList.flatMap(\.1).filter { p in
+            return groupList.flatMap(\.1).filter { p in
                 p.name.contains(q) || p.group.contains(q) || (store.soulStars[p.id] ?? "").contains(q)
             }
-            return hits.isEmpty ? [] : [(nil, hits)]
         }
-        if let filter, let g = groupList.first(where: { $0.0 == filter }) { return [(nil, g.1)] }
+        if let filter { return groupList.first { $0.0 == filter }?.1 ?? [] }
         let me = store.showSelfInSidebar ? store.me : nil
-        var out: [(String?, [Person])] = me.map { [(nil, [$0])] } ?? []
-        for (title, list) in groupList {
-            let rest = list.filter { $0.id != me?.id }
-            if !rest.isEmpty { out.append((title, rest)) }
-        }
-        return out
+        return (me.map { [$0] } ?? []) + groupList.flatMap(\.1).filter { $0.id != me?.id }
     }
 
     private var chips: some View {
@@ -128,15 +122,6 @@ struct PeopleList: View {
             }
             .padding(.horizontal, 16)
         }
-    }
-
-    private func sectionHeader(_ title: String, _ count: Int) -> some View {
-        HStack(spacing: 6) {
-            Text(title).zText(.footnoteStrong).foregroundStyle(Color.zText2)
-            Text("\(count)").zText(.footnote).foregroundStyle(Color.zText3)
-        }
-        .padding(.leading, 4)
-        .padding(.top, 8)
     }
 
     private func link(_ p: Person) -> some View {
