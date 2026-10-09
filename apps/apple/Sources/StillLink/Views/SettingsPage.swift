@@ -276,7 +276,7 @@ struct SettingsPage: View {
             row("夾宮提示樣式", "雙箭頭：交界線上的箭頭指向被夾的宮位，鄰宮撞進來一下；框線：三宮用一條淡淡的線框起來") {
                 SettingSegment(options: [(.arrows, "雙箭頭"), (.frame, "框線")], selection: s.clampStyle)
             }
-            toggle("夾宮四化照目前運限", "選到大限、流年…時，那一層的四化也一起算（例：生年祿＋大限祿＝雙祿夾）；關掉只看生年四化", s.clampByScope)
+            toggle("夾宮四化照目前運限", "選到大限、流年…時，盤面上顯示的運限四化（最多三層）也一起算（例：選流年時，生年忌＋大限忌＝雙忌夾）；關掉只看生年四化", s.clampByScope)
             toggle("顯示流曜", "選到大限、流年時，宮內加上大祿、大羊、年鸞、年喜…這些流曜", s.showFlowStars, last: true)
             Text("星曜顏色").zText(.calloutStrong).foregroundStyle(Color.zText).padding(.top, 18).hiddenWhenSearching()
             note("盤面上四類星曜各用一種顏色，一眼分出主星、輔星、凶星、雜曜。")

@@ -36,13 +36,16 @@ extension ZW {
     /// 判斷夾宮用的一組星：星本身＋這些星所在宮位的地支（合盤的合祿看地支）
     struct ClampSide { var stars: [Star]; var branches: [String] }
 
-    /// 一組星有哪些四化：生年四化一定算；`level` ≥ 1 時再加上那一層運限的四化；合盤時加上對方年干的四化；祿存、合祿當成祿
+    /// 一組星有哪些四化：生年四化一定算；`level` ≥ 1 時再加上盤面顯示的運限層（跟盤面一樣最多三層：選流年＝大限＋流年）；合盤時加上對方年干的四化；祿存、合祿當成祿
     private static func clampMutagens(_ side: ClampSide, horo: Horoscope, level: Int, hepan: Hepan?) -> Set<String> {
         let stars = side.stars
         var out = Set(stars.map(\.mutagen).filter { !$0.isEmpty })
         if level >= 1 {
-            let list = horo.scope(level).mutagen
-            for s in stars { if let m = mutagen(in: list, star: s.name) { out.insert(m.rawValue) } }
+            // 只算選到的那一層會漏掉盤面上同時顯示的其他層（例：生年忌＋大限忌夾，選到流年時沒判斷到）
+            for lv in max(1, level - 2)...level {
+                let list = horo.scope(lv).mutagen
+                for s in stars { if let m = mutagen(in: list, star: s.name) { out.insert(m.rawValue) } }
+            }
         }
         if let h = hepan {
             for s in stars { if let m = h.mutagen(star: s.name) { out.insert(m.rawValue) } }
@@ -61,7 +64,7 @@ extension ZW {
         return (own, ClampSide(stars: p.stars + opp.stars, branches: [p.branch, opp.branch]), opp.name)
     }
 
-    /// 被選宮位 `i` 被哪些組合夾（`level`：0＝只看生年四化，1–5＝再加上那一層的四化；`hepan`：合盤時加上對方年干的四化）
+    /// 被選宮位 `i` 被哪些組合夾（`level`：0＝只看生年四化，1–5＝再加上盤面顯示的運限層四化；`hepan`：合盤時加上對方年干的四化）
     static func clamps(_ c: Chart, horo: Horoscope, center i: Int, level: Int, hepan: Hepan? = nil) -> [Clamp] {
         let na = (i + 11) % 12, nb = (i + 1) % 12
         let a = clampStars(c, na), b = clampStars(c, nb)
