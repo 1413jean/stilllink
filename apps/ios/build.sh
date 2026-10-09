@@ -44,6 +44,9 @@ fi
 cp $RES/{iztro.min.js,bridge.js,zone.tab,star-notes.json} $OUT/
 cp -R $RES/sfx $OUT/sfx
 [[ -d Resources ]] && cp -R Resources/. $OUT/ 2>/dev/null || true
+# 圖示：iOS 18 起只認編譯過的 asset catalog（Assets.car），光放 PNG 主畫面會顯示空白圖示
+xcrun actool Assets.xcassets --compile $OUT --platform iphonesimulator --minimum-deployment-target 18.0 \
+  --app-icon AppIcon --output-partial-info-plist build/icon-info.plist >/dev/null 2>&1 || true
 
 VERSION=$(cat ../apple/VERSION 2>/dev/null || echo 0.1.0)
 cat > $OUT/Info.plist <<PLIST
@@ -59,7 +62,9 @@ cat > $OUT/Info.plist <<PLIST
   <key>CFBundleVersion</key><string>$(git rev-list --count HEAD)</string>
   <key>CFBundleDevelopmentRegion</key><string>zh_TW</string>
   <key>CFBundleIcons</key><dict><key>CFBundlePrimaryIcon</key><dict>
-    <key>CFBundleIconFiles</key><array><string>AppIcon60x60</string></array></dict></dict>
+    <key>CFBundleIconFiles</key><array><string>AppIcon60x60</string></array>
+    <key>CFBundleIconName</key><string>AppIcon</string></dict></dict>
+  <key>CFBundleIconName</key><string>AppIcon</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>MinimumOSVersion</key><string>18.0</string>
   <key>UIDeviceFamily</key><array><integer>1</integer><integer>2</integer></array>

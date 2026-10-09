@@ -18,8 +18,12 @@ targets:
   StillLink:
     type: application
     platform: iOS
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon   # 圖示：Figma 81:823（B 發光紫微藍版），1024 正方形不帶圓角
     sources:
       - path: Sources
+      - path: Assets.xcassets
       - path: ../apple/Sources/StillLink
         includes:
           - "Engine/*.swift"
