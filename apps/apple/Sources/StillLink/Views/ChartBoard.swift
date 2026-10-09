@@ -55,14 +55,17 @@ struct ChartBoard: View, Equatable {
             let ch = (geo.size.height - m * 2) / 4
             let fs = ChartType.base(cellWidth: cw / zoom) * zoom
             let lsf = locked.map(ZW.sanFang) ?? []
+            // 12 宮共用：選到的宮飛出去的星、轉宮的太極（不要在每一宮各算一次）
+            let fly: [String: Mutagen] = cleared ? [:] : Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a })
+            let tj = effectiveTaiji(selected, chart)
             ZStack(alignment: .topLeading) {
                 ForEach(0..<12, id: \.self) { i in
                     let (r, c) = ZW.grid[i]
                     PalaceCell(model: model, index: i, level: level, layers: layers, fs: fs, hepan: hepan,
                                selected: !cleared && selected == i, inSF: sf.contains(i) && selected != i,
                                isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
-                               taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart, names: scopeNames) },
-                               flyStars: cleared ? [:] : Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
+                               taijiLabel: tj.map { ZW.transferredName(taiji: $0, index: i, chart: chart, names: scopeNames) },
+                               flyStars: fly)
                         .frame(width: cw, height: ch, alignment: .top)
                         .clipShape(StarLayout.cornerShape(r: r, c: c, rounded: !outerCard))
                         .contentShape(Rectangle())
@@ -163,11 +166,33 @@ struct ChartBoard: View, Equatable {
         .overlay { if outerCard { RoundedRectangle(cornerRadius: 12).stroke(Color.zLine) } }
         .onAppear {
             appeared = true; sel = focusIndex; onSelect(focusIndex)
+            #if os(iOS)
+            Sound.warmUp(settings)
+            #endif
             // 驗證用：ZIWEI_PICK=宮位編號 直接當成使用者點了那一宮
             if let v = ProcessInfo.processInfo.environment["ZIWEI_PICK"].flatMap(Int.init) {
                 let wait = ProcessInfo.processInfo.environment["ZIWEI_PICK_DELAY"].flatMap(Double.init) ?? 1.2   // 錄動畫時延後點，先開始錄
                 DispatchQueue.main.asyncAfter(deadline: .now() + wait) { userPicked = true; sel = v; onSelect(v) }
             }
+            #if os(iOS)
+            // 點宮位自測：ZIWEI_PICK_BENCH=1＋ZIWEI_BENCH=檔案 → 輪流點 12 宮，量每次選宮到整個畫面排版完花多久
+            if ProcessInfo.processInfo.environment["ZIWEI_PICK_BENCH"] != nil,
+               let path = ProcessInfo.processInfo.environment["ZIWEI_BENCH"] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                    guard let win = UIApplication.shared.connectedScenes.compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first else { return }
+                    var times: [Double] = []
+                    for k in 0..<24 {
+                        let t = Date()
+                        userPicked = true; sel = k % 12
+                        RunLoop.main.run(until: Date().addingTimeInterval(0.001))
+                        win.layoutIfNeeded()
+                        times.append(Date().timeIntervalSince(t) * 1000)
+                    }
+                    let st = times.sorted()
+                    try? String(format: "pick x24  median %.0fms  min %.0fms  max %.0fms", st[12], st[0], st[23]).write(toFile: path, atomically: true, encoding: .utf8)
+                }
+            }
+            #endif
         }
         .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { _, v in
             onSelect(v < 0 ? nil : v)

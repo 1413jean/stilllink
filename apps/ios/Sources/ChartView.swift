@@ -18,13 +18,14 @@ struct ChartView: View {
     @State private var zoom: CGFloat = 1        // 排版用的倍率（1～3）
     @State private var live: CGFloat = 1        // 捏合中、還沒放手的額外倍率
     @State private var pinchAt: CGPoint = .zero // 捏的那一點（盤面上的位置，放手前的倍率）
-    @State private var scrollOffset: CGPoint = .zero
+    @State private var scrollBox = ScrollOffsetBox()   // 目前捲動位置（縮放時算錨點用）；放在 class 裡，捲動時不會讓整頁重畫
     @State private var scrollPos = ScrollPosition()
     @State private var adding = false
     @State private var showPillars = false
     @State private var tempChart: TempItem?
     @State private var savedTemp = false
-    @State private var selPalace: Int?      // 盤上點選的宮位（底部星曜筆記用）
+    // 盤上點選的宮位（底部星曜筆記用）：放在 @Observable 裡、只有底部筆記列讀它，點宮位時不會讓整頁（運限表、備註）跟著重畫
+    @State private var selection = PalaceSelection()
     @State private var showNotes = false
     @AppStorage("hideBirth") private var hideBirth = false
     @State private var hepanYear: Int?        // 合盤：對方出生年
@@ -68,7 +69,7 @@ struct ChartView: View {
                         if let model {
                             ChartBoard(person: person, model: model, level: shownLevel, zoom: zoom, hepan: hepanYear.map(Hepan.init),
                                        onResetLevel: { pick.level = 0 },
-                                       onSelect: { selPalace = $0 },
+                                       onSelect: { selection.index = $0 },
                                        margin: phone ? 4 : 14, outerCard: !phone)
                                 .equatable()
                                 .transaction(value: pick) { $0.animation = nil }
@@ -115,7 +116,7 @@ struct ChartView: View {
             // 內容可以捲到導覽列底下（被漸層＋模糊蓋住），不要在導覽列下緣硬切一條線
             .scrollClipDisabled()
             .scrollPosition($scrollPos)
-            .onScrollGeometryChange(for: CGPoint.self) { $0.contentOffset } action: { _, p in scrollOffset = p }
+            .onScrollGeometryChange(for: CGPoint.self) { $0.contentOffset } action: { _, p in scrollBox.offset = p }
             .defaultScrollAnchor(ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] != nil ? .bottom : .top)
             // 打備註時：捲動或點盤面其他地方就收鍵盤
             .scrollDismissesKeyboard(.interactively)
@@ -130,10 +131,8 @@ struct ChartView: View {
         .zEdgeFades()
         // 底部浮著選到宮位的摘要：點了拉出星曜筆記
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let model, let i = selPalace, StarNotes.enabled {
-                NotesBar(title: palaceTitle(model, i), stars: model.chart.palaces[i].major.map(\.name).joined()) { showNotes = true }
-                    .padding(.bottom, 4)
-                    .transition(.opacity.combined(with: .offset(y: 8)))
+            if let model, StarNotes.enabled {
+                SelectedNotesBar(selection: selection, model: model, title: { palaceTitle(model, $0) }) { showNotes = true }
             }
         }
         .onAppear {
@@ -143,7 +142,7 @@ struct ChartView: View {
             }
         }
         .sheet(isPresented: $showNotes) {
-            if let model, let i = selPalace {
+            if let model, let i = selection.index {
                 NotesSheet(chart: model.chart, index: i, includeBirth: max(0, shownLevel - 2) == 0, scopes: activeScopes(model),
                            clamps: notesClamps(model, i),
                            names: shownLevel >= 1 ? model.horo.scope(shownLevel).palaceNames : nil,
@@ -230,7 +229,7 @@ struct ChartView: View {
     private func setZoom(_ z: CGFloat) {
         var t = Transaction(); t.disablesAnimations = true
         withTransaction(t) { zoom = z; live = 1 }
-        if z == 1 { scrollPos.scrollTo(x: 0, y: scrollOffset.y) }
+        if z == 1 { scrollPos.scrollTo(x: 0, y: scrollBox.offset.y) }
     }
 
     /// 放手：倍率寫進排版；捲動位置調成捏的那一點還留在手指下面
@@ -240,7 +239,7 @@ struct ChartView: View {
         var z = old * live
         if z < 1.05 { z = 1 }
         let k = z / old
-        let target = CGPoint(x: max(0, scrollOffset.x + pinchAt.x * (k - 1)), y: max(0, scrollOffset.y + pinchAt.y * (k - 1)))
+        let target = CGPoint(x: max(0, scrollBox.offset.x + pinchAt.x * (k - 1)), y: max(0, scrollBox.offset.y + pinchAt.y * (k - 1)))
         var t = Transaction(); t.disablesAnimations = true
         withTransaction(t) { zoom = z; live = 1 }
         DispatchQueue.main.async { scrollPos.scrollTo(x: z > 1 ? target.x : 0, y: target.y) }
@@ -285,4 +284,25 @@ struct ChartView: View {
     }
 
     private struct LoadKey: Equatable { let chart: String; let pick: Pick }
+}
+
+/// 捲動位置：只在縮放放手時讀，不需要觸發重畫
+final class ScrollOffsetBox { var offset: CGPoint = .zero }
+
+@Observable final class PalaceSelection { var index: Int? }
+
+/// 底部筆記列：自己讀選到的宮位，點宮位時只有這一條重畫
+private struct SelectedNotesBar: View {
+    let selection: PalaceSelection
+    let model: ChartModel
+    let title: (Int) -> String
+    let open: () -> Void
+
+    var body: some View {
+        if let i = selection.index {
+            NotesBar(title: title(i), stars: model.chart.palaces[i].major.map(\.name).joined(), action: open)
+                .padding(.bottom, 4)
+                .transition(.opacity.combined(with: .offset(y: 8)))
+        }
+    }
 }

@@ -37,7 +37,7 @@ enum Sound {
         static func level(_ lv: Int) -> Event { [.decade, .decade, .year, .month, .day, .hour][max(0, min(5, lv))] }
     }
 
-    private static var cache: [String: PlatformSound] = [:]
+    nonisolated(unsafe) private static var cache: [String: PlatformSound] = [:]
 
     static func url(_ style: String, _ cue: String) -> URL? {
         if let u = Bundle.main.url(forResource: cue, withExtension: "mp3", subdirectory: "sfx/\(style)") { return u }
@@ -59,16 +59,40 @@ enum Sound {
         guard let snd else { return }
         cache[key] = snd
         snd.stop()
-        #else
-        // 跟靜音開關走（.ambient），不會打斷使用者正在聽的音樂
-        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: .mixWithOthers)
-        let snd = cache[key] ?? (try? AVAudioPlayer(contentsOf: u))
-        guard let snd else { return }
-        cache[key] = snd
-        snd.stop()
-        snd.currentTime = 0
-        #endif
         snd.volume = Float(volume)
         snd.play()
+        #else
+        // iPhone：設定音訊模式、建播放器、播放都會同步等系統音訊服務，放在主執行緒會讓點宮位卡一下，
+        // 全部丟到自己的佇列（cache 也只在這個佇列裡讀寫）
+        audioQueue.async {
+            if !sessionReady {
+                // 跟靜音開關走（.ambient），不會打斷使用者正在聽的音樂；只要設定一次
+                try? AVAudioSession.sharedInstance().setCategory(.ambient, options: .mixWithOthers)
+                sessionReady = true
+            }
+            let snd = cache[key] ?? (try? AVAudioPlayer(contentsOf: u))
+            guard let snd else { return }
+            if cache[key] == nil { snd.prepareToPlay(); cache[key] = snd }
+            snd.stop()
+            snd.currentTime = 0
+            snd.volume = Float(volume)
+            snd.play()
+        }
+        #endif
     }
+
+    #if os(iOS)
+    private static let audioQueue = DispatchQueue(label: "stilllink.sound", qos: .userInteractive)
+    nonisolated(unsafe) private static var sessionReady = false
+
+    /// 打開命盤時先把點宮位的音效準備好，第一次點才不會等播放器暖機
+    static func warmUp(_ s: ZSettings) {
+        guard s.sound, let u = url(s.soundStyle, s.cues[Event.palace.rawValue] ?? Event.palace.defaultCue) else { return }
+        let key = s.soundStyle + "/" + (s.cues[Event.palace.rawValue] ?? Event.palace.defaultCue)
+        audioQueue.async {
+            if !sessionReady { try? AVAudioSession.sharedInstance().setCategory(.ambient, options: .mixWithOthers); sessionReady = true }
+            if cache[key] == nil, let p = try? AVAudioPlayer(contentsOf: u) { p.prepareToPlay(); cache[key] = p }
+        }
+    }
+    #endif
 }

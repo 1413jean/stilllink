@@ -35,12 +35,21 @@ enum Platform {
         #if os(macOS)
         NSHapticFeedbackManager.defaultPerformer.perform(h == .alignment ? .alignment : .levelChange, performanceTime: .now)
         #else
+        // 產生器重複用、震完就 prepare 下一次（每次 new 一個，Taptic Engine 要暖機，會慢半拍）
         switch h {
-        case .alignment: UISelectionFeedbackGenerator().selectionChanged()
-        case .levelChange: UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        case .success: UINotificationFeedbackGenerator().notificationOccurred(.success)
-        case .error: UINotificationFeedbackGenerator().notificationOccurred(.error)
+        case .alignment: Feedback.select.selectionChanged(); Feedback.select.prepare()
+        case .levelChange: Feedback.impact.impactOccurred(); Feedback.impact.prepare()
+        case .success: Feedback.notify.notificationOccurred(.success)
+        case .error: Feedback.notify.notificationOccurred(.error)
         }
         #endif
     }
+
+    #if os(iOS)
+    @MainActor private enum Feedback {
+        static let select = UISelectionFeedbackGenerator()
+        static let impact = UIImpactFeedbackGenerator(style: .light)
+        static let notify = UINotificationFeedbackGenerator()
+    }
+    #endif
 }

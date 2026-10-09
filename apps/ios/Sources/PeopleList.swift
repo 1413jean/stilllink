@@ -41,7 +41,7 @@ struct PeopleList: View {
         // 搜尋框跟著內容：往上滑收走、往下滑回頂端才出現；導覽列沒有底色，捲到上面用漸層霧化
         // 頂部漸層跟導覽列同一層、往下延伸蓋過分類列（分開兩層會在接縫出現一條線）；
         // 底部漸層蓋到新增按鈕那一帶，名單淡出得比較自然
-        .zEdgeFades(top: showChips ? 36 + Self.chipBarHeight : 36, bottom: 72)
+        .zEdgeFades(top: showChips && chipsShown ? 36 + Self.chipBarHeight : 36, bottom: 72)   // 分類列收起後跟首頁一樣高
         // 分類膠囊浮在漸層上面（放在 zEdgeFades 之前會被漸層蓋淡）
         .overlay(alignment: .top) {
             if showChips {
