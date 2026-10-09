@@ -34,6 +34,11 @@ create trigger people_touch before insert or update on public.people for each ro
 drop trigger if exists prefs_touch on public.prefs;
 create trigger prefs_touch before insert or update on public.prefs for each row execute function public.touch_server_at();
 
+-- 建專案時沒勾「Automatically expose new tables」：這裡手動開權限，只給登入的使用者（anon 訪客完全碰不到）
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.people, public.prefs to authenticated;
+revoke all on public.people, public.prefs from anon;
+
 alter table public.people enable row level security;
 alter table public.prefs enable row level security;
 
