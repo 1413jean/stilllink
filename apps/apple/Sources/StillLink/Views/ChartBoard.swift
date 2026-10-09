@@ -349,20 +349,6 @@ private struct PalaceCell: View {
                 fittedStars(p: p, horo: horo, minor: minor)
                 .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
-                // 流曜（大祿、年鸞…）與合祿／合羊／合陀：放右上角，跟本命星曜分開；每排 4 個，由右往左
-                let extra = extraStars(p, horo)
-                if !extra.isEmpty {
-                    VStack(alignment: .trailing, spacing: 3) {
-                        ForEach(Array(stride(from: 0, to: extra.count, by: 4)), id: \.self) { k in
-                            HStack(alignment: .top, spacing: 1) {
-                                ForEach(Array(extra[k..<min(k + 4, extra.count)].reversed()), id: \.0) { name, color in
-                                    VerticalText(name, size: ChartType.adj(fs) * 0.76, color: color)   // 流曜是輔助資訊，比雜曜小一點
-                                }
-                            }
-                        }
-                    }
-                    .fixedSize()
-                }
             }
             .frame(minHeight: fs * 2.4, alignment: .top)   // 星曜區至少留一行主星的高度，不會被下方擠到消失
             .layoutPriority(-1)
@@ -462,6 +448,8 @@ private struct PalaceCell: View {
                             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
                             .padding(.bottom, 2)
                     }
+                    // 長生、天干、地支一欄置中；流曜（大祿、年鸞…）與合祿／合羊／合陀浮在這一欄上面：
+                    // 用 overlay 不佔版面高度（星曜區不會被擠小），那個角落平常是空的；每排 3 個、由右往左、比雜曜小一點
                     VStack(spacing: 0) {
                         // 長生十二神：自己一個開關（預設關）
                         if settings.showChangsheng {
@@ -471,6 +459,23 @@ private struct PalaceCell: View {
                         Text(p.stem).font(ChartType.font(ChartType.ganzhi(fs)))
                         Text(p.branch).font(ChartType.font(ChartType.ganzhi(fs)))
                     }
+                    // 這一欄最上緣放一個 0 高的錨點，流曜從錨點往上長（貼齊右邊）
+                    .overlay(alignment: .top) { Color.clear.frame(height: 0).overlay(alignment: .bottomTrailing) {
+                        let extra = extraStars(p, horo)
+                        if !extra.isEmpty {
+                            VStack(alignment: .trailing, spacing: 2) {
+                                ForEach(Array(stride(from: 0, to: extra.count, by: 3)), id: \.self) { k in
+                                    HStack(alignment: .top, spacing: 1) {
+                                        ForEach(Array(extra[k..<min(k + 3, extra.count)].reversed()), id: \.0) { name, color in
+                                            VerticalText(name, size: ChartType.adj(fs) * 0.76, color: color)
+                                        }
+                                    }
+                                }
+                            }
+                            .fixedSize()
+                            .padding(.bottom, 3)
+                        }
+                    } }
                 }
                 .foregroundStyle(Color.zText)
             }
@@ -527,9 +532,10 @@ extension PalaceCell {
         }
     }
 
+    // 星曜一律不換行（Jean：寧願變小）：放不下就一階一階縮——先縮雜曜、主星縮得慢，主星最小 70%、雜曜最小 46%
     private static let fitCandidates: [(CGFloat, CGFloat, Bool)] =
-        [(1.0, 1.0), (1.0, 0.9), (1.0, 0.82), (0.94, 0.76), (0.88, 0.72), (0.82, 0.68)].map { ($0.0, $0.1, false) } +
-        [(1.0, 1.0), (0.92, 0.84), (0.84, 0.78), (0.76, 0.72), (0.68, 0.66)].map { ($0.0, $0.1, true) }
+        [(1.0, 1.0), (1.0, 0.9), (1.0, 0.82), (0.94, 0.76), (0.9, 0.7), (0.86, 0.64),
+         (0.82, 0.58), (0.78, 0.54), (0.74, 0.5), (0.7, 0.46)].map { ($0.0, $0.1, false) }
 
     private func fitChoice(_ p: Palace, horo: Horoscope, minor: Bool, w: CGFloat, h: CGFloat) -> (CGFloat, CGFloat, Bool) {
         for c in Self.fitCandidates {

@@ -30,7 +30,7 @@ struct ClampOverlay: View {
             // 跟鄰宮撞進來同一拍：0.09 秒加速衝到交界線 → 吸附
             withAnimation(.easeIn(duration: 0.09)) { shown = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.45)) { snapped = true }
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) { snapped = true }   // 阻尼高：吸附時只輕輕一彈，不晃
                 withAnimation(.easeOut(duration: 0.55)) { ring = true }
             }
         }
@@ -66,7 +66,7 @@ struct ClampOverlay: View {
                 .frame(width: w, height: h)
                 .background(Capsule().fill(Color.zCard))
                 .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 1))
-                .scaleEffect(snapped ? 1 : 0.86)
+                .scaleEffect(snapped ? 1 : 0.94)
         }
         .rotationEffect(.degrees(angle))
         .opacity(shown ? 1 : 0)
@@ -104,9 +104,9 @@ struct ClampFrameOverlay: View {
                 let t = freeze ?? (done || Motion.reduce ? Self.duration : tl.date.timeIntervalSince(start))
                 let p = min(1, max(0, t / Self.duration))
                 let k = Self.strength
-                // 靜止的淡框：光跑過去之後才慢慢浮出來
+                // 光跑完留下的靜止框：光跑過去之後才慢慢浮出來，要看得出來（比一般格線粗、深）
                 var frame = Path(); frame.addLines(poly); frame.closeSubpath()
-                ctx.stroke(frame, with: .color(color.opacity(0.4 * k * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1, lineJoin: .miter))
+                ctx.stroke(frame, with: .color(color.opacity(0.9 * k * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1.8, lineJoin: .miter))
                 guard p < 1 else { return }
                 let track = Track(poly)
                 let s0 = track.nearest(to: center)                       // 從被夾的宮位那一側出發
