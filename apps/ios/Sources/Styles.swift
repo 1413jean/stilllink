@@ -49,7 +49,20 @@ private struct EdgeFades: ViewModifier {
                 }
                 .allowsHitTesting(false)
             }
+            .modifier(NativeScrollEdgeHidden())
             .onAppear(perform: SystemScrollEdge.hideAll)
+    }
+}
+
+/// iOS 26.1 起用 SwiftUI 原生的關法：List 的「硬式」邊緣效果（導覽列下緣一層底色＋一條分隔線）
+/// KVC 關不掉；26.0 這個 API 缺型別會閃退，所以只在 26.1 以上用
+private struct NativeScrollEdgeHidden: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.1, *) {
+            content.scrollEdgeEffectHidden(true, for: .all)
+        } else {
+            content
+        }
     }
 }
 
