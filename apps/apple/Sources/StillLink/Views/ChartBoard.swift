@@ -514,7 +514,7 @@ private struct PalaceCell: View {
                             tagLine(t.0, t.1).alignmentGuide(.nameCenter) { $0[HorizontalAlignment.center] }
                         }
                         // 本命宮名跟上面的運限宮名（年命、大兄…）同樣大小、粗細
-                        Text(StarLayout.compact && level >= 1 && p.isBody && settings.showBody ? String(p.name.prefix(1)) + "|身" : p.name)
+                        Text(StarLayout.compact && level >= 1 && p.isBody && settings.showBody && !selected ? String(p.name.prefix(1)) + "|身" : p.name)
                             .font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmRed)
                             .lineLimit(1).fixedSize()
                             .alignmentGuide(.nameCenter) { $0[HorizontalAlignment.center] }
@@ -535,7 +535,8 @@ private struct PalaceCell: View {
                 Spacer(minLength: 0)
                 // 身宮、來因放在天干地支左邊並排（往上疊會太高，把星曜區擠沒）
                 HStack(alignment: .bottom, spacing: 2) {
-                    if p.isBody && settings.showBody && !(StarLayout.compact && level >= 1) {
+                    // iPhone 點選這一宮時收起身宮：格子窄，讓位給大限歲數和宮名
+                    if p.isBody && settings.showBody && !(StarLayout.compact && (level >= 1 || selected)) {
                         VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
                             .padding(.vertical, 3).padding(.horizontal, 1)
                             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
