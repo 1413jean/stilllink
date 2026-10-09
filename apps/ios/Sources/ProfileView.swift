@@ -7,6 +7,7 @@ struct SettingsView: View {
     @AppStorage("appearance") private var appearance: Appearance = .system
     @AppStorage("hideBirth") private var hideBirth = false
     @State private var editingSelf = false
+    @State private var legal: LegalDoc?
 
     var body: some View {
         ScrollView {
@@ -90,6 +91,10 @@ struct SettingsView: View {
                     Link(destination: URL(string: "https://github.com/SylarLong/iztro")!) {
                         rowLabel("排盤計算", value: "iztro")
                     }
+                    divider
+                    ForEach(LegalDoc.allCases) { d in
+                        row(d.rawValue, value: "", last: d == LegalDoc.allCases.last) { legal = d }
+                    }
                 }
             }
             .padding(.horizontal, 24)
@@ -98,6 +103,11 @@ struct SettingsView: View {
         }
         .background(Color.zBg)
         .zEdgeFades()
+        .sheet(item: $legal) { LegalView(doc: $0) }
+        .onAppear {
+            // 驗證用：ZIWEI_LEGAL=privacy／terms／delete／license 直接打開那份條款
+            if let v = ProcessInfo.processInfo.environment["ZIWEI_LEGAL"] { legal = LegalDoc.allCases.first { "\($0)" == v } }
+        }
         .sheet(isPresented: $editingSelf) {
             if let p = store.me { PersonForm(editing: p) } else { PersonForm(asSelf: true) }
         }

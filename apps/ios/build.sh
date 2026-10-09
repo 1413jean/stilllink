@@ -20,7 +20,7 @@ if [[ "$1" == xcode ]]; then xcodegen generate; open StillLink.xcodeproj; exit 0
 
 FILES=(Sources/**/*.swift(N)
   $SHARED/Engine/*.swift
-  $SHARED/{AppInfo,Platform,Settings,Store,Theme,Motion,Sound,StarNotes}.swift
+  $SHARED/{AppInfo,Platform,Settings,Store,Theme,Motion,Sound,StarNotes,LegalText}.swift
   $SHARED/Views/{ChartBoard,ClampOverlay,Controls,ZInput,PeriodTable,GroupDial,Skeleton}.swift
   $SHARED/Sync/*.swift)
 
@@ -44,6 +44,7 @@ fi
 # 資源：排盤 JS、時區表、星曜筆記、音效、圖示
 cp $RES/{iztro.min.js,bridge.js,zone.tab,star-notes.json} $OUT/
 cp -R $RES/sfx $OUT/sfx
+cp ../../LICENSE ../../THIRD_PARTY_NOTICES.md $OUT/   # 開源授權：我的 →「開源授權」
 [[ -d Resources ]] && cp -R Resources/. $OUT/ 2>/dev/null || true
 # 圖示：iOS 18 起只認編譯過的 asset catalog（Assets.car），光放 PNG 主畫面會顯示空白圖示
 xcrun actool Assets.xcassets --compile $OUT --platform iphonesimulator --minimum-deployment-target 18.0 \

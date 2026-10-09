@@ -112,6 +112,7 @@ DESIGN.md                  設計規範
 | `ZIWEI_BENCH=檔案` ＋ `ZIWEI_REDRAW_BENCH=1` | 量整張盤重畫 10 次的時間寫到檔案（改盤面後確認沒變慢；目前約 80ms） |
 | `ZIWEI_NOTES`、`ZIWEI_STAR_DETAIL` | 開星曜筆記頁 |
 | `ZIWEI_SCROLL=1` | iOS：命盤頁、所有命盤一打開就捲到底（所有命盤會順便收起分類列），看捲動後頂端的樣子 |
+| `ZIWEI_LEGAL=privacy／terms／delete／license` | iOS：「我的」頁打開時直接開那份條款 |
 | `ZIWEI_PICK_BENCH=1` ＋ `ZIWEI_BENCH=檔案` | iOS：輪流點 12 宮 24 次，量每次選宮到排版完的時間（改盤面後確認點宮位沒變慢；2026-10 約 13ms，模擬器） |
 
 要測新畫面就照這個模式自己加一個 `ZIWEI_*`，並補進這張表。
