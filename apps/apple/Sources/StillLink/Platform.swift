@@ -27,15 +27,19 @@ enum Platform {
         #endif
     }
 
-    enum Haptic { case alignment, levelChange }
-    /// 觸控板（Mac）／Taptic Engine（iPhone）回饋
+    /// success／error：儲存完成、出錯（iPhone 是系統的成功、錯誤震動）
+    enum Haptic { case alignment, levelChange, success, error }
+    /// 觸控板（Mac）／Taptic Engine（iPhone）回饋；設定裡關掉「震動」就不震
     @MainActor static func haptic(_ h: Haptic) {
+        if Store.current?.settings.haptics == false { return }
         #if os(macOS)
         NSHapticFeedbackManager.defaultPerformer.perform(h == .alignment ? .alignment : .levelChange, performanceTime: .now)
         #else
         switch h {
         case .alignment: UISelectionFeedbackGenerator().selectionChanged()
         case .levelChange: UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        case .success: UINotificationFeedbackGenerator().notificationOccurred(.success)
+        case .error: UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
         #endif
     }

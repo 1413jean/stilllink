@@ -71,7 +71,7 @@ struct ChartRecords: View {
         guard !t.isEmpty, var p = person else { return }
         withAnimation(Motion.base) { p.notes.append(Note(text: t)); store.update(p) }
         draft = ""
-        Platform.haptic(.alignment)
+        Platform.haptic(.success)
     }
 
     private func deleteNote(_ id: UUID) {
@@ -113,9 +113,13 @@ struct ChartRecords: View {
         }
         .onChange(of: item) { _, it in
             Task {
-                guard let data = try? await it?.loadTransferable(type: Data.self), let name = Self.savePhoto(data), var q = person else { return }
+                guard let it else { return }
+                guard let data = try? await it.loadTransferable(type: Data.self), let name = Self.savePhoto(data), var q = person else {
+                    Platform.haptic(.error); item = nil; return
+                }
                 q.photos = (q.photos ?? []) + [name]
                 withAnimation(Motion.base) { store.update(q) }
+                Platform.haptic(.success)
                 item = nil
             }
         }

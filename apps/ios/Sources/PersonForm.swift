@@ -130,7 +130,9 @@ struct PersonForm: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(editing == nil ? "排盤" : "儲存", action: submit).disabled(!canSubmit)
+                    // 不用 disabled：資料沒填完也按得到，按了給錯誤震動（停用的按鈕按了沒反應，不知道哪裡錯）
+                    Button(editing == nil ? "排盤" : "儲存", action: submit)
+                        .foregroundStyle(canSubmit ? Color.zText : Color.zText3)
                 }
             }
             .alert("新增分組", isPresented: $addingGroup) {
@@ -222,7 +224,7 @@ struct PersonForm: View {
     }
 
     private func submit() {
-        guard canSubmit else { return }
+        guard canSubmit else { Platform.haptic(.error); return }
         let r = resolved()
         let n = name.trimmingCharacters(in: .whitespaces)
         if var p = editing {
@@ -238,6 +240,7 @@ struct PersonForm: View {
             if asSelf { store.selfIDString = p.id.uuidString; store.userName = p.name }
             onCreated?(p)
         }
+        Platform.haptic(.success)
         dismiss()
     }
 }

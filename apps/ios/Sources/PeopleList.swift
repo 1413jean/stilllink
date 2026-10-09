@@ -24,16 +24,10 @@ struct PeopleList: View {
         .background(Color.zBg)
         .environment(\.defaultMinListRowHeight, 64)
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 64) }   // 右下角的新增按鈕不蓋到最後一列
-        // 分類列佔的位置固定不變，收起只是往上滑出＋淡出：
+        // 分類列佔的位置固定不變（這裡只留空位，膠囊本身浮在下面的 overlay），收起只是往上滑出＋淡出：
         // 要是收起時連位置一起拿掉，列表內容會被推一下，又被當成反方向滑動而來回切換（會卡住）
         .safeAreaInset(edge: .top, spacing: 0) {
-            if query.isEmpty && groupList.count > 1 {
-                chips.padding(.bottom, 2)
-                    .background(alignment: .top) { EdgeFade(edge: .top, height: 64) }   // 名單捲到分類列底下時一樣淡出
-                    .offset(y: chipsShown ? 0 : -48)
-                    .opacity(chipsShown ? 1 : 0)
-                    .allowsHitTesting(chipsShown)
-            }
+            if showChips { Color.clear.frame(height: Self.chipBarHeight) }
         }
         // 滑動方向：手指往上推收起、往下拉出現；要同方向累積滑過 24pt 才切換，回到頂端一定出現
         .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y + $0.contentInsets.top }) { _, y in
@@ -45,7 +39,18 @@ struct PeopleList: View {
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜尋")
         // 搜尋框跟著內容：往上滑收走、往下滑回頂端才出現；導覽列沒有底色，捲到上面用漸層霧化
-        .zEdgeFades(bottom: 72)   // 底部漸層蓋到新增按鈕那一帶，名單淡出得比較自然
+        // 頂部漸層跟導覽列同一層、往下延伸蓋過分類列（分開兩層會在接縫出現一條線）；
+        // 底部漸層蓋到新增按鈕那一帶，名單淡出得比較自然
+        .zEdgeFades(top: showChips ? 36 + Self.chipBarHeight : 36, bottom: 72)
+        // 分類膠囊浮在漸層上面（放在 zEdgeFades 之前會被漸層蓋淡）
+        .overlay(alignment: .top) {
+            if showChips {
+                chips.frame(height: Self.chipBarHeight)
+                    .offset(y: chipsShown ? 0 : -Self.chipBarHeight)
+                    .opacity(chipsShown ? 1 : 0)
+                    .allowsHitTesting(chipsShown)
+            }
+        }
         // 新增按鈕要浮在底部漸層霧化上面，所以放在 zEdgeFades 之後
         .overlay(alignment: .bottomTrailing) {
             Button { adding = true } label: { Label("新增命盤", systemImage: "plus") }
@@ -115,6 +120,9 @@ struct PeopleList: View {
         let me = store.showSelfInSidebar ? store.me : nil
         return (me.map { [$0] } ?? []) + groupList.flatMap(\.1).filter { $0.id != me?.id }
     }
+
+    private static let chipBarHeight: CGFloat = 46
+    private var showChips: Bool { query.isEmpty && groupList.count > 1 }
 
     private var chips: some View {
         ScrollView(.horizontal, showsIndicators: false) {

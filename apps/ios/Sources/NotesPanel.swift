@@ -113,7 +113,7 @@ struct NoteEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("儲存") { notes.set(key, draft); dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("儲存") { notes.set(key, draft); Platform.haptic(.success); dismiss() } }
             }
             .onAppear { if !loaded { draft = notes.note(key); loaded = true } }
         }

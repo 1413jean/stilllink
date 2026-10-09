@@ -136,6 +136,7 @@
 |---|---|---|
 | `.buttonStyle(.capsule(_:fill:floating:))` | `Components.swift` | 膠囊按鈕。`.primary` 黑底白字（主要動作）、`.secondary` 淺灰底（取消）、`.outline` 卡片底＋細框；高度一律 48；`fill` 撐滿寬、`floating` 浮起陰影 |
 | `.zFloatingCapsule()` | `Components.swift` | 浮在盤面上的膠囊底（`zRaised`＋`zRaisedLine`＋陰影） |
+| `Platform.haptic(_:)` | `Platform.swift` | 震動：`.success` 儲存／新增完成、`.error` 沒填完就按儲存或讀取失敗、`.alignment` 刻度、`.levelChange` 切層級；跟著設定的「震動」開關 |
 | `FilterChip` | `Components.swift` | 篩選膠囊（分類、標籤）：選到是主文字色底反白字、沒選淺灰底，可帶數量；高 34、觸控補到 44 |
 | `ZForm` | `Styles.swift` | 系統 Form 換成 App 色系（暖白底、淺灰卡片）；設定、表單一律用它 |
 | `.zSwitch()` | `Styles.swift` | 開關用主色（按鈕、選單是主文字色） |

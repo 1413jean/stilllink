@@ -223,7 +223,7 @@ struct ChartView: View {
     /// 暫時命盤存進命盤列表（分組「占卜」），之後在所有命盤裡找得到
     private func saveTemp() {
         store.add(person)
-        Platform.haptic(.levelChange)
+        Platform.haptic(.success)
         withAnimation(Motion.base) { savedTemp = true }
     }
 

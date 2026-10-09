@@ -46,8 +46,12 @@ struct AvatarPicker: View {
         .accessibilityLabel("更換頭貼")
         .onChange(of: item) { _, it in
             Task {
-                guard let data = try? await it?.loadTransferable(type: Data.self), let saved = Self.save(data) else { return }
+                guard let it else { return }
+                guard let data = try? await it.loadTransferable(type: Data.self), let saved = Self.save(data) else {
+                    Platform.haptic(.error); item = nil; return
+                }
                 name = saved
+                Platform.haptic(.success)
                 item = nil
             }
         }
