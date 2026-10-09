@@ -5,8 +5,8 @@ import Foundation
 /// 不要把 service_role key 放進來——那把會繞過所有權限。
 /// 建專案、拿這兩個值的步驟：docs/account-sync.md
 enum CloudConfig {
-    static let url = ""        // 例：https://abcdefgh.supabase.co
-    static let anonKey = ""    // Project Settings → API → anon public
+    static let url = "https://vfwyjhdvhpnzbbqilgej.supabase.co"
+    static let anonKey = "sb_publishable_oSTr5bIFj_IQZ0MizTh-5w_TVaJ0fSZ"   // 公開金鑰（publishable），可以放在 App 裡
 
     /// 還沒填就不顯示登入按鈕的實際功能（按了只提示）
     static var isConfigured: Bool { !url.isEmpty && !anonKey.isEmpty }
