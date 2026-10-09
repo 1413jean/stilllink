@@ -82,13 +82,13 @@ innerShadow(star, color: rgb(0x9C3A18, 0.35), blur: 7.62, dy: -4.10)  // 下緣�
 
 // 測試版：右下角星橘膠囊＋夜空色字 BETA
 if CommandLine.arguments.count > 2 && CommandLine.arguments[2] == "beta" {
-    let pill = CGRect(x: body.maxX - 430, y: body.minY + 70, width: 380, height: 150)
-    ctx.addPath(CGPath(roundedRect: pill, cornerWidth: 75, cornerHeight: 75, transform: nil))
+    let pill = CGRect(x: body.maxX - 100 - 320, y: body.minY + 90, width: 320, height: 126)  // 離圓角遠一點，不貼邊
+    ctx.addPath(CGPath(roundedRect: pill, cornerWidth: 63, cornerHeight: 63, transform: nil))
     ctx.setFillColor(rgb(0xF59457)); ctx.fillPath()
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
     let para = NSMutableParagraphStyle(); para.alignment = .center
-    let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 96, weight: .heavy),
+    let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 80, weight: .heavy),
                                                 .foregroundColor: NSColor(cgColor: rgb(0x0B1220))!,
                                                 .paragraphStyle: para, .kern: 6]
     let t = NSAttributedString(string: "BETA", attributes: attrs)
