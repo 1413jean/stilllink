@@ -14,6 +14,15 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.3.5", date: "2026 年 10 月 9 日",
+            improved: [
+                "換上新的 App 圖示：夜空藍底＋星橘四角星",
+                "視窗頂部和底部的漸層改成整段自然淡出，不再有一條硬邊",
+            ],
+            fixed: [
+                "修正在 macOS 27 上點命盤宮位沒反應（只有長按有用）的問題，現在點一下選宮位、點兩下或長按鎖定都正常",
+                "夾宮的四化改成跟盤面顯示的運限層一致：選流年時大限的四化也一起算（例：生年忌＋大限忌的雙忌夾，之前選流年時判斷不到）",
+            ]),
         ReleaseNote(version: "2.3.4", date: "2026 年 10 月 9 日",
             improved: [
                 "流曜（年祿、年鸞、大喜…）與合盤的合祿、合羊、合陀，移到每宮右下角長生十二神的上面，星曜區整排留給本命星曜",
