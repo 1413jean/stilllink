@@ -21,15 +21,8 @@ struct PeopleList: View {
         .environment(\.defaultMinListRowHeight, 64)
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 64) }   // 右下角的新增按鈕不蓋到最後一列
         .overlay(alignment: .bottomTrailing) {
-            Button { adding = true } label: {
-                Label("新增命盤", systemImage: "plus")
-                    .zText(.body)
-                    .foregroundStyle(Color.zBg)
-                    .padding(.horizontal, 20).frame(height: 48)
-                    .background(Capsule().fill(Color.zText))
-                    .shadow(color: Color.zShadow, radius: 10, y: 3)
-            }
-            .buttonStyle(.plain)
+            Button { adding = true } label: { Label("新增命盤", systemImage: "plus") }
+                .buttonStyle(.capsule(floating: true))
             .padding(.trailing, 16).padding(.bottom, 8)
         }
         .navigationTitle("所有命盤")
@@ -53,13 +46,7 @@ struct PeopleList: View {
                 } description: {
                     Text("新增客人或家人的生辰，就能排盤、記錄")
                 } actions: {
-                    Button { adding = true } label: {
-                        Text("新增命盤").zText(.bodyStrong)
-                            .foregroundStyle(Color.zBg)
-                            .padding(.horizontal, 22).frame(height: 44)
-                            .background(Capsule().fill(Color.zText))
-                    }
-                    .buttonStyle(.plain)
+                    Button("新增命盤") { adding = true }.buttonStyle(.capsule())
                 }
             } else if !query.isEmpty && rows.isEmpty {
                 ContentUnavailableView.search(text: query)

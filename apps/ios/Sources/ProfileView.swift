@@ -137,26 +137,16 @@ struct SettingsView: View {
             Text("保存你的命盤").zText(.title3).foregroundStyle(Color.zText).padding(.bottom, 10)
             Text("命盤和紀錄可以在不同裝置同步。不用填表單，也不用密碼。")
                 .zText(.callout).foregroundStyle(Color.zText2).padding(.bottom, 14)
-            Button { soon = true } label: {
-                Label("使用 Apple 登入", systemImage: "apple.logo")
-                    .zText(.bodyStrong)
-                    .foregroundStyle(Color.zBg)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Capsule().fill(Color.zText))
-            }
-            .buttonStyle(.plain)
-            .padding(.bottom, 12)
+            Button { soon = true } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
+                .buttonStyle(.capsule(fill: true))
+                .padding(.bottom, 12)
             Button { soon = true } label: {
                 HStack(spacing: 10) {
                     Text("G").font(.system(size: 18, weight: .bold))
-                    Text("使用 Google 登入").zText(.bodyStrong)
+                    Text("使用 Google 登入")
                 }
-                .foregroundStyle(Color.zText)
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .background(Capsule().fill(Color.zCard))
-                .overlay(Capsule().stroke(Color.zLine))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.capsule(.outline, fill: true))
         }
         .padding(20)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.zHover))

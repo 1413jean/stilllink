@@ -210,14 +210,9 @@ struct SelfOnboarding: View {
             Text("先填你的命盤").zText(.title2).foregroundStyle(Color.zText)
             Text("輸入你的出生日期、時間和地點，\n打開 App 就會看到自己的命盤").zText(.callout)
                 .foregroundStyle(Color.zText2).multilineTextAlignment(.center)
-            Button { filling = true } label: {
-                Text("填寫我的命盤").zText(.bodyStrong)
-                    .foregroundStyle(Color.zBg)
-                    .padding(.horizontal, 26).frame(height: 50)
-                    .background(Capsule().fill(Color.zText))
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 8)
+            Button("填寫我的命盤") { filling = true }
+                .buttonStyle(.capsule())
+                .padding(.top, 8)
             Spacer()
             Spacer()
         }

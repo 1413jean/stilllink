@@ -17,9 +17,7 @@ struct NotesBar: View {
                 Image(systemName: "chevron.up").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.zText3)
             }
             .padding(.horizontal, 18).frame(height: 44)
-            .background(Capsule().fill(Color.zRaised))
-            .overlay(Capsule().stroke(Color.zRaisedLine, lineWidth: 0.5))
-            .shadow(color: Color.zShadow, radius: 12, y: 4)
+            .zFloatingCapsule()
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(title)星曜筆記")

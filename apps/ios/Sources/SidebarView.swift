@@ -126,16 +126,8 @@ struct SidebarView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("個人檔案與設定")
             Spacer()
-            Button(action: onNew) {
-                Label("新增命盤", systemImage: "plus")
-                    .zText(.bodyStrong)
-                    .foregroundStyle(Color.zBg)
-                    .padding(.horizontal, 22)
-                    .frame(height: 52)
-                    .background(Capsule().fill(Color.zText))
-                    .shadow(color: .black.opacity(0.15), radius: 10, y: 3)
-            }
-            .buttonStyle(.plain)
+            Button(action: onNew) { Label("新增命盤", systemImage: "plus") }
+                .buttonStyle(.capsule(floating: true))
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)

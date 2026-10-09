@@ -248,19 +248,11 @@ struct BaoshuSheet: View {
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.zHover))
                 .onChange(of: text) { _, v in let d = String(v.filter(\.isNumber).prefix(4)); if d != v { text = d } }
             HStack(spacing: 10) {
-                Button { dismiss() } label: {
-                    Text("取消").zText(.bodyStrong).foregroundStyle(Color.zText)
-                        .frame(maxWidth: .infinity).frame(height: 48)
-                        .background(Capsule().fill(Color.zHover))
-                }
-                Button { if let v = value { onSubmit(v); dismiss() } } label: {
-                    Text("起卦").zText(.bodyStrong).foregroundStyle(Color.zBg)
-                        .frame(maxWidth: .infinity).frame(height: 48)
-                        .background(Capsule().fill(Color.zText))
-                }
-                .disabled(value == nil).opacity(value == nil ? 0.4 : 1)
+                Button("取消") { dismiss() }.buttonStyle(.capsule(.secondary, fill: true))
+                Button("起卦") { if let v = value { onSubmit(v); dismiss() } }
+                    .buttonStyle(.capsule(fill: true))
+                    .disabled(value == nil)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20).padding(.top, 24)
         .frame(maxHeight: .infinity, alignment: .top)

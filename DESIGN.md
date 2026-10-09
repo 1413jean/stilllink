@@ -126,3 +126,27 @@
   - 備註新增和刪除有過場動畫。
   - 按鈕按下會縮到 0.97。
 - 系統開啟「減少動態效果」時，所有動畫改成瞬間切換。
+
+## iOS 元件（`apps/ios/Sources`）
+
+新畫面先找這張表；同樣的東西不要在各頁自己畫一次。要新做的元件，做完補進來。
+
+| 元件 | 檔案 | 用途 |
+|---|---|---|
+| `.buttonStyle(.capsule(_:fill:floating:))` | `Components.swift` | 膠囊按鈕。`.primary` 黑底白字（主要動作）、`.secondary` 淺灰底（取消）、`.outline` 卡片底＋細框；高度一律 48；`fill` 撐滿寬、`floating` 浮起陰影 |
+| `.zFloatingCapsule()` | `Components.swift` | 浮在盤面上的膠囊底（`zRaised`＋`zRaisedLine`＋陰影） |
+| `ZForm` | `Styles.swift` | 系統 Form 換成 App 色系（暖白底、淺灰卡片）；設定、表單一律用它 |
+| `.zSwitch()` | `Styles.swift` | 開關用主色（按鈕、選單是主文字色） |
+| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 狀態列、導覽列下緣：底色漸層 100%→0%＋漸進模糊；會順便關掉系統捲動邊緣效果 |
+| `AvatarView`／`AvatarPicker` | `AvatarView.swift` | 頭貼（沒有就預設人像）；可點的版本從相簿選、裁正方形 256px |
+| `Thumbnails.image(_:maxPixel:)` | `ChartRecords.swift` | ImageIO 讀縮圖＋快取；列表、格子裡的圖一律用它，不要整張解碼 |
+| `PersonRow` | `PeopleList.swift` | 命盤列表的一列（頭貼、姓名性別、生日） |
+| `SidebarGlyph` | `SidebarView.swift` | 側欄按鈕的三條線 |
+| `NotesBar`／`NotesSheet`／`NoteEditor` | `NotesPanel.swift` | 底部宮位摘要、半頁星曜筆記、筆記編輯 |
+| `ChartRecords` | `ChartRecords.swift` | 運限表下的備註與照片（照片存前壓成 1600px／JPEG 0.72） |
+| `HepanSheet`／`BaoshuSheet`／`PillarSearchSheet` | `QuickTools.swift` | 合盤、報數、四柱反查 |
+| `MutagenStrip` | 共用 `ChartBoard.swift` | iPhone 四化方塊（固定大小、對齊自己的星、最多疊蓋前一個 6 成、每顆星最多 4 格） |
+| `StarLayout` | 共用 `ChartBoard.swift` | iPhone／Mac 盤面差異（`compact`、欄寬、角落圓角） |
+| `BoardSkeleton`／`PeriodTableSkeleton`／`SkeletonBar` | 共用 `Views/Skeleton.swift` | 載入骨架 |
+
+**規則**：按鈕高度 48、觸控目標 ≥44；顏色、字級照上面的 token；照片一律先壓縮再存。
