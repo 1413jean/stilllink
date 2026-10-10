@@ -27,11 +27,7 @@ struct LegalView: View {
             }
             .background(Color.zBg)
             .zEdgeFades()
-            .navigationTitle(doc.rawValue)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } }
-            }
+            .zSheetBar(doc.rawValue, done: { dismiss() })
         }
         .tint(Color.zText)
     }

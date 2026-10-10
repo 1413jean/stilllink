@@ -48,15 +48,15 @@ struct NotesSheet: View {
                     .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 32)
             }
             .background(Color.zBg)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
+            .zEdgeFades()
+            .zSheetBar(title, done: { dismiss() })
             .navigationDestination(for: Detail.self) { d in
                 ScrollView {
                     StarDetailView(key: d.key, palaceName: d.palace, onBack: { _ = path.popLast() }, showHeader: false)
                         .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 32)
                 }
                 .background(Color.zBg)
+                .zEdgeFades()
                 // 系統導覽列：返回、標題（星名）、右上編輯
                 .navigationTitle(d.key)
                 .navigationBarTitleDisplayMode(.inline)
@@ -109,12 +109,7 @@ struct NoteEditor: View {
                     }
                 }
             }
-            .navigationTitle(key)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("儲存") { notes.set(key, draft); Platform.haptic(.success); dismiss() } }
-            }
+            .zSheetBar(key, done: { notes.set(key, draft); Platform.haptic(.success); dismiss() }, confirm: "儲存", cancel: { dismiss() })
             .onAppear { if !loaded { draft = notes.note(key); loaded = true } }
         }
         .tint(Color.zText)

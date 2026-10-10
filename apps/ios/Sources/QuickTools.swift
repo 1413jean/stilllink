@@ -157,14 +157,7 @@ struct PillarSearchSheet: View {
                     }
                 }
             }
-            .navigationTitle("四柱反查")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("關閉") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    if searching { ProgressView() } else { Button("查詢", action: search) }
-                }
-            }
+            .zSheetBar("四柱反查", done: search, confirm: "查詢", busy: searching, cancel: { dismiss() })
         }
     }
 
@@ -213,9 +206,7 @@ struct HepanSheet: View {
                     }
                 }
             }
-            .navigationTitle("合盤")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } } }
+            .zSheetBar("合盤", cancel: { dismiss() })
         }
         .tint(Color.zText)
     }

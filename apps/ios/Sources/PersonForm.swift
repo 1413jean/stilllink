@@ -125,16 +125,8 @@ struct PersonForm: View {
                     }
                 }
             }
-            .navigationTitle(asSelf ? "我的命盤" : editing == nil ? "新增命盤" : "編輯命主資料")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    // 不用 disabled：資料沒填完也按得到，按了給錯誤震動（停用的按鈕按了沒反應，不知道哪裡錯）
-                    Button(editing == nil ? "排盤" : "儲存", action: submit)
-                        .foregroundStyle(canSubmit ? Color.zText : Color.zText3)
-                }
-            }
+            .zSheetBar(asSelf ? "我的命盤" : editing == nil ? "新增命盤" : "編輯命主資料",
+                       done: submit, confirm: editing == nil ? "排盤" : "儲存", confirmEnabled: canSubmit, cancel: { dismiss() })
             .alert("新增分組", isPresented: $addingGroup) {
                 TextField("例如：VIP", text: $newGroup)
                 Button("取消", role: .cancel) { newGroup = "" }

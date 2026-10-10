@@ -68,3 +68,45 @@ extension View {
             .shadow(color: Color.zShadow, radius: 12, y: 4)
     }
 }
+
+// MARK: - 彈出視窗（sheet）
+
+extension View {
+    /// 彈出視窗的導覽列，所有 sheet 一律用這個（不要各自寫 toolbar）：
+    /// - 只看內容（筆記、條款、設定、我的）：只給 done → 右上「完成」
+    /// - 要填寫（新增／編輯命盤、編輯筆記、反查、合盤）：cancel → 左上「取消」；done＋confirm 文字 → 右上主要動作
+    /// - confirmEnabled = false 時字變淡但按得到（按了由呼叫端給錯誤震動，停用的按鈕按了沒反應不知道哪裡錯）
+    /// - busy：主要動作進行中，換成轉圈
+    /// 標題置中小字；底色與上下淡出由內容負責（ScrollView 用 zEdgeFades、表單用 ZForm）
+    func zSheetBar(_ title: String? = nil, done: (() -> Void)? = nil, confirm: String = "完成", confirmEnabled: Bool = true,
+                   busy: Bool = false, cancel: (() -> Void)? = nil) -> some View {
+        modifier(SheetBar(title: title, done: done, confirm: confirm, confirmEnabled: confirmEnabled, busy: busy, cancel: cancel))
+    }
+}
+
+private struct SheetBar: ViewModifier {
+    let title: String?
+    let done: (() -> Void)?
+    let confirm: String
+    let confirmEnabled: Bool
+    let busy: Bool
+    let cancel: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle(title ?? "")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if let cancel {
+                    ToolbarItem(placement: .cancellationAction) { Button("取消", action: cancel) }
+                }
+                if let done {
+                    ToolbarItem(placement: .confirmationAction) {
+                        if busy { ProgressView() }
+                        else { Button(confirm, action: done).foregroundStyle(confirmEnabled ? Color.zText : Color.zText3) }
+                    }
+                }
+            }
+    }
+}
+

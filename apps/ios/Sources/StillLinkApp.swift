@@ -120,7 +120,7 @@ struct RootView: View {
         .sheet(isPresented: $showProfile) {
             NavigationStack {
                 SettingsView()
-                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showProfile = false } } }
+                    .zSheetBar(done: { showProfile = false })
             }
             .tint(Color.zText)
         }

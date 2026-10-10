@@ -186,7 +186,7 @@ struct ChartView: View {
         .sheet(isPresented: $showSettings) {
             NavigationStack {
                 DisplaySettingsView(showRulesLink: true)
-                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showSettings = false } } }
+                    .zSheetBar("盤面顯示", done: { showSettings = false })
             }
             .presentationDetents([.medium, .large])
         }
