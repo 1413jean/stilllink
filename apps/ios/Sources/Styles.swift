@@ -18,7 +18,7 @@ struct ZForm<Content: View>: View {
 extension View {
     /// 上下邊緣：跟 Mac 版一樣的 TopFade（同底色漸層＋背景模糊），取代系統的捲動邊緣效果
     /// （系統的在深色模式會整片變黑）。導覽列、分頁列都不要自己的底色
-    func zEdgeFades(top: CGFloat = 14, bottom: CGFloat = 20) -> some View {
+    func zEdgeFades(top: CGFloat = 24, bottom: CGFloat = 20) -> some View {
         modifier(EdgeFades(top: top, bottom: bottom))
     }
 
@@ -82,17 +82,77 @@ struct EdgeFade: View {
 
     var body: some View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
-        // 均勻的輕度模糊只蓋狀態列上面 80%，漸層在交界處還有 85% 底色，把模糊的邊蓋掉，再往下淡到 0；
-        // 不做漸進：系統模糊加漸層遮罩會失效、疊層模糊會有階梯（2026-10 試過）
-        ZStack(alignment: edge == .top ? .top : .bottom) {
-            if solid > 0 { LightBlur().frame(height: solid * 0.8) }
-            LinearGradient(stops: [.init(color: Color.zBg, location: 0),
-                                   .init(color: Color.zBg.opacity(0.85), location: height > 0 ? min(solid * 0.8 / height, 1) : 0),
-                                   .init(color: Color.zBg.opacity(0), location: 1)], startPoint: start, endPoint: end)
+        // 照 Claude／Instagram：漸進模糊（邊緣最糊、往內平順到 0，沒有交界線）＋同底色漸層 100% → 0%
+        ZStack {
+            if solid > 0 { VariableBlur(radius: 12, fromTop: edge == .top) }
+            LinearGradient(colors: [Color.zBg, Color.zBg.opacity(0)], startPoint: start, endPoint: end)
         }
         .frame(height: height)
         .allowsHitTesting(false)
     }
+}
+
+/// 漸進背景模糊：用系統導覽列邊緣效果同一個濾鏡（CAFilter variableBlur，未公開 API），
+/// 由一張漸層圖決定每一處糊多少——邊緣 100%、往內平順到 0，所以沒有分割線。
+/// 濾鏡名稱用拼字組出來、找不到就什麼都不做（只剩漸層），不會閃退
+private struct VariableBlur: UIViewRepresentable {
+    let radius: CGFloat
+    let fromTop: Bool
+
+    final class View: UIView {
+        var radius: CGFloat = 12
+        var fromTop = true
+        private var applied: CGSize = .zero
+        // 這個 view 本身的 layer 就是 backdrop layer（會取樣後面的畫面），濾鏡直接掛在它上面
+        override class var layerClass: AnyClass { NSClassFromString(["CA", "Backdrop", "Layer"].joined()) ?? CALayer.self }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            guard bounds.size != applied, bounds.height > 0 else { return }
+            applied = bounds.size
+            apply()
+        }
+
+        override func traitCollectionDidChange(_ previous: UITraitCollection?) {
+            super.traitCollectionDidChange(previous)
+            applied = .zero; setNeedsLayout()
+        }
+
+        private func apply() {
+            let cls = ["CA", "Filter"].joined()
+            let make = NSSelectorFromString(["filter", "With", "Type:"].joined())
+            guard let filterClass = NSClassFromString(cls) as AnyObject as? NSObjectProtocol,
+                  filterClass.responds(to: make),
+                  let filter = filterClass.perform(make, with: ["variable", "Blur"].joined())?.takeUnretainedValue() as? NSObject
+            else { return }
+            filter.setValue(radius, forKey: "inputRadius")
+            filter.setValue(mask(bounds.size), forKey: "inputMaskImage")
+            filter.setValue(true, forKey: "inputNormalizeEdges")
+            layer.filters = [filter]
+            layer.setValue(UIScreen.main.scale, forKey: "scale")
+        }
+
+        /// 遮罩圖：邊緣不透明（全糊）→ 往內透明（不糊），用緩和曲線
+        private func mask(_ size: CGSize) -> CGImage? {
+            let h = max(1, Int(size.height))
+            let r = UIGraphicsImageRenderer(size: CGSize(width: 1, height: h))
+            return r.image { ctx in
+                let colors = [UIColor.black.cgColor, UIColor.black.withAlphaComponent(0.6).cgColor, UIColor.black.withAlphaComponent(0).cgColor] as CFArray
+                guard let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.45, 1]) else { return }
+                let a = CGPoint(x: 0, y: fromTop ? 0 : CGFloat(h)), b = CGPoint(x: 0, y: fromTop ? CGFloat(h) : 0)
+                ctx.cgContext.drawLinearGradient(g, start: a, end: b, options: [])
+            }.cgImage
+        }
+    }
+
+    func makeUIView(context: Context) -> View {
+        let v = View()
+        v.isUserInteractionEnabled = false
+        v.backgroundColor = .clear
+        v.radius = radius; v.fromTop = fromTop
+        return v
+    }
+    func updateUIView(_ v: View, context: Context) { v.radius = radius; v.fromTop = fromTop }
 }
 
 /// 輕度、均勻的背景模糊：系統材質用暫停的動畫器停在 35% 強度（調模糊強度的公開做法），

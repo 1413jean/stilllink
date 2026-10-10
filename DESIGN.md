@@ -142,7 +142,7 @@
 | `FilterChip` | `Components.swift` | 篩選膠囊（分類、標籤）：選到是主文字色底反白字、沒選淺灰底，可帶數量；高 34、觸控補到 44 |
 | `ZForm` | `Styles.swift` | 系統 Form 換成 App 色系（暖白底、淺灰卡片）；設定、表單一律用它 |
 | `.zSwitch()` | `Styles.swift` | 開關用主色（按鈕、選單是主文字色） |
-| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 照 Claude App：頂部只蓋**狀態列**（時間、電量那一條），導覽列按鈕底下完全透明、內容直接穿過去。狀態列上面 80% 是均勻輕度模糊（系統材質 35%、清掉灰色染色），同底色漸層 100% → 交界 85% → 往下 14pt 淡到 0（蓋掉模糊的邊）。底部是安全區＋20 的同底色漸層。會順便關掉系統捲動邊緣效果 |
+| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 照 Claude／Instagram：頂部蓋狀態列＋往下 24pt，**漸進模糊**（`VariableBlur`：系統導覽列邊緣效果用的 variableBlur 濾鏡，未公開 API，找不到就只剩漸層不會閃退；半徑 12，邊緣最糊往下平順到 0）＋同底色漸層 100%→0%，沒有交界線。導覽列按鈕底下內容直接穿過。底部是安全區＋20。會順便關掉系統捲動邊緣效果 |
 | `AvatarView`／`AvatarPicker` | `AvatarView.swift` | 頭貼（沒有就預設人像）；可點的版本從相簿選、裁正方形 256px |
 | `Thumbnails.image(_:maxPixel:)` | `ChartRecords.swift` | ImageIO 讀縮圖＋快取；列表、格子裡的圖一律用它，不要整張解碼 |
 | `PersonRowSkeleton`、`CloudSync.refreshWithSkeleton(_:)` | `PeopleList.swift`、`CloudSync.swift` | 下拉更新：`.refreshable { await CloudSync.refreshWithSkeleton($flag) }`，flag 為 true 時列表換成骨架（至少 0.6 秒） |
