@@ -235,14 +235,17 @@ struct SettingsPage: View {
             }
             toggle("在側欄顯示我的命盤", "關閉後側欄不會出現「我」", $store.showSelfInSidebar, last: true)
         case .account:
-            note("登入後，命盤、備註、照片、頭貼和設定都會存在你的帳號，換電腦或用手機版登入同一個帳號就能看到。")
+            note("登入後，命盤、備註、照片、頭貼和設定會自動同步到你的帳號，換電腦或用手機版登入同一個帳號就能看到。")
             if let ses = account.session {
                 row("目前帳號", [ses.email, ses.provider.map { $0 == "apple" ? "Apple" : $0 == "google" ? "Google" : $0 }].compactMap { $0 }.joined(separator: " · ")) {
                     HStack { Spacer(); Label("已登入", systemImage: "checkmark.icloud").font(Font.zCallout).foregroundStyle(Color.zAccent) }
                 }
-                row("同步", syncStatus) {
-                    HStack { Spacer(); Button { Task { await sync.syncNow() } } label: { Label(sync.syncing ? "同步中…" : "立即同步", systemImage: "arrow.triangle.2.circlepath") }
-                        .buttonStyle(ZSecondaryButton(small: true)).disabled(sync.syncing) }
+                // 登入後自動同步（開 App、回到前景、改資料後幾秒），平常不用顯示；失敗才出現讓人重試
+                if let e = sync.lastError {
+                    row("同步失敗", e) {
+                        HStack { Spacer(); Button { Task { await sync.syncNow() } } label: { Label(sync.syncing ? "同步中…" : "重試", systemImage: "arrow.triangle.2.circlepath") }
+                            .buttonStyle(ZSecondaryButton(small: true)).disabled(sync.syncing) }
+                    }
                 }
                 row("登出", "只登出這台 Mac；本機的命盤保留，之後再登入會自動合併") {
                     HStack { Spacer(); Button("登出") { account.signOut(); Toast.show("已登出") }.buttonStyle(ZSecondaryButton(small: true)) }
@@ -527,13 +530,6 @@ struct SettingsPage: View {
 
     private func note(_ t: String) -> some View {
         SettingNote(text: t)
-    }
-
-    private var syncStatus: String {
-        if sync.syncing { return "同步中…" }
-        if let e = sync.lastError { return e }
-        guard let t = sync.lastSync else { return "還沒同步" }
-        return "上次同步：" + t.formatted(.relative(presentation: .named))
     }
 
     private func signIn(_ p: Account.Provider) {

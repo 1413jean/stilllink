@@ -65,11 +65,15 @@ struct AccountSection: View {
             Text("帳號").zText(.eyebrow).foregroundStyle(Color.zText3)
             VStack(spacing: 0) {
                 line("帳號", value: session.email ?? providerName)
-                divider
-                Button { Task { await sync.syncNow(); Platform.haptic(sync.lastError == nil ? .success : .error) } } label: {
-                    line("立即同步", value: status, valueColor: sync.lastError == nil ? Color.zText3 : Color.wmRed)
+                // 登入後自動同步，平常不用顯示；只有失敗（沒網路等）才出現一列讓人重試
+                if let e = sync.lastError {
+                    divider
+                    Button { Task { await sync.syncNow(); Platform.haptic(sync.lastError == nil ? .success : .error) } } label: {
+                        line(sync.syncing ? "同步中…" : "同步失敗 · 點這裡重試", value: "", titleColor: Color.wmRed)
+                    }
+                    .buttonStyle(.plain).disabled(sync.syncing)
+                    .accessibilityHint(e)
                 }
-                .buttonStyle(.plain).disabled(sync.syncing)
                 divider
                 Button { confirmSignOut = true } label: { line("登出", value: providerName) }.buttonStyle(.plain)
                 divider
@@ -98,13 +102,6 @@ struct AccountSection: View {
 
     private var providerName: String {
         session.provider == "apple" ? "Apple" : session.provider == "google" ? "Google" : (session.provider ?? "")
-    }
-
-    private var status: String {
-        if sync.syncing { return "同步中…" }
-        if let e = sync.lastError { return e }
-        guard let t = sync.lastSync else { return "還沒同步" }
-        return t.formatted(.relative(presentation: .named))
     }
 
     private func line(_ title: String, value: String, titleColor: Color = Color.zText, valueColor: Color = Color.zText3) -> some View {
