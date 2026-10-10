@@ -573,34 +573,7 @@ private struct MenuRow: View {
     }
 }
 
-/// Mac 的下拉更新：觸控板往下拉過頭（彈性捲動超過 60pt）再放開 → 手動同步（進骨架）
-/// macOS 沒有原生的下拉更新，用捲動位置自己判斷；拉的時候頂端出現小箭頭，拉夠了變成重新整理圖示
-struct PullToRefresh: ViewModifier {
-    @ObservedObject private var sync = CloudSync.shared
-    @ObservedObject private var account = Account.shared
-    @State private var pull: CGFloat = 0
-    @State private var armed = false
-    func body(content: Content) -> some View {
-        if #available(macOS 15.0, *), account.isSignedIn {
-            content
-                .onScrollGeometryChange(for: CGFloat.self, of: { -($0.contentOffset.y + $0.contentInsets.top) }) { _, y in
-                    pull = max(0, y)
-                    if y > 60 { armed = true }
-                    else if armed && y <= 2 { armed = false; Task { await sync.refresh() } }
-                }
-                .overlay(alignment: .top) {
-                    // 內容頂端原本在捲動區往下 14pt（ChartScreen 的 padding），被拉開 pull 那麼多：箭頭放在空隙正中間
-                    if pull > 4 && !sync.refreshing {
-                        RefreshArrow(progress: pull / 60, armed: armed).offset(y: 14 + pull / 2 - RefreshArrow.size / 2)
-                    }
-                }
-        } else {
-            content
-        }
-    }
-}
-
-/// 按住滑鼠往下拖更新（命盤區任何地方）：觸控板兩指下拉不好拉，用滑鼠按住往下拖一樣能更新
+/// 按住滑鼠往下拖更新（命盤區任何地方，像手機手指下拉）：觸控板兩指下拉不好拉，Jean 決定只留這種
 /// 跟宮位的點擊／長按同時聽（simultaneousGesture）：宮位那邊拖開 6pt 就自己取消，不會又選宮又更新
 /// 只有往下為主的拖曳才算；內容跟著往下彈（阻尼 0.4、最多 70pt），拖超過 110pt 放開就更新
 struct DragToRefresh: ViewModifier {
@@ -614,7 +587,7 @@ struct DragToRefresh: ViewModifier {
         content
             .offset(y: min(70, dy * 0.4))
             .overlay(alignment: .top) {
-                // 內容往下移了 min(70, dy×0.4)：箭頭放在拉開的空隙正中間（跟兩指下拉同一個位置算法）
+                // 內容往下移了 min(70, dy×0.4)：箭頭放在拉開的空隙正中間
                 if dy > 8 {
                     RefreshArrow(progress: dy / trigger, armed: dy > trigger)
                         .offset(y: min(70, dy * 0.4) / 2 - RefreshArrow.size / 2)
@@ -633,7 +606,7 @@ struct DragToRefresh: ViewModifier {
     }
 }
 
-/// 下拉更新的箭頭（兩指下拉、按住拖共用）：拉的時候 ↓ 慢慢浮現，拉夠了變 ↻
+/// 下拉更新的箭頭：拉的時候 ↓ 慢慢浮現，拉夠了變 ↻
 struct RefreshArrow: View {
     static let size: CGFloat = 16
     var progress: CGFloat

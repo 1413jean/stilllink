@@ -163,7 +163,6 @@ struct ChartScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .defaultScrollAnchor(.top)
-                .modifier(PullToRefresh())
                 // 命盤也能捲到頂部工具列底下（跟右側面板一樣被漸層＋模糊蓋住），左右下照常裁切
                 .scrollClipDisabled()
                 .mask(Rectangle().padding(.top, -80))
