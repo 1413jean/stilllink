@@ -124,7 +124,7 @@ struct RootView: View {
 
     var body: some View {
         main
-        .onChange(of: route) { _, r in
+        .onChange(of: route) { r in
             guard let r else { return }
             if stepping { stepping = false; return }
             if history.indices.contains(cursor), history[cursor] == r { return }
@@ -205,7 +205,7 @@ struct RootView: View {
             // 視窗最小寬度：側欄收起後，命盤區最少保留這麼寬（再窄右側面板會暫時藏起來）
             .frame(minWidth: 640)
             // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
-            .transaction(value: route) { $0.animation = nil }
+            .animation(nil, value: route)
             // 標題列底下墊背景色：系統標題列是比 zBg 亮的灰藍（#323536），TopFade 淡出時會從下半段透出來、在標題列底部硬切成一條亮帶
             .background(Color.zBg.ignoresSafeArea(edges: .top))
             .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }
