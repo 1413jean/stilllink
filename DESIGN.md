@@ -142,7 +142,7 @@
 | `FilterChip` | `Components.swift` | 篩選膠囊（分類、標籤）：選到是主文字色底反白字、沒選淺灰底，可帶數量；高 34、觸控補到 44 |
 | `ZForm` | `Styles.swift` | 系統 Form 換成 App 色系（暖白底、淺灰卡片）；設定、表單一律用它 |
 | `.zSwitch()` | `Styles.swift` | 開關用主色（按鈕、選單是主文字色） |
-| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 狀態列、導覽列下緣：底色漸層 100%→0%＋漸進模糊；底部只有底色漸層（不加模糊）；會順便關掉系統捲動邊緣效果 |
+| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 狀態列、導覽列（底部是安全區）：只用背景色，不疊模糊——導覽列那段 100% 實心完全蓋住，從導覽列下緣用緩和曲線 100%→0% 淡出（模糊會把底下的字糊成灰，看起來髒）；會順便關掉系統捲動邊緣效果。Mac 版的 TopFade 照舊有模糊 |
 | `AvatarView`／`AvatarPicker` | `AvatarView.swift` | 頭貼（沒有就預設人像）；可點的版本從相簿選、裁正方形 256px |
 | `Thumbnails.image(_:maxPixel:)` | `ChartRecords.swift` | ImageIO 讀縮圖＋快取；列表、格子裡的圖一律用它，不要整張解碼 |
 | `PersonRowSkeleton`、`CloudSync.refreshWithSkeleton(_:)` | `PeopleList.swift`、`CloudSync.swift` | 下拉更新：`.refreshable { await CloudSync.refreshWithSkeleton($flag) }`，flag 為 true 時列表換成骨架（至少 0.6 秒） |

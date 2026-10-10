@@ -41,9 +41,9 @@ private struct EdgeFades: ViewModifier {
             .overlay {
                 GeometryReader { g in
                     VStack(spacing: 0) {
-                        EdgeFade(edge: .top, height: g.safeAreaInsets.top + top)
+                        EdgeFade(edge: .top, height: g.safeAreaInsets.top + top, solid: g.safeAreaInsets.top)
                         Spacer(minLength: 0)
-                        EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom)
+                        EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom, solid: g.safeAreaInsets.bottom)
                     }
                     .ignoresSafeArea()
                 }
@@ -66,23 +66,24 @@ private struct NativeScrollEdgeHidden: ViewModifier {
     }
 }
 
-/// 狀態列、導覽列、分頁列後面：背景色（backgroundPrimary）漸層 100%→0%；頂部再疊漸進背景模糊（邊緣 24 → 0），底部只有漸層
+/// 狀態列＋導覽列（或底部安全區）後面：只用背景色，不疊模糊（模糊會把底下的字糊成一片灰，看起來髒）。
+/// 導覽列那一段（solid）是 100% 背景色完全蓋住，從導覽列下緣開始用緩和曲線 100% → 0%
 struct EdgeFade: View {
     let edge: VerticalEdge
     var height: CGFloat = 20
+    var solid: CGFloat = 0
 
     var body: some View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
-        ZStack {
-            // 底部只用背景色漸層（Jean：底部模糊看起來不自然），頂部才疊模糊
-            if edge == .top { BackdropBlur(fadeFromTop: true, radius: 24) }
-            // 底色漸層用緩和曲線（線性的在 0% 那一端看得出一條界線）
-            LinearGradient(stops: [.init(color: Color.zBg, location: 0), .init(color: Color.zBg.opacity(0.85), location: 0.3),
-                                   .init(color: Color.zBg.opacity(0.45), location: 0.6), .init(color: Color.zBg.opacity(0.12), location: 0.85),
-                                   .init(color: Color.zBg.opacity(0), location: 1)], startPoint: start, endPoint: end)
-        }
-        .frame(height: height)
-        .allowsHitTesting(false)
+        let s = height > 0 ? min(max(solid / height, 0), 0.95) : 0
+        let f = { (t: Double) in s + (1 - s) * t }   // 淡出段裡的位置
+        // 緩和曲線（線性的在 0% 那一端看得出一條界線）
+        LinearGradient(stops: [.init(color: Color.zBg, location: 0), .init(color: Color.zBg, location: s),
+                               .init(color: Color.zBg.opacity(0.8), location: f(0.25)), .init(color: Color.zBg.opacity(0.45), location: f(0.55)),
+                               .init(color: Color.zBg.opacity(0.15), location: f(0.8)), .init(color: Color.zBg.opacity(0), location: 1)],
+                       startPoint: start, endPoint: end)
+            .frame(height: height)
+            .allowsHitTesting(false)
     }
 }
 
