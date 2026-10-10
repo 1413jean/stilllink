@@ -75,7 +75,7 @@ step "打包正式版"
 grep -q "error:" "$OUT/release.log" && fail "正式版編譯錯誤" release
 cp "build/StillLink-$VER.dmg" build/appcast.xml "$OUT/"
 
-# 3. macOS 13：合併 release，onChange 改單參數，編譯、推上去、打包
+# 3. macOS 13：合併 release，onChange 改單參數、transaction(value:) 改 animation(nil, value:)，編譯、推上去、打包
 step "合併 macos13"
 git checkout -q macos13
 if ! git merge --no-edit -q origin/release > "$OUT/merge.log" 2>&1; then
@@ -94,6 +94,8 @@ for f in glob.glob("Sources/StillLink/**/*.swift", recursive=True):
     s = open(f, encoding="utf-8").read()
     t = re.sub(r"(\.onChange\(of: [^{]*?\{\s*)_, (\w+) in", r"\1\2 in", s)
     t = re.sub(r"(\.onChange\(of: [^{]*?\{\s*)_, _ in", r"\1_ in", t)
+    # transaction(value:) 要 macOS 14：只用來關掉某個值變化的動畫時，換成 animation(nil, value:)
+    t = re.sub(r"\.transaction\(value: ([^)]+)\) \{ \$0\.animation = nil \}", r".animation(nil, value: \1)", t)
     if t != s: open(f, "w", encoding="utf-8").write(t)
 EOF
 ./build.sh beta > "$OUT/macos13-check.log" 2>&1
