@@ -18,7 +18,7 @@ struct ZForm<Content: View>: View {
 extension View {
     /// 上下邊緣：跟 Mac 版一樣的 TopFade（同底色漸層＋背景模糊），取代系統的捲動邊緣效果
     /// （系統的在深色模式會整片變黑）。導覽列、分頁列都不要自己的底色
-    func zEdgeFades(top: CGFloat = 0, bottom: CGFloat = 20) -> some View {
+    func zEdgeFades(top: CGFloat = 28, bottom: CGFloat = 20) -> some View {
         modifier(EdgeFades(top: top, bottom: bottom))
     }
 
@@ -41,7 +41,7 @@ private struct EdgeFades: ViewModifier {
             .overlay {
                 GeometryReader { g in
                     VStack(spacing: 0) {
-                        EdgeFade(edge: .top, height: g.safeAreaInsets.top + top)
+                        EdgeFade(edge: .top, height: g.safeAreaInsets.top + top, solid: g.safeAreaInsets.top)
                         Spacer(minLength: 0)
                         EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom)
                     }
@@ -71,14 +71,72 @@ private struct NativeScrollEdgeHidden: ViewModifier {
 struct EdgeFade: View {
     let edge: VerticalEdge
     var height: CGFloat = 20
+    var solid: CGFloat = 0     // 導覽列（或底部安全區）本身的高度：模糊只蓋這段
 
     var body: some View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
-        // 目前只有同底色漸層：系統的模糊加漸層遮罩會失效、疊層模糊會出現階梯和灰帶（2026-10 試過），先不加
-        LinearGradient(colors: [Color.zBg, Color.zBg.opacity(0)], startPoint: start, endPoint: end)
+        // 均勻的輕度模糊只蓋到導覽列（solid 那段），漸層再往下多延伸一段把模糊的邊蓋掉；
+        // 不做漸進：系統模糊加漸層遮罩會失效、疊層模糊會有階梯（2026-10 試過）
+        ZStack(alignment: edge == .top ? .top : .bottom) {
+            if solid > 0 { LightBlur().frame(height: solid) }
+            LinearGradient(stops: [.init(color: Color.zBg, location: 0),
+                                   .init(color: Color.zBg.opacity(0.55), location: height > 0 ? min(solid / height, 1) : 0),
+                                   .init(color: Color.zBg.opacity(0), location: 1)], startPoint: start, endPoint: end)
+        }
         .frame(height: height)
         .allowsHitTesting(false)
     }
+}
+
+/// 輕度、均勻的背景模糊：系統材質用暫停的動畫器停在 35% 強度（調模糊強度的公開做法），
+/// 並清掉材質自帶的灰色染色；回到前景時動畫器會被系統跑完，所以重建
+private struct LightBlur: UIViewRepresentable {
+    static let intensity: CGFloat = 0.35
+
+    final class View: UIVisualEffectView {
+        private var animator: UIViewPropertyAnimator?
+        private var observer: NSObjectProtocol?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            guard window != nil else { return }
+            rebuild()
+            if observer == nil {
+                observer = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.rebuild() }
+                }
+            }
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            for v in subviews where String(describing: type(of: v)).contains("VisualEffectSubview") { v.backgroundColor = .clear }
+        }
+
+        func rebuild() {
+            animator?.stopAnimation(true)
+            effect = nil
+            let a = UIViewPropertyAnimator(duration: 1, curve: .linear) { [weak self] in
+                self?.effect = UIBlurEffect(style: .systemUltraThinMaterial)
+            }
+            a.pausesOnCompletion = true
+            a.fractionComplete = LightBlur.intensity
+            animator = a
+            setNeedsLayout()
+        }
+
+        deinit {
+            animator?.stopAnimation(true)
+            if let observer { NotificationCenter.default.removeObserver(observer) }
+        }
+    }
+
+    func makeUIView(context: Context) -> View {
+        let v = View(effect: nil)
+        v.isUserInteractionEnabled = false
+        return v
+    }
+    func updateUIView(_ v: View, context: Context) {}
 }
 
 /// iOS 26 的捲動邊緣效果（深色模式會整片變黑）全部關掉，改用上面的 EdgeFade。
