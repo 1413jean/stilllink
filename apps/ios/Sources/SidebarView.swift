@@ -46,6 +46,7 @@ struct SidebarView: View {
                 .padding(.bottom, 110)   // 留給底部按鈕
             }
             .scrollIndicators(.hidden)
+            .refreshable { await CloudSync.shared.syncNow() }   // 下拉更新：跟雲端同步一次（沒登入就直接結束）
 
             bottomBar
         }

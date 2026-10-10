@@ -29,6 +29,7 @@ struct PeopleList: View {
                 }
                 ForEach(rows) { link($0) }
             }
+            .refreshable { await CloudSync.shared.syncNow() }   // 下拉更新：跟雲端同步一次（沒登入就直接結束）
             .onAppear {
                 // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看滑動後頂端的樣子）
                 guard ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] == "1", let last = rows.last?.id else { return }
