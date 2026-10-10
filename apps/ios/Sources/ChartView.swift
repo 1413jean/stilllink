@@ -148,8 +148,7 @@ struct ChartView: View {
                            names: shownLevel >= 1 ? model.horo.scope(shownLevel).palaceNames : nil,
                            prefix: shownLevel >= 1 ? ZW.scopeTags[shownLevel - 1] : "")
                     .presentationDetents([.fraction(0.5), .large])
-                    // 半頁時還能點盤面上半部換宮位，筆記跟著換（像 Apple 地圖）
-                    .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.5)))
+                    // 不開放點背景：點外面就關掉（開放時點盤面會跟 sheet 搶點擊，換宮位出問題）
                     .presentationBackground(Color.zBg)
             }
         }
