@@ -20,9 +20,11 @@ struct AccountCard: View {
             Text("保存你的命盤").zText(.title3).foregroundStyle(Color.zText).padding(.bottom, 10)
             Text("登入後命盤、備註、照片會存在你的帳號，Mac 和 iPhone 登入同一個帳號就看得到。不用填表單，也不用密碼。")
                 .zText(.callout).foregroundStyle(Color.zText2).padding(.bottom, 14)
-            Button { signIn(.apple) } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
-                .buttonStyle(.capsule(fill: true))
-                .padding(.bottom, 12)
+            if CloudConfig.appleEnabled {
+                Button { signIn(.apple) } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
+                    .buttonStyle(.capsule(fill: true))
+                    .padding(.bottom, 12)
+            }
             Button { signIn(.google) } label: {
                 HStack(spacing: 10) {
                     Text("G").font(.system(size: 18, weight: .bold))

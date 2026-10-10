@@ -16,7 +16,7 @@ enum Changelog {
     static let notes: [ReleaseNote] = [
         ReleaseNote(version: "2.4.0", date: "2026 年 10 月 10 日", major: true,
             new: [
-                "帳號與同步：可以用 Apple 或 Google 登入，命盤、備註、照片、頭貼和設定會自動同步，換電腦或用手機版登入同一個帳號就看得到",
+                "帳號與同步：可以用 Google 登入（Apple 登入準備中），命盤、備註、照片、頭貼和設定會自動同步，換電腦或用手機版登入同一個帳號就看得到",
                 "手動更新：在命盤上按住往下拖、或按 ⌘R，會跟雲端同步一次（更新時先顯示載入畫面，完成後淡入新資料）",
             ],
             improved: [

@@ -270,9 +270,11 @@ struct SettingsPage: View {
                 row("目前狀態", "尚未登入，資料只存在這台 Mac") {
                     HStack { Spacer(); Label("本機", systemImage: "laptopcomputer").font(Font.zCallout).foregroundStyle(Color.zText2) }
                 }
-                row("使用 Apple 登入", "Sign in with Apple") {
-                    HStack { Spacer(); Button { signIn(.apple) } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
-                        .buttonStyle(ZSecondaryButton(small: true)).disabled(account.signingIn) }
+                if CloudConfig.appleEnabled {
+                    row("使用 Apple 登入", "Sign in with Apple") {
+                        HStack { Spacer(); Button { signIn(.apple) } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
+                            .buttonStyle(ZSecondaryButton(small: true)).disabled(account.signingIn) }
+                    }
                 }
                 row("使用 Google 登入", "Google 帳號", last: true) {
                     HStack { Spacer(); Button { signIn(.google) } label: { Label("使用 Google 登入", systemImage: "g.circle") }

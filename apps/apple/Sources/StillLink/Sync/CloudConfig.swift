@@ -10,6 +10,8 @@ enum CloudConfig {
 
     /// 還沒填就不顯示登入按鈕的實際功能（按了只提示）
     static var isConfigured: Bool { !url.isEmpty && !anonKey.isEmpty }
+    /// Apple 登入：Supabase 後台 Authentication → Providers → Apple 設定好（Services ID、金鑰）之後改成 true；之前不顯示按鈕，免得按了只看到錯誤頁
+    static let appleEnabled = false
     static var base: URL { URL(string: url)! }
 
     /// 登入完瀏覽器導回 App 的網址（Supabase 後台 Authentication → URL Configuration → Redirect URLs 要加這一條）
