@@ -41,14 +41,15 @@ struct StillLinkApp: App {
     }
 }
 
-/// 檔案選單「立即同步」（⌘R）：Mac 沒有下拉更新，用選單＋快捷鍵；沒登入時灰掉
+/// 檔案選單「立即同步」（⌘R）：跟下拉更新一樣走 CloudSync.refresh()（進骨架）；沒登入時灰掉
 private struct SyncNowCommand: View {
     @ObservedObject private var account = Account.shared
     var body: some View {
         Button("立即同步") {
+            // 進骨架 → 同步 → 淡入新資料；骨架本身就是回饋，只有失敗才跳提示
             Task {
-                await CloudSync.shared.syncNow()
-                Toast.show(CloudSync.shared.lastError == nil ? "已同步" : "同步失敗，請到設定 → 帳號與同步重試")
+                await CloudSync.shared.refresh()
+                if CloudSync.shared.lastError != nil { Toast.show("同步失敗，請到設定 → 帳號與同步重試") }
             }
         }
         .keyboardShortcut("r")

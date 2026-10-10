@@ -4,6 +4,7 @@ import SwiftUI
 /// 導覽列下面一排分類膠囊（全部／釘選／朋友／家人…）：往下滑出現、往上滑收起（像 Safari 的工具列）；
 /// 右下角浮著「新增命盤」；左滑刪除、右滑釘選、長按選單照用
 struct PeopleList: View {
+    @ObservedObject private var sync = CloudSync.shared   // 下拉更新中：列表換成骨架
     @EnvironmentObject private var store: Store
     @State private var query = ""
     @State private var adding = false
@@ -27,7 +28,15 @@ struct PeopleList: View {
                         .listRowInsets(EdgeInsets())
                         .accessibilityHidden(true)
                 }
-                ForEach(rows) { link($0) }
+                if sync.refreshing {
+                    ForEach(0..<8, id: \.self) { i in
+                        ListRowSkeleton(index: i, avatar: 40).frame(height: 64)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+                } else {
+                    ForEach(rows) { link($0) }
+                }
             }
             .onAppear {
                 // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看滑動後頂端的樣子）
@@ -37,8 +46,8 @@ struct PeopleList: View {
             }
         }
         .listStyle(.plain)
-        // 下拉更新（原生）：登入後立刻跟雲端同步一次；平常開 App、回到前景、改完資料也會自動同步
-        .refreshable { if Account.shared.isSignedIn { await CloudSync.shared.syncNow() } }
+        // 下拉更新（原生）：跟 Mac 的 ⌘R 一樣走 refresh()，列表先換成骨架、同步完淡入；平常開 App、回到前景、改完資料也會自動同步
+        .refreshable { await CloudSync.shared.refresh() }
         .scrollContentBackground(.hidden)
         .background(Color.zBg)
         .environment(\.defaultMinListRowHeight, Self.chipBarHeight)   // 命盤列自己撐到 64（見 link），分類列空位才不會被撐高

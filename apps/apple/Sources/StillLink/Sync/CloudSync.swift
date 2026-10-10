@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import SwiftUI
 #if os(macOS)
 import AppKit
 #else
@@ -22,6 +23,8 @@ final class CloudSync: ObservableObject {
     @Published private(set) var syncing = false
     @Published private(set) var lastSync: Date?
     @Published private(set) var lastError: String?
+    /// 手動更新中（⌘R、下拉）：畫面換成骨架，跑完再淡入新資料
+    @Published private(set) var refreshing = false
 
     private struct State: Codable {
         var userID: String?
@@ -47,6 +50,8 @@ final class CloudSync: ObservableObject {
     func start() {
         guard !started else { return }
         started = true
+        // 驗證用：ZIWEI_SKELETON=1 一直停在手動更新的骨架畫面（截圖看骨架）
+        if ProcessInfo.processInfo.environment["ZIWEI_SKELETON"] != nil { refreshing = true }
         #if os(macOS)
         let name = NSApplication.didBecomeActiveNotification
         #else
@@ -101,6 +106,18 @@ final class CloudSync: ObservableObject {
     }
 
     // MARK: 同步
+
+    /// 手動更新：進骨架 → 同步 → 淡入新資料。骨架最少停 0.7 秒，太快結束會像閃一下
+    func refresh() async {
+        guard Account.shared.isSignedIn, !refreshing else { return }
+        withAnimation(Motion.fast) { refreshing = true }
+        let start = Date()
+        while syncing { try? await Task.sleep(for: .milliseconds(100)) }   // 背景同步正在跑：等它跑完再跑一次
+        await syncNow()
+        let left = 0.7 - Date().timeIntervalSince(start)
+        if left > 0 { try? await Task.sleep(for: .seconds(left)) }
+        withAnimation(Motion.base) { refreshing = false }
+    }
 
     func syncNow() async {
         guard CloudConfig.isConfigured, let session = Account.shared.session, !syncing, let store = Store.current else { return }

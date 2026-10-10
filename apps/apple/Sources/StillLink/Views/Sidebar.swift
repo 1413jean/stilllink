@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 /// Claude／Codex 式側欄：平面列、圓角選取底色、小灰字分組標題、分組像 Codex 的資料夾
 struct Sidebar: View {
     @EnvironmentObject var store: Store
+    @ObservedObject private var sync = CloudSync.shared
     @Binding var route: Route?
     var onNew: () -> Void
     @State private var searching = false
@@ -85,37 +86,44 @@ struct Sidebar: View {
                         .zInput(.small, style: .filled, icon: "magnifyingglass")
                     }
 
-                    let pinned = store.sorted(store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID })
-                    if !pinned.isEmpty {
-                        SectionLabel("釘選").padding(.top, 18)
-                        ForEach(pinned) { p in personRow(p, indent: false) }
-                    }
+                    // 手動更新中（⌘R、下拉）：命盤列表換成骨架，同步完再淡入
+                    if sync.refreshing {
+                        SectionLabel("命盤").padding(.top, 18)
+                        ForEach(0..<7, id: \.self) { i in ListRowSkeleton(index: i, avatar: 18).frame(height: 30).padding(.horizontal, 10) }
+                            .transition(.opacity)
+                    } else {
+                        let pinned = store.sorted(store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID })
+                        if !pinned.isEmpty {
+                            SectionLabel("釘選").padding(.top, 18)
+                            ForEach(pinned) { p in personRow(p, indent: false) }
+                        }
 
-                    SectionLabel("命盤", action: onNew, sort: $store.sortMode).padding(.top, 18)
-                    ForEach(groupNames, id: \.self) { g in
-                        let list = store.sorted(store.people.filter { !$0.pinned && $0.group == g && matches($0) && $0.id != store.selfID })
-                        if !list.isEmpty {
-                            FolderRow(name: g, count: list.count, open: !collapsed.contains(g),
-                                      onAdd: { NotificationCenter.default.post(name: .newChart, object: g) }) {
-                                withAnimation(Motion.base) {
-                                    if collapsed.contains(g) { collapsed.remove(g) } else { collapsed.insert(g) }
+                        SectionLabel("命盤", action: onNew, sort: $store.sortMode).padding(.top, 18)
+                        ForEach(groupNames, id: \.self) { g in
+                            let list = store.sorted(store.people.filter { !$0.pinned && $0.group == g && matches($0) && $0.id != store.selfID })
+                            if !list.isEmpty {
+                                FolderRow(name: g, count: list.count, open: !collapsed.contains(g),
+                                          onAdd: { NotificationCenter.default.post(name: .newChart, object: g) }) {
+                                    withAnimation(Motion.base) {
+                                        if collapsed.contains(g) { collapsed.remove(g) } else { collapsed.insert(g) }
+                                    }
                                 }
-                            }
-                            .opacity(dragKey == "g:" + g ? 0.35 : 1)
-                            .modifier(DropMarker(key: "g:" + g, line: dropLine))
-                            .onDrag { beginDrag("g:" + g) } preview: { DragPreview(icon: "folder", title: g) }
-                            .onDrop(of: [.text], delegate: RowDrop(key: "g:" + g, dragKey: $dragKey, line: $dropLine,
-                                                                  accepts: { _ in true }, perform: drop))
-                            if !collapsed.contains(g) {
-                                ForEach(list) { p in
-                                    personRow(p, indent: true)
-                                        .transition(.opacity.combined(with: .offset(y: -4)))
+                                .opacity(dragKey == "g:" + g ? 0.35 : 1)
+                                .modifier(DropMarker(key: "g:" + g, line: dropLine))
+                                .onDrag { beginDrag("g:" + g) } preview: { DragPreview(icon: "folder", title: g) }
+                                .onDrop(of: [.text], delegate: RowDrop(key: "g:" + g, dragKey: $dragKey, line: $dropLine,
+                                                                      accepts: { _ in true }, perform: drop))
+                                if !collapsed.contains(g) {
+                                    ForEach(list) { p in
+                                        personRow(p, indent: true)
+                                            .transition(.opacity.combined(with: .offset(y: -4)))
+                                    }
                                 }
                             }
                         }
                     }
                     // 空狀態：還沒有任何命盤
-                    if groupNames.isEmpty {
+                    if groupNames.isEmpty && !sync.refreshing {
                         Text("還沒有命盤，按 ＋ 新增")
                             .font(Font.zCaption).foregroundStyle(Color.zText3)
                             .padding(.horizontal, 10).padding(.top, 4)
@@ -125,6 +133,7 @@ struct Sidebar: View {
                 .padding(.top, 6)
                 .padding(.bottom, 12)
             }
+            .modifier(PullToRefresh())
             AccountBar()
         }
         .dimmedBlur()
@@ -562,5 +571,35 @@ private struct MenuRow: View {
         }
         .buttonStyle(QuickRowStyle())
         .focusable(false)
+    }
+}
+
+/// Mac 的下拉更新：觸控板往下拉過頭（彈性捲動超過 60pt）再放開 → 手動同步（進骨架）
+/// macOS 沒有原生的下拉更新，用捲動位置自己判斷；拉的時候頂端出現小箭頭，拉夠了變成重新整理圖示
+struct PullToRefresh: ViewModifier {
+    @ObservedObject private var sync = CloudSync.shared
+    @ObservedObject private var account = Account.shared
+    @State private var pull: CGFloat = 0
+    @State private var armed = false
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *), account.isSignedIn {
+            content
+                .onScrollGeometryChange(for: CGFloat.self, of: { -($0.contentOffset.y + $0.contentInsets.top) }) { _, y in
+                    pull = max(0, y)
+                    if y > 60 { armed = true }
+                    else if armed && y <= 2 { armed = false; Task { await sync.refresh() } }
+                }
+                .overlay(alignment: .top) {
+                    if pull > 4 && !sync.refreshing {
+                        Image(systemName: armed ? "arrow.clockwise" : "arrow.down")
+                            .font(Font.zIconBold).foregroundStyle(Color.zText3)
+                            .opacity(min(1, pull / 60))
+                            .padding(.top, 10)
+                            .allowsHitTesting(false)
+                    }
+                }
+        } else {
+            content
+        }
     }
 }

@@ -28,6 +28,7 @@ let boardAspect: CGFloat = 1.12   // 高比寬多一點：四化方塊疊三層�
 
 struct ChartScreen: View {
     @EnvironmentObject var store: Store
+    @ObservedObject private var sync = CloudSync.shared   // 手動更新中：盤面、運限表換成骨架
     @AppStorage("hideBirth") private var hideBirth = false
 
     /// 右側星曜筆記的夾宮段落：跟盤面框線同一套判斷（設定關掉夾宮提示就不列）
@@ -115,7 +116,7 @@ struct ChartScreen: View {
                 ScrollView(zoom > 1 ? [.vertical, .horizontal] : .vertical) {
                     VStack(spacing: 12) {
                         Group {
-                            if let model {
+                            if let model, !sync.refreshing {
                                 ChartBoard(person: person, model: model, level: shownLevel, zoom: sharpZoom, hepan: hepanYear.map(Hepan.init),
                                            onResetLevel: { pick.level = 0 }, onSelect: { selPalace = $0 })
                                     .equatable()
@@ -145,11 +146,11 @@ struct ChartScreen: View {
                             if let onAdd, zoom == 1 { AddBoardButton(action: onAdd).offset(x: 40) }
                         }
 
-                        if let model {
+                        if let model, !sync.refreshing {
                             PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
                                 .transition(.opacity.combined(with: .offset(y: 8)))
                         } else {
-                            RoundedRectangle(cornerRadius: 12).fill(Color.zHover).frame(height: 210).shimmer()
+                            PeriodTableSkeleton().transition(.opacity)
                         }
 
                     }
@@ -160,6 +161,7 @@ struct ChartScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .defaultScrollAnchor(.top)
+                .modifier(PullToRefresh())
                 // 命盤也能捲到頂部工具列底下（跟右側面板一樣被漸層＋模糊蓋住），左右下照常裁切
                 .scrollClipDisabled()
                 .mask(Rectangle().padding(.top, -80))

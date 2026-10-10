@@ -97,3 +97,26 @@ struct SkeletonBar: View {
             .shimmer()
     }
 }
+
+/// 列表一列的骨架（Mac 側欄、iPhone 所有命盤）：頭像圓點＋名字＋一行小字；寬度依序變化，看起來不像複製貼上
+struct ListRowSkeleton: View {
+    var index = 0
+    var avatar: CGFloat = 22
+    var body: some View {
+        let widths: [CGFloat] = [0.55, 0.4, 0.62, 0.48, 0.35, 0.58]
+        GeometryReader { g in
+            HStack(spacing: 10) {
+                Circle().fill(Color.zHover).frame(width: avatar, height: avatar)
+                VStack(alignment: .leading, spacing: 5) {
+                    RoundedRectangle(cornerRadius: 3).fill(Color.zHover)
+                        .frame(width: (g.size.width - avatar - 10) * widths[index % widths.count], height: 9)
+                    RoundedRectangle(cornerRadius: 3).fill(Color.zHover)
+                        .frame(width: (g.size.width - avatar - 10) * widths[(index + 3) % widths.count] * 0.6, height: 7)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxHeight: .infinity)
+        }
+        .shimmer()
+    }
+}
