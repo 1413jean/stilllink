@@ -153,6 +153,15 @@ struct BackdropBlur: UIViewRepresentable {
             maskHost.frame = bounds
             maskHost.set(top: top)
             if mask !== maskHost { mask = maskHost }
+            clearTint()
+        }
+
+        /// 系統模糊材質會自己疊一層灰色染色（深色模式看起來髒）：把染色層清掉，只留純模糊，顏色交給上面的同底色漸層
+        private func clearTint() {
+            for v in subviews where String(describing: type(of: v)).contains("VisualEffectSubview") {
+                v.backgroundColor = .clear
+                v.layer.backgroundColor = UIColor.clear.cgColor
+            }
         }
     }
 

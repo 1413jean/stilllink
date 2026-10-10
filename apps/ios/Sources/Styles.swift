@@ -18,7 +18,7 @@ struct ZForm<Content: View>: View {
 extension View {
     /// 上下邊緣：跟 Mac 版一樣的 TopFade（同底色漸層＋背景模糊），取代系統的捲動邊緣效果
     /// （系統的在深色模式會整片變黑）。導覽列、分頁列都不要自己的底色
-    func zEdgeFades(top: CGFloat = 36, bottom: CGFloat = 20) -> some View {
+    func zEdgeFades(top: CGFloat = 0, bottom: CGFloat = 20) -> some View {
         modifier(EdgeFades(top: top, bottom: bottom))
     }
 
@@ -41,9 +41,9 @@ private struct EdgeFades: ViewModifier {
             .overlay {
                 GeometryReader { g in
                     VStack(spacing: 0) {
-                        EdgeFade(edge: .top, height: g.safeAreaInsets.top + top, solid: g.safeAreaInsets.top)
+                        EdgeFade(edge: .top, height: g.safeAreaInsets.top + top)
                         Spacer(minLength: 0)
-                        EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom, solid: g.safeAreaInsets.bottom)
+                        EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom)
                     }
                     .ignoresSafeArea()
                 }
@@ -66,24 +66,22 @@ private struct NativeScrollEdgeHidden: ViewModifier {
     }
 }
 
-/// 狀態列＋導覽列（或底部安全區）後面：只用背景色，不疊模糊（模糊會把底下的字糊成一片灰，看起來髒）。
-/// 導覽列那一段（solid）是 100% 背景色完全蓋住，從導覽列下緣開始用緩和曲線 100% → 0%
+/// 狀態列＋導覽列（或底部安全區）後面，照 Figma Morning App「Navbar」：
+/// 同底色漸層——邊緣 30% 實心 100%，接著線性淡到 0%（結束在導覽列下緣）；疊漸進背景模糊（邊緣 24 → 0）。
+/// 模糊用系統最淡的材質並清掉它自帶的灰色染色（BackdropBlur.clearTint），不然深色模式會髒髒的
 struct EdgeFade: View {
     let edge: VerticalEdge
     var height: CGFloat = 20
-    var solid: CGFloat = 0
 
     var body: some View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
-        let s = height > 0 ? min(max(solid / height, 0), 0.95) : 0
-        let f = { (t: Double) in s + (1 - s) * t }   // 淡出段裡的位置
-        // 緩和曲線（線性的在 0% 那一端看得出一條界線）
-        LinearGradient(stops: [.init(color: Color.zBg, location: 0), .init(color: Color.zBg, location: s),
-                               .init(color: Color.zBg.opacity(0.8), location: f(0.25)), .init(color: Color.zBg.opacity(0.45), location: f(0.55)),
-                               .init(color: Color.zBg.opacity(0.15), location: f(0.8)), .init(color: Color.zBg.opacity(0), location: 1)],
-                       startPoint: start, endPoint: end)
-            .frame(height: height)
-            .allowsHitTesting(false)
+        ZStack {
+            BackdropBlur(fadeFromTop: edge == .top, radius: 24)
+            LinearGradient(stops: [.init(color: Color.zBg, location: 0), .init(color: Color.zBg, location: 0.3),
+                                   .init(color: Color.zBg.opacity(0), location: 1)], startPoint: start, endPoint: end)
+        }
+        .frame(height: height)
+        .allowsHitTesting(false)
     }
 }
 
