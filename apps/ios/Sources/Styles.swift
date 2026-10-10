@@ -18,7 +18,7 @@ struct ZForm<Content: View>: View {
 extension View {
     /// 上下邊緣：跟 Mac 版一樣的 TopFade（同底色漸層＋背景模糊），取代系統的捲動邊緣效果
     /// （系統的在深色模式會整片變黑）。導覽列、分頁列都不要自己的底色
-    func zEdgeFades(top: CGFloat = 28, bottom: CGFloat = 20) -> some View {
+    func zEdgeFades(top: CGFloat = 14, bottom: CGFloat = 20) -> some View {
         modifier(EdgeFades(top: top, bottom: bottom))
     }
 
@@ -32,6 +32,12 @@ private struct EdgeFades: ViewModifier {
     let top: CGFloat
     let bottom: CGFloat
 
+    /// 狀態列高度：問狀態列管理器（這一頁量到的安全區會含導覽列；讀視窗的安全區會在排版中再觸發排版）
+    @MainActor static var statusBar: CGFloat {
+        let h = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.statusBarManager?.statusBarFrame.height }.first ?? 0
+        return h > 0 ? h : 54
+    }
+
     func body(content: Content) -> some View {
         content
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
@@ -41,7 +47,8 @@ private struct EdgeFades: ViewModifier {
             .overlay {
                 GeometryReader { g in
                     VStack(spacing: 0) {
-                        EdgeFade(edge: .top, height: g.safeAreaInsets.top + top, solid: g.safeAreaInsets.top)
+                        // 照 Claude App：只蓋狀態列（時間、電量那一條），導覽列按鈕底下完全透明
+                        EdgeFade(edge: .top, height: Self.statusBar + top, solid: Self.statusBar)
                         Spacer(minLength: 0)
                         EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom)
                     }
@@ -75,12 +82,12 @@ struct EdgeFade: View {
 
     var body: some View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
-        // 均勻的輕度模糊只蓋到導覽列（solid 那段），漸層再往下多延伸一段把模糊的邊蓋掉；
+        // 均勻的輕度模糊只蓋狀態列上面 80%，漸層在交界處還有 85% 底色，把模糊的邊蓋掉，再往下淡到 0；
         // 不做漸進：系統模糊加漸層遮罩會失效、疊層模糊會有階梯（2026-10 試過）
         ZStack(alignment: edge == .top ? .top : .bottom) {
-            if solid > 0 { LightBlur().frame(height: solid) }
+            if solid > 0 { LightBlur().frame(height: solid * 0.8) }
             LinearGradient(stops: [.init(color: Color.zBg, location: 0),
-                                   .init(color: Color.zBg.opacity(0.55), location: height > 0 ? min(solid / height, 1) : 0),
+                                   .init(color: Color.zBg.opacity(0.85), location: height > 0 ? min(solid * 0.8 / height, 1) : 0),
                                    .init(color: Color.zBg.opacity(0), location: 1)], startPoint: start, endPoint: end)
         }
         .frame(height: height)
