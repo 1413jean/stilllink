@@ -24,6 +24,7 @@ struct ChartView: View {
     @State private var showPillars = false
     @State private var tempChart: TempItem?
     @State private var savedTemp = false
+    @State private var refreshing = false   // 下拉更新中：盤面、運限表換成骨架
     // 盤上點選的宮位（底部星曜筆記用）：放在 @Observable 裡、只有底部筆記列讀它，點宮位時不會讓整頁（運限表、備註）跟著重畫
     @State private var selection = PalaceSelection()
     @State private var showNotes = false
@@ -66,7 +67,7 @@ struct ChartView: View {
                 VStack(spacing: 14) {
                     if let y = hepanYear { hepanChip(y) }
                     Group {
-                        if let model {
+                        if let model, !refreshing {
                             ChartBoard(person: person, model: model, level: shownLevel, zoom: zoom, hepan: hepanYear.map(Hepan.init),
                                        onResetLevel: { pick.level = 0 },
                                        onSelect: { selection.index = $0 },
@@ -88,13 +89,13 @@ struct ChartView: View {
                         }
                         .onEnded { _ in commitZoom() })
 
-                    if model == nil {
+                    if model == nil || refreshing {
                         PeriodTableSkeleton()
                             .padding(.horizontal, phone ? 16 : 4)   // 跟宮格同一條邊
                             .frame(width: geo.size.width)
                             .transition(.opacity)
                     }
-                    if let model {
+                    if let model, !refreshing {
                         PeriodTable(chart: model.chart, birthYear: person.birthYear, pick: $pick)
                             .padding(.horizontal, phone ? 16 : 4)   // 跟宮格同一條邊
                             .frame(width: geo.size.width)
@@ -115,6 +116,8 @@ struct ChartView: View {
             // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看捲上去之後頂端的樣子）
             // 內容可以捲到導覽列底下（被漸層＋模糊蓋住），不要在導覽列下緣硬切一條線
             .scrollClipDisabled()
+            // 下拉更新：跟雲端同步一次（暫時命盤、此刻盤沒有雲端資料，不用）
+            .refreshable { if !temporary && !isNow { await CloudSync.refreshWithSkeleton($refreshing) } }
             .scrollPosition($scrollPos)
             .onScrollGeometryChange(for: CGPoint.self) { $0.contentOffset } action: { _, p in scrollBox.offset = p }
             .defaultScrollAnchor(ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] == "1" ? .bottom : .top)

@@ -13,7 +13,7 @@ struct PeopleList: View {
     @State private var filter: String?  // 分類膠囊：nil＝全部
     @State private var chipsShown = true
     @State private var refreshing = false   // 下拉更新中：名單換成骨架
-    @State private var pull: CGFloat = 0     // 往下拉超過頂端的距離：分類列跟著往下，轉圈才不會疊在分類列底下
+    @State private var pull: CGFloat = 0     // 往下拉超過頂端的距離：一拉就把分類列藏起來（轉圈、骨架才不會被它蓋住）
     @State private var scrollDir = ScrollDirection()
     @AppStorage("hideBirth") private var hideBirth = false
 
@@ -75,9 +75,10 @@ struct PeopleList: View {
         .overlay(alignment: .top) {
             if showChips {
                 chips.frame(height: Self.chipBarHeight)
-                    .offset(y: chipsShown ? pull : -Self.chipBarHeight)
-                    .opacity(chipsShown ? 1 : 0)
-                    .allowsHitTesting(chipsShown)
+                    .offset(y: chipsShown ? 0 : -Self.chipBarHeight)
+                    .opacity(chipsVisible ? 1 : 0)
+                    .animation(Motion.fast, value: chipsVisible)
+                    .allowsHitTesting(chipsVisible)
             }
         }
         // 新增按鈕要浮在底部漸層霧化上面，所以放在 zEdgeFades 之後
@@ -152,6 +153,8 @@ struct PeopleList: View {
 
     private static let chipBarHeight: CGFloat = 46
     private var showChips: Bool { query.isEmpty && groupList.count > 1 }
+    /// 往下拉、下拉更新中都藏起來
+    private var chipsVisible: Bool { chipsShown && pull < 2 && !refreshing }
 
     private var chips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
