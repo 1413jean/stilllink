@@ -47,7 +47,7 @@ struct PeopleList: View {
         .navigationTitle("所有命盤")
         .navigationBarTitleDisplayMode(.inline)
         // 頂部跟首頁一樣；底部漸層蓋到新增按鈕那一帶，名單淡出得比較自然
-        .zEdgeFades(bottom: 72)
+        .zEdgeFades(bottom: 88)
         // 新增按鈕要浮在底部漸層霧化上面，所以放在 zEdgeFades 之後
         .overlay(alignment: .bottomTrailing) {
             Button { adding = true } label: { Label("新增命盤", systemImage: "plus") }

@@ -18,7 +18,7 @@ struct ZForm<Content: View>: View {
 extension View {
     /// 上下邊緣：跟 Mac 版一樣的 TopFade（同底色漸層＋背景模糊），取代系統的捲動邊緣效果
     /// （系統的在深色模式會整片變黑）。導覽列、分頁列都不要自己的底色
-    func zEdgeFades(top: CGFloat = 24, bottom: CGFloat = 20) -> some View {
+    func zEdgeFades(top: CGFloat = 24, bottom: CGFloat = 56) -> some View {
         modifier(EdgeFades(top: top, bottom: bottom))
     }
 
@@ -50,7 +50,7 @@ private struct EdgeFades: ViewModifier {
                         // 照 Claude App：只蓋狀態列（時間、電量那一條），導覽列按鈕底下完全透明
                         EdgeFade(edge: .top, height: Self.statusBar + top, solid: Self.statusBar)
                         Spacer(minLength: 0)
-                        EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom)
+                        EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom, solid: max(1, g.safeAreaInsets.bottom))
                     }
                     .ignoresSafeArea()
                 }
@@ -137,8 +137,9 @@ private struct VariableBlur: UIViewRepresentable {
             let h = max(1, Int(size.height))
             let r = UIGraphicsImageRenderer(size: CGSize(width: 1, height: h))
             return r.image { ctx in
-                let colors = [UIColor.black.cgColor, UIColor.black.withAlphaComponent(0.6).cgColor, UIColor.black.withAlphaComponent(0).cgColor] as CFArray
-                guard let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.45, 1]) else { return }
+                // 往內的那一半要很緩（0.25 → 0.08 → 0），不然模糊開始的地方看得出一條線
+                let colors = [1, 0.55, 0.25, 0.08, 0].map { UIColor.black.withAlphaComponent($0).cgColor } as CFArray
+                guard let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.3, 0.55, 0.8, 1]) else { return }
                 let a = CGPoint(x: 0, y: fromTop ? 0 : CGFloat(h)), b = CGPoint(x: 0, y: fromTop ? CGFloat(h) : 0)
                 ctx.cgContext.drawLinearGradient(g, start: a, end: b, options: [])
             }.cgImage
