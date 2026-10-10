@@ -55,7 +55,6 @@ struct ChartView: View {
     var body: some View {
         // 外層先量導覽列＋狀態列的高度（內層延伸到導覽列底下後就量不到了）
         GeometryReader { outer in
-        let topInset = outer.safeAreaInsets.top
         GeometryReader { geo in
             // 手機直拿：盤面左右只留一點邊；iPad／橫放：寬度上限跟 Mac 一樣
             let phone = geo.size.width < 600
@@ -110,7 +109,7 @@ struct ChartView: View {
                 }
                 // 放大時內容比螢幕寬：寬度跟著盤面撐開，左右留一樣的邊（盤面左上角位置不變，縮放後捲動才算得準）
                 .frame(width: max(geo.size.width, boardW * zoom + (geo.size.width - boardW)))
-                .padding(.top, topInset + 16)   // 整頁延伸到導覽列底下，內容自己往下讓
+                .padding(.top, 16)
                 .padding(.bottom, 24)
             }
             // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看捲上去之後頂端的樣子）
@@ -127,8 +126,8 @@ struct ChartView: View {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             })
         }
-        // 捲動區延伸到導覽列底下：內容捲上去時從漸層＋模糊底下穿過，不會在導覽列下緣硬切一條線
-        .ignoresSafeArea(edges: .top)
+        // 捲動區不再延伸到導覽列底下（下拉更新的轉圈才會出現在導覽列下面）；
+        // 往上捲時內容照樣穿到導覽列底下，之前那條硬線是系統邊緣效果，已由 zEdgeFades 關掉
         }
         .background(Color.zBg)
         .zEdgeFades()

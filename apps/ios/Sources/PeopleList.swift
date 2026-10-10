@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// 所有命盤（從側欄進）：照 Claude App 的 Chats——導覽列中間標題、一列一列（頭貼＋姓名＋生日），
-/// 導覽列下面一排分類膠囊（全部／釘選／朋友／家人…）：往下滑出現、往上滑收起（像 Safari 的工具列）；
+/// 所有命盤（從側欄進）：照 Claude App 的 Chats——導覽列中間標題、一列一列（頭貼＋姓名＋生日）。
+/// 導覽列以下（搜尋框、分類膠囊、名單）全部是同一個列表：捲動、下拉更新時一起動，不會互相疊到；
 /// 右下角浮著「新增命盤」；左滑刪除、右滑釘選、長按選單照用
 struct PeopleList: View {
     @EnvironmentObject private var store: Store
@@ -11,24 +11,15 @@ struct PeopleList: View {
     @State private var deleting: Person?
     @State private var routed: UUID?   // 驗證用：ZIWEI_ROUTE=姓名 直接打開那張盤
     @State private var filter: String?  // 分類膠囊：nil＝全部
-    @State private var chipsShown = true
     @State private var refreshing = false   // 下拉更新中：名單換成骨架
-    @State private var pull: CGFloat = 0     // 往下拉超過頂端的距離：一拉就把分類列藏起來（轉圈、骨架才不會被它蓋住）
-    @State private var scrollDir = ScrollDirection()
     @AppStorage("hideBirth") private var hideBirth = false
 
     var body: some View {
         ScrollViewReader { proxy in
             List {
-                // 分類列的空位：放成列表第一列（透明），不要用 safeAreaInset——
-                // iOS 26 會把 safeAreaInset 當成工具列，在導覽列下緣自動加一條分割線和深色底
-                if showChips {
-                    Color.clear.frame(height: Self.chipBarHeight)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets())
-                        .accessibilityHidden(true)
-                }
+                // 搜尋框、分類列放在列表裡（不用系統導覽列的搜尋抽屜）：下拉時跟名單一起往下
+                ZSearchField(text: $query).headerRow(top: 4)
+                if showChips { chips.headerRow(top: 2) }
                 if refreshing {
                     ForEach(0..<max(6, min(rows.count, 10)), id: \.self) { _ in
                         PersonRowSkeleton()
@@ -45,42 +36,18 @@ struct PeopleList: View {
                 // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看滑動後頂端的樣子）
                 guard ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] == "1", let last = rows.last?.id else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { proxy.scrollTo(last, anchor: .bottom) }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { chipsShown = false }
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.immediately)
         .background(Color.zBg)
-        .environment(\.defaultMinListRowHeight, Self.chipBarHeight)   // 命盤列自己撐到 64（見 link），分類列空位才不會被撐高
+        .environment(\.defaultMinListRowHeight, 0)   // 命盤列自己撐到 64（見 link），搜尋框、分類列照自己的高度
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 64) }   // 右下角的新增按鈕不蓋到最後一列
-        // 分類列的位置固定不變（列表第一列留空位，膠囊本身浮在下面的 overlay），收起只是往上滑出＋淡出：
-        // 要是收起時連位置一起拿掉，列表內容會被推一下，又被當成反方向滑動而來回切換（會卡住）
-        // 只有拉過頂端時才會變（平常捲動一直是 0，不會觸發重畫）
-        .onScrollGeometryChange(for: CGFloat.self, of: { max(0, -($0.contentOffset.y + $0.contentInsets.top)) }) { _, p in pull = p }
-        // 滑動方向：手指往上推收起、往下拉出現；要同方向累積滑過 24pt 才切換，回到頂端一定出現
-        .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y + $0.contentInsets.top }) { _, y in
-            if let show = scrollDir.update(y, shown: chipsShown), show != chipsShown {
-                withAnimation(Motion.fast) { chipsShown = show }
-            }
-        }
         .navigationTitle("所有命盤")
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "搜尋")
-        // 搜尋框跟著內容：往上滑收走、往下滑回頂端才出現；導覽列沒有底色，捲到上面用漸層霧化
-        // 頂部漸層跟導覽列同一層、往下延伸蓋過分類列（分開兩層會在接縫出現一條線）；
-        // 底部漸層蓋到新增按鈕那一帶，名單淡出得比較自然
-        // 分類列收起後跟首頁一樣高
-        .zEdgeFades(top: showChips && chipsShown ? 36 + Self.chipBarHeight : 36, bottom: 72)
-        // 分類膠囊浮在漸層上面（放在 zEdgeFades 之前會被漸層蓋淡）
-        .overlay(alignment: .top) {
-            if showChips {
-                chips.frame(height: Self.chipBarHeight)
-                    .offset(y: chipsShown ? 0 : -Self.chipBarHeight)
-                    .opacity(chipsVisible ? 1 : 0)
-                    .animation(Motion.fast, value: chipsVisible)
-                    .allowsHitTesting(chipsVisible)
-            }
-        }
+        // 頂部跟首頁一樣；底部漸層蓋到新增按鈕那一帶，名單淡出得比較自然
+        .zEdgeFades(bottom: 72)
         // 新增按鈕要浮在底部漸層霧化上面，所以放在 zEdgeFades 之後
         .overlay(alignment: .bottomTrailing) {
             Button { adding = true } label: { Label("新增命盤", systemImage: "plus") }
@@ -151,10 +118,7 @@ struct PeopleList: View {
         return (me.map { [$0] } ?? []) + groupList.flatMap(\.1).filter { $0.id != me?.id }
     }
 
-    private static let chipBarHeight: CGFloat = 46
     private var showChips: Bool { query.isEmpty && groupList.count > 1 }
-    /// 往下拉、下拉更新中都藏起來
-    private var chipsVisible: Bool { chipsShown && pull < 2 && !refreshing }
 
     private var chips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -168,6 +132,7 @@ struct PeopleList: View {
             }
             .padding(.horizontal, 16)
         }
+        .scrollClipDisabled()
     }
 
     private func link(_ p: Person) -> some View {
@@ -254,16 +219,11 @@ struct PersonRow: View {
     }
 }
 
-/// 判斷捲動方向（不是 ObservableObject：每一格捲動都會更新，不要觸發重畫）
-final class ScrollDirection {
-    private var anchor: CGFloat = 0
-    /// 回傳要不要顯示；nil＝不變
-    func update(_ y: CGFloat, shown: Bool, threshold: CGFloat = 24) -> Bool? {
-        if y <= 4 { anchor = y; return true }
-        // 順著目前狀態繼續滑就把起點跟著移，反方向要累積滿 threshold 才切換
-        if shown ? y < anchor : y > anchor { anchor = y; return nil }
-        if shown && y - anchor > threshold { anchor = y; return false }
-        if !shown && anchor - y > threshold { anchor = y; return true }
-        return nil
+private extension View {
+    /// 列表頂端的搜尋框、分類列：沒有底色、沒有分隔線，左右自己排
+    func headerRow(top: CGFloat) -> some View {
+        listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: top, leading: 0, bottom: 4, trailing: 0))
     }
 }

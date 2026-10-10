@@ -69,6 +69,35 @@ extension View {
     }
 }
 
+/// 搜尋框（放在列表裡、跟內容一起捲）：放大鏡＋輸入＋清除，淺灰膠囊、高 40（含上下留白觸控 ≥ 44）
+struct ZSearchField: View {
+    @Binding var text: String
+    var prompt = "搜尋"
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Color.zText3)
+            TextField(prompt, text: $text)
+                .zText(.body)
+                .focused($focused)
+                .submitLabel(.search)
+                .autocorrectionDisabled()
+            if !text.isEmpty {
+                Button { text = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.zText3) }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("清除搜尋")
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 40)
+        .background(Capsule().fill(Color.zHover))
+        .contentShape(Capsule())
+        .onTapGesture { focused = true }
+        .padding(.horizontal, 16)
+    }
+}
+
 // MARK: - 彈出視窗（sheet）
 
 extension View {
