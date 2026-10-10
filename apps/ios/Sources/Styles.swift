@@ -67,19 +67,15 @@ private struct NativeScrollEdgeHidden: ViewModifier {
 }
 
 /// 狀態列＋導覽列（或底部安全區）後面，照 Figma Morning App「Navbar」：
-/// 同底色漸層——邊緣 30% 實心 100%，接著線性淡到 0%（結束在導覽列下緣）；疊漸進背景模糊（邊緣 24 → 0）。
-/// 模糊用系統最淡的材質並清掉它自帶的灰色染色（BackdropBlur.clearTint），不然深色模式會髒髒的
+/// 同底色漸層——邊緣 100% 線性淡到 0%（結束在導覽列下緣）
 struct EdgeFade: View {
     let edge: VerticalEdge
     var height: CGFloat = 20
 
     var body: some View {
         let start: UnitPoint = edge == .top ? .top : .bottom, end: UnitPoint = edge == .top ? .bottom : .top
-        ZStack {
-            BackdropBlur(fadeFromTop: edge == .top, radius: 24)
-            LinearGradient(stops: [.init(color: Color.zBg, location: 0), .init(color: Color.zBg, location: 0.3),
-                                   .init(color: Color.zBg.opacity(0), location: 1)], startPoint: start, endPoint: end)
-        }
+        // 目前只有同底色漸層：系統的模糊加漸層遮罩會失效、疊層模糊會出現階梯和灰帶（2026-10 試過），先不加
+        LinearGradient(colors: [Color.zBg, Color.zBg.opacity(0)], startPoint: start, endPoint: end)
         .frame(height: height)
         .allowsHitTesting(false)
     }
