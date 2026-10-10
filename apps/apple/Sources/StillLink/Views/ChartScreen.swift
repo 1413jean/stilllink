@@ -155,6 +155,8 @@ struct ChartScreen: View {
 
                     }
                     .frame(width: boardW * zoom)
+                    // 按住往下拖更新（畫筆等標註工具開著時不觸發）
+                    .modifier(DragToRefresh(enabled: annoTool == .select))
                     .padding(.top, 14)
                     .padding(.bottom, store.settings.showComposer ? 210 : 100)   // 底部留給工具列
                     .frame(width: max(usable, boardW * zoom + 48))

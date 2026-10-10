@@ -603,3 +603,38 @@ struct PullToRefresh: ViewModifier {
         }
     }
 }
+
+/// 按住滑鼠往下拖更新（命盤區任何地方）：觸控板兩指下拉不好拉，用滑鼠按住往下拖一樣能更新
+/// 跟宮位的點擊／長按同時聽（simultaneousGesture）：宮位那邊拖開 6pt 就自己取消，不會又選宮又更新
+/// 只有往下為主的拖曳才算；內容跟著往下彈（阻尼 0.4、最多 70pt），拖超過 110pt 放開就更新
+struct DragToRefresh: ViewModifier {
+    var enabled: Bool
+    @ObservedObject private var sync = CloudSync.shared
+    @ObservedObject private var account = Account.shared
+    @State private var dy: CGFloat = 0
+    private let trigger: CGFloat = 110
+    func body(content: Content) -> some View {
+        let on = enabled && account.isSignedIn && !sync.refreshing
+        content
+            .offset(y: min(70, dy * 0.4))
+            .overlay(alignment: .top) {
+                if dy > 8 {
+                    Image(systemName: dy > trigger ? "arrow.clockwise" : "arrow.down")
+                        .font(Font.zIconBold).foregroundStyle(Color.zText3)
+                        .opacity(min(1, dy / trigger))
+                        .offset(y: min(70, dy * 0.4) / 2 - 14)
+                        .allowsHitTesting(false)
+                }
+            }
+            .simultaneousGesture(DragGesture(minimumDistance: 12)
+                .onChanged { v in
+                    guard on, v.translation.height > abs(v.translation.width) else { return }
+                    dy = max(0, v.translation.height)
+                }
+                .onEnded { _ in
+                    let fire = on && dy > trigger
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dy = 0 }
+                    if fire { Task { await sync.refresh() } }
+                }, including: on ? .all : .subviews)
+    }
+}
