@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("hideBirth") private var hideBirth = false
     @State private var editingSelf = false
     @State private var legal: LegalDoc?
+    @ObservedObject private var account = Account.shared
 
     var body: some View {
         ScrollView {
@@ -19,7 +20,7 @@ struct SettingsView: View {
                 .padding(.bottom, 16)
 
                 me.padding(.bottom, 24)
-                AccountCard().padding(.bottom, 28)
+                if !account.isSignedIn { AccountCard().padding(.bottom, 28) }
 
                 group("出生資料") {
                     if let p = store.me {
@@ -96,6 +97,8 @@ struct SettingsView: View {
                         row(d.rawValue, value: "", last: d == LegalDoc.allCases.last) { legal = d }
                     }
                 }
+                // 登入後：帳號、同步、登出放在最下面（上面的登入卡片就不顯示了）
+                if let s = account.session { AccountSection(session: s).padding(.top, 20) }
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)

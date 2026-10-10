@@ -1,32 +1,18 @@
 import SwiftUI
 
-/// 「我的」頁的帳號卡片：沒登入是 Apple／Google 登入，登入後是帳號、同步狀態、立即同步、登出、刪除帳號
+/// 「我的」頁的登入卡片：只在沒登入時出現（Apple／Google 登入）。
+/// 登入後的帳號、同步、登出、刪除帳號放在「我的」最下面的「帳號」區塊（AccountSection）
 struct AccountCard: View {
     @ObservedObject private var account = Account.shared
-    @ObservedObject private var sync = CloudSync.shared
     @State private var message: String?
-    @State private var confirmSignOut = false
-    @State private var confirmDelete = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let s = account.session { signedIn(s) } else { signedOut }
-        }
-        .padding(20)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.zHover))
-        .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
-            Button("好", role: .cancel) {}
-        }
-        .confirmationDialog("登出這台 iPhone？", isPresented: $confirmSignOut, titleVisibility: .visible) {
-            Button("登出", role: .destructive) { account.signOut() }
-        } message: {
-            Text("這台 iPhone 上的命盤會保留，之後再登入會自動合併。")
-        }
-        .confirmationDialog("刪除帳號？", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("刪除帳號與雲端資料", role: .destructive) { deleteAccount() }
-        } message: {
-            Text("雲端上的命盤、照片會一起刪除，無法復原。這台 iPhone 上的資料會保留。")
-        }
+        signedOut
+            .padding(20)
+            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.zHover))
+            .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
+                Button("好", role: .cancel) {}
+            }
     }
 
     private var signedOut: some View {
@@ -49,41 +35,6 @@ struct AccountCard: View {
         .overlay { if account.signingIn { ProgressView() } }
     }
 
-    private func signedIn(_ s: Account.Session) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.icloud").foregroundStyle(Color.zAccent)
-                Text("已登入").zText(.title3).foregroundStyle(Color.zText)
-            }
-            .padding(.bottom, 6)
-            Text([s.email, s.provider.map { $0 == "apple" ? "Apple" : $0 == "google" ? "Google" : $0 }].compactMap { $0 }.joined(separator: " · "))
-                .zText(.callout).foregroundStyle(Color.zText2)
-            Text(status).zText(.footnote).foregroundStyle(sync.lastError == nil ? Color.zText3 : Color.wmRed)
-                .padding(.top, 4).padding(.bottom, 14)
-            Button { Task { await sync.syncNow(); Platform.haptic(sync.lastError == nil ? .success : .error) } } label: {
-                Label(sync.syncing ? "同步中…" : "立即同步", systemImage: "arrow.triangle.2.circlepath")
-            }
-            .buttonStyle(.capsule(.outline, fill: true))
-            .disabled(sync.syncing)
-            .padding(.bottom, 12)
-            HStack {
-                Button("登出") { confirmSignOut = true }
-                Spacer()
-                Button("刪除帳號", role: .destructive) { confirmDelete = true }
-            }
-            .zText(.subheadline)
-            .padding(.horizontal, 4)
-            .frame(minHeight: 44)
-        }
-    }
-
-    private var status: String {
-        if sync.syncing { return "同步中…" }
-        if let e = sync.lastError { return e }
-        guard let t = sync.lastSync else { return "還沒同步" }
-        return "上次同步：" + t.formatted(.relative(presentation: .named))
-    }
-
     private func signIn(_ p: Account.Provider) {
         guard CloudConfig.isConfigured else { message = "雲端同步還在準備中，資料目前存在這台裝置，不會遺失。"; return }
         Task {
@@ -96,6 +47,75 @@ struct AccountCard: View {
                 message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
         }
+    }
+
+}
+
+/// 登入後「我的」最下面的帳號區塊：帳號、同步狀態、立即同步、登出、刪除帳號
+struct AccountSection: View {
+    let session: Account.Session
+    @ObservedObject private var account = Account.shared
+    @ObservedObject private var sync = CloudSync.shared
+    @State private var message: String?
+    @State private var confirmSignOut = false
+    @State private var confirmDelete = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("帳號").zText(.eyebrow).foregroundStyle(Color.zText3)
+            VStack(spacing: 0) {
+                line("帳號", value: session.email ?? providerName)
+                divider
+                Button { Task { await sync.syncNow(); Platform.haptic(sync.lastError == nil ? .success : .error) } } label: {
+                    line("立即同步", value: status, valueColor: sync.lastError == nil ? Color.zText3 : Color.wmRed)
+                }
+                .buttonStyle(.plain).disabled(sync.syncing)
+                divider
+                Button { confirmSignOut = true } label: { line("登出", value: providerName) }.buttonStyle(.plain)
+                divider
+                Button { confirmDelete = true } label: { line("刪除帳號", value: "", titleColor: Color.wmRed) }.buttonStyle(.plain)
+            }
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.zHover))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
+            Button("好", role: .cancel) {}
+        }
+        .confirmationDialog("登出這台 iPhone？", isPresented: $confirmSignOut, titleVisibility: .visible) {
+            Button("登出", role: .destructive) { account.signOut() }
+        } message: {
+            Text("這台 iPhone 上的命盤會保留，之後再登入會自動合併。")
+        }
+        .confirmationDialog("刪除帳號？", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("刪除帳號與雲端資料", role: .destructive) { deleteAccount() }
+        } message: {
+            Text("雲端上的命盤、照片會一起刪除，無法復原。這台 iPhone 上的資料會保留。")
+        }
+    }
+
+    // 跟「我的」其他區塊同一種分隔線
+    private var divider: some View { Rectangle().fill(Color.zLine).frame(height: 0.5).padding(.leading, 16) }
+
+    private var providerName: String {
+        session.provider == "apple" ? "Apple" : session.provider == "google" ? "Google" : (session.provider ?? "")
+    }
+
+    private var status: String {
+        if sync.syncing { return "同步中…" }
+        if let e = sync.lastError { return e }
+        guard let t = sync.lastSync else { return "還沒同步" }
+        return t.formatted(.relative(presentation: .named))
+    }
+
+    private func line(_ title: String, value: String, titleColor: Color = Color.zText, valueColor: Color = Color.zText3) -> some View {
+        HStack(spacing: 8) {
+            Text(title).zText(.body).foregroundStyle(titleColor)
+            Spacer(minLength: 12)
+            Text(value).zText(.body).foregroundStyle(valueColor).lineLimit(1)
+        }
+        .padding(.horizontal, 16)
+        .frame(minHeight: 52)
+        .contentShape(Rectangle())
     }
 
     private func deleteAccount() {
