@@ -37,6 +37,8 @@ struct PeopleList: View {
             }
         }
         .listStyle(.plain)
+        // 下拉更新（原生）：登入後立刻跟雲端同步一次；平常開 App、回到前景、改完資料也會自動同步
+        .refreshable { if Account.shared.isSignedIn { await CloudSync.shared.syncNow() } }
         .scrollContentBackground(.hidden)
         .background(Color.zBg)
         .environment(\.defaultMinListRowHeight, Self.chipBarHeight)   // 命盤列自己撐到 64（見 link），分類列空位才不會被撐高

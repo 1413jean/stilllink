@@ -30,12 +30,29 @@ struct StillLinkApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("新增命盤") { NotificationCenter.default.post(name: .newChart, object: nil) }
                     .keyboardShortcut("n")
+                Divider()
+                SyncNowCommand()
             }
             CommandGroup(replacing: .help) {
                 Button("新功能…") { NotificationCenter.default.post(name: .openWhatsNew, object: nil) }
                 Button("回報問題…") { ReportState.shared.show() }
             }
         }
+    }
+}
+
+/// 檔案選單「立即同步」（⌘R）：Mac 沒有下拉更新，用選單＋快捷鍵；沒登入時灰掉
+private struct SyncNowCommand: View {
+    @ObservedObject private var account = Account.shared
+    var body: some View {
+        Button("立即同步") {
+            Task {
+                await CloudSync.shared.syncNow()
+                Toast.show(CloudSync.shared.lastError == nil ? "已同步" : "同步失敗，請到設定 → 帳號與同步重試")
+            }
+        }
+        .keyboardShortcut("r")
+        .disabled(!account.isSignedIn)
     }
 }
 
