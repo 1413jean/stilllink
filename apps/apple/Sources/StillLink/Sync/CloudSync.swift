@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import SwiftUI
 #if os(macOS)
 import AppKit
 #else
@@ -90,6 +91,15 @@ final class CloudSync: ObservableObject {
             guard !Task.isCancelled else { return }
             await syncNow()
         }
+    }
+
+    /// 下拉更新：同步一次，期間把 flag 設成 true 讓畫面換成骨架；太快的話至少留 0.6 秒，骨架才不會一閃就不見
+    static func refreshWithSkeleton(_ flag: Binding<Bool>) async {
+        withAnimation(Motion.fast) { flag.wrappedValue = true }
+        async let wait: Void = { try? await Task.sleep(for: .milliseconds(600)) }()
+        await shared.syncNow()
+        _ = await wait
+        withAnimation(Motion.fast) { flag.wrappedValue = false }
     }
 
     /// 登出：清掉同步紀錄（下次登入不管是不是同一個帳號，都重新合併一次）

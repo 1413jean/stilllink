@@ -117,7 +117,7 @@ struct ChartView: View {
             .scrollClipDisabled()
             .scrollPosition($scrollPos)
             .onScrollGeometryChange(for: CGPoint.self) { $0.contentOffset } action: { _, p in scrollBox.offset = p }
-            .defaultScrollAnchor(ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] != nil ? .bottom : .top)
+            .defaultScrollAnchor(ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] == "1" ? .bottom : .top)
             // 打備註時：捲動或點盤面其他地方就收鍵盤
             .scrollDismissesKeyboard(.interactively)
             .simultaneousGesture(TapGesture().onEnded {

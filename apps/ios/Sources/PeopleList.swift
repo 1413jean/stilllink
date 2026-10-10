@@ -12,6 +12,8 @@ struct PeopleList: View {
     @State private var routed: UUID?   // 驗證用：ZIWEI_ROUTE=姓名 直接打開那張盤
     @State private var filter: String?  // 分類膠囊：nil＝全部
     @State private var chipsShown = true
+    @State private var refreshing = false   // 下拉更新中：名單換成骨架
+    @State private var pull: CGFloat = 0     // 往下拉超過頂端的距離：分類列跟著往下，轉圈才不會疊在分類列底下
     @State private var scrollDir = ScrollDirection()
     @AppStorage("hideBirth") private var hideBirth = false
 
@@ -27,9 +29,18 @@ struct PeopleList: View {
                         .listRowInsets(EdgeInsets())
                         .accessibilityHidden(true)
                 }
-                ForEach(rows) { link($0) }
+                if refreshing {
+                    ForEach(0..<max(6, min(rows.count, 10)), id: \.self) { _ in
+                        PersonRowSkeleton()
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 16))
+                    }
+                } else {
+                    ForEach(rows) { link($0) }
+                }
             }
-            .refreshable { await CloudSync.shared.syncNow() }   // 下拉更新：跟雲端同步一次（沒登入就直接結束）
+            .refreshable { await CloudSync.refreshWithSkeleton($refreshing) }   // 下拉更新：跟雲端同步一次，同步中名單換成骨架
             .onAppear {
                 // 驗證用：ZIWEI_SCROLL=1 一打開就捲到底（看滑動後頂端的樣子）
                 guard ProcessInfo.processInfo.environment["ZIWEI_SCROLL"] == "1", let last = rows.last?.id else { return }
@@ -44,6 +55,8 @@ struct PeopleList: View {
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 64) }   // 右下角的新增按鈕不蓋到最後一列
         // 分類列的位置固定不變（列表第一列留空位，膠囊本身浮在下面的 overlay），收起只是往上滑出＋淡出：
         // 要是收起時連位置一起拿掉，列表內容會被推一下，又被當成反方向滑動而來回切換（會卡住）
+        // 只有拉過頂端時才會變（平常捲動一直是 0，不會觸發重畫）
+        .onScrollGeometryChange(for: CGFloat.self, of: { max(0, -($0.contentOffset.y + $0.contentInsets.top)) }) { _, p in pull = p }
         // 滑動方向：手指往上推收起、往下拉出現；要同方向累積滑過 24pt 才切換，回到頂端一定出現
         .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y + $0.contentInsets.top }) { _, y in
             if let show = scrollDir.update(y, shown: chipsShown), show != chipsShown {
@@ -62,7 +75,7 @@ struct PeopleList: View {
         .overlay(alignment: .top) {
             if showChips {
                 chips.frame(height: Self.chipBarHeight)
-                    .offset(y: chipsShown ? 0 : -Self.chipBarHeight)
+                    .offset(y: chipsShown ? pull : -Self.chipBarHeight)
                     .opacity(chipsShown ? 1 : 0)
                     .allowsHitTesting(chipsShown)
             }
@@ -194,6 +207,23 @@ struct PeopleList: View {
             Image(systemName: "slider.horizontal.3").foregroundStyle(Color.zText)
         }
         .accessibilityLabel("排序")
+    }
+}
+
+/// 命盤列的骨架（下拉更新時）：跟 PersonRow 同尺寸，換回來不會跳
+struct PersonRowSkeleton: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            Circle().fill(Color.zHover).frame(width: 40, height: 40)
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 5).fill(Color.zHover).frame(width: 96, height: 12)
+                RoundedRectangle(cornerRadius: 4).fill(Color.zHover).frame(width: 128, height: 9)
+            }
+            Spacer()
+        }
+        .frame(minHeight: 52)
+        .shimmer()
+        .accessibilityLabel("載入中")
     }
 }
 

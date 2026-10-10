@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// 側欄（照 Claude App）：上面是我的命盤、所有命盤，下面是釘選與最近看過的紀錄；
+/// 側欄（照 Claude App）：上面是我的命盤、此刻盤、所有命盤，下面是釘選與最近看過的紀錄；
 /// 左下角頭像（到設定）、右下角黑色「新增命盤」
 struct SidebarView: View {
     let current: UUID?
     var showingAll = false
+    var showingNow = false
     var onPick: (UUID?) -> Void
+    var onNow: () -> Void = {}
     var onAllCharts: () -> Void
     var onNew: () -> Void
     var onProfile: () -> Void
@@ -14,6 +16,8 @@ struct SidebarView: View {
     @AppStorage("hideBirth") private var hideBirth = false
     @State private var editing: Person?
     @State private var deleting: Person?
+
+    @State private var refreshing = false   // 下拉更新中：釘選、最近換成骨架
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -26,18 +30,24 @@ struct SidebarView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 20)
 
-                    row("我的命盤", icon: "person.crop.circle", selected: current == nil && !showingAll) { onPick(nil) }
+                    row("我的命盤", icon: "person.crop.circle", selected: current == nil && !showingAll && !showingNow) { onPick(nil) }
                         .contextMenu {
                             if let me = store.me { Button("編輯命主資料", systemImage: "pencil") { editing = me } }
                         }
+                    row("此刻盤", icon: "clock", selected: showingNow, action: onNow)
                     row("所有命盤", icon: "person.2", selected: showingAll, action: onAllCharts)
 
                     let pinned = store.people.filter(\.pinned)
-                    if !pinned.isEmpty {
+                    if refreshing {
+                        section("最近")
+                        ForEach(0..<6, id: \.self) { _ in
+                            SkeletonBar(width: 120, height: 12).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).padding(.horizontal, 14)
+                        }
+                    } else if !pinned.isEmpty {
                         section("釘選")
                         ForEach(pinned) { p in personRow(p) }
                     }
-                    if !recent.isEmpty {
+                    if !refreshing && !recent.isEmpty {
                         section("最近")
                         ForEach(recent) { p in personRow(p) }
                     }
@@ -46,7 +56,7 @@ struct SidebarView: View {
                 .padding(.bottom, 110)   // 留給底部按鈕
             }
             .scrollIndicators(.hidden)
-            .refreshable { await CloudSync.shared.syncNow() }   // 下拉更新：跟雲端同步一次（沒登入就直接結束）
+            .refreshable { await CloudSync.refreshWithSkeleton($refreshing) }   // 下拉更新：跟雲端同步一次，同步中換成骨架
 
             bottomBar
         }

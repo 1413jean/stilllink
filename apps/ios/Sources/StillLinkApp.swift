@@ -43,7 +43,9 @@ struct RootView: View {
                 // 主畫面往右推的距離：開著時可以往左拖回去，關著時從左緣往右拉
                 let x = drawer ? max(0, w + min(0, drag)) : max(0, min(w, drag))
                 ZStack(alignment: .leading) {
-                    SidebarView(current: homeID, showingAll: homeRaw == "all", onPick: show, onAllCharts: {
+                    SidebarView(current: homeID, showingAll: homeRaw == "all", showingNow: homeRaw == "now", onPick: show, onNow: {
+                        homeRaw = "now"; homePath = NavigationPath(); closeDrawer()
+                    }, onAllCharts: {
                         homeRaw = "all"; homePath = NavigationPath(); closeDrawer()
                     }, onNew: {
                         closeDrawer(); adding = true
@@ -102,6 +104,7 @@ struct RootView: View {
             // 驗證用：ZIWEI_TAB=people 直接開到命盤分頁；ZIWEI_DRAWER=1 打開側欄
             if env["ZIWEI_TAB"] == "people" { homeRaw = "all" }
             if env["ZIWEI_TAB"] == "home" { homeRaw = "" }
+            if env["ZIWEI_TAB"] == "now" { homeRaw = "now" }
             if env["ZIWEI_TAB"] == "settings" { showProfile = true }
             if env["ZIWEI_DRAWER"] != nil { drawer = true }
             // 驗證用：ZIWEI_DRAWER_CLOSE=秒 幾秒後自動關上（錄關閉動畫）
@@ -179,6 +182,9 @@ struct HomeView: View {
         Group {
             if mode == "all" {
                 PeopleList()
+            } else if mode == "now" {
+                // 此刻盤：現在這一刻起盤（不用選男女，用上次的設定），不存進命盤列表
+                ChartView(person: NowChart.person()).id(Person.nowID)
             } else if let id = UUID(uuidString: mode), let p = store.people.first(where: { $0.id == id }) {
                 ChartView(person: p).id(p.id)
             } else if let me = store.me {
@@ -194,6 +200,16 @@ struct HomeView: View {
                     .accessibilityLabel("側欄")
             }
         }
+    }
+}
+
+/// 此刻盤：固定 id（Person.nowID，命盤頁靠它判斷標題「此刻」、不顯示備註照片）
+enum NowChart {
+    static func person() -> Person {
+        let g = Gender(rawValue: UserDefaults.standard.string(forKey: "nowGender") ?? "") ?? .male
+        var p = TempChart.make(Date(), g, name: "此刻")
+        p.id = Person.nowID
+        return p
     }
 }
 

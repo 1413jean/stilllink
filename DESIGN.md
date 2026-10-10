@@ -144,6 +144,7 @@
 | `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 狀態列、導覽列下緣：底色漸層 100%→0%＋漸進模糊；底部只有底色漸層（不加模糊）；會順便關掉系統捲動邊緣效果 |
 | `AvatarView`／`AvatarPicker` | `AvatarView.swift` | 頭貼（沒有就預設人像）；可點的版本從相簿選、裁正方形 256px |
 | `Thumbnails.image(_:maxPixel:)` | `ChartRecords.swift` | ImageIO 讀縮圖＋快取；列表、格子裡的圖一律用它，不要整張解碼 |
+| `PersonRowSkeleton`、`CloudSync.refreshWithSkeleton(_:)` | `PeopleList.swift`、`CloudSync.swift` | 下拉更新：`.refreshable { await CloudSync.refreshWithSkeleton($flag) }`，flag 為 true 時列表換成骨架（至少 0.6 秒） |
 | `PersonRow` | `PeopleList.swift` | 命盤列表的一列（頭貼、姓名性別、生日） |
 | `SidebarGlyph` | `SidebarView.swift` | 側欄按鈕的三條線 |
 | `NotesBar`／`NotesSheet`／`NoteEditor` | `NotesPanel.swift` | 底部宮位摘要、半頁星曜筆記、筆記編輯 |
