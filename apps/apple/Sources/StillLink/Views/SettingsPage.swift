@@ -735,17 +735,16 @@ struct SettingMenu: View {
     }
 }
 
-/// 帳號列右邊的同步狀態：平常是灰字「已同步 · 剛剛」讓人安心；同步中顯示「同步中…」；失敗才用紅字
+/// 帳號列右邊的同步狀態：登入後自動同步，平常只顯示灰字「已同步 · 剛剛」（同步中不另外顯示，Jean：自動的就不用講）；失敗才用紅字
 /// （主色星橘留給可以按的東西，狀態不用它）
 private struct SyncStatusLabel: View {
     @ObservedObject var sync: CloudSync
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { ctx in
             let (text, icon, color): (String, String, Color) =
-                sync.syncing ? ("同步中…", "arrow.triangle.2.circlepath.icloud", Color.zText2)
-                : sync.lastError != nil ? ("同步失敗", "exclamationmark.icloud", Color.zDanger)
+                sync.lastError != nil ? ("同步失敗", "exclamationmark.icloud", Color.zDanger)
                 : sync.lastSync.map { ("已同步 · \(Self.ago($0, now: ctx.date))", "checkmark.icloud", Color.zText2) }
-                    ?? ("等待第一次同步", "icloud", Color.zText3)
+                    ?? ("已登入", "checkmark.icloud", Color.zText2)
             Label(text, systemImage: icon).font(Font.zCallout).foregroundStyle(color)
                 .contentTransition(.opacity).animation(Motion.fast, value: text)
         }
