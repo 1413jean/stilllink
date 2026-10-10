@@ -11,14 +11,15 @@ struct ZForm<Content: View>: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color.zBg)
-        .zEdgeFades()
+        .zEdgeFades(bottom: nil)   // 表單都在彈出視窗裡：底部不淡出
     }
 }
 
 extension View {
     /// 上下邊緣：跟 Mac 版一樣的 TopFade（同底色漸層＋背景模糊），取代系統的捲動邊緣效果
     /// （系統的在深色模式會整片變黑）。導覽列、分頁列都不要自己的底色
-    func zEdgeFades(top: CGFloat = 24, bottom: CGFloat = 56) -> some View {
+    /// bottom 傳 nil：底部不淡出（彈出視窗 sheet 底部就是螢幕邊，不需要）
+    func zEdgeFades(top: CGFloat = 24, bottom: CGFloat? = 56) -> some View {
         modifier(EdgeFades(top: top, bottom: bottom))
     }
 
@@ -30,7 +31,7 @@ extension View {
 
 private struct EdgeFades: ViewModifier {
     let top: CGFloat
-    let bottom: CGFloat
+    let bottom: CGFloat?
 
     /// 狀態列高度：問狀態列管理器（這一頁量到的安全區會含導覽列；讀視窗的安全區會在排版中再觸發排版）
     @MainActor static var statusBar: CGFloat {
@@ -50,7 +51,9 @@ private struct EdgeFades: ViewModifier {
                         // 照 Claude App：只蓋狀態列（時間、電量那一條），導覽列按鈕底下完全透明
                         EdgeFade(edge: .top, height: Self.statusBar + top, solid: Self.statusBar)
                         Spacer(minLength: 0)
-                        EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom, solid: max(1, g.safeAreaInsets.bottom))
+                        if let bottom {
+                            EdgeFade(edge: .bottom, height: g.safeAreaInsets.bottom + bottom, solid: max(1, g.safeAreaInsets.bottom))
+                        }
                     }
                     .ignoresSafeArea()
                 }

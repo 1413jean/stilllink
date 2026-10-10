@@ -48,7 +48,7 @@ struct NotesSheet: View {
                     .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 32)
             }
             .background(Color.zBg)
-            .zEdgeFades()
+            .zEdgeFades(bottom: nil)
             .zSheetBar(title, done: { dismiss() })
             .navigationDestination(for: Detail.self) { d in
                 ScrollView {
@@ -56,7 +56,7 @@ struct NotesSheet: View {
                         .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 32)
                 }
                 .background(Color.zBg)
-                .zEdgeFades()
+                .zEdgeFades(bottom: nil)
                 // 系統導覽列：返回、標題（星名）、右上編輯
                 .navigationTitle(d.key)
                 .navigationBarTitleDisplayMode(.inline)

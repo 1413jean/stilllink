@@ -267,7 +267,7 @@ struct PlacePicker: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color.zBg)
-        .zEdgeFades()
+        .zEdgeFades(bottom: nil)
         .navigationTitle("國家／地區")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜尋國家或城市")
@@ -306,7 +306,7 @@ private struct CityPicker: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color.zBg)
-        .zEdgeFades()
+        .zEdgeFades(bottom: nil)
         .navigationTitle(region.name)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜尋城市")

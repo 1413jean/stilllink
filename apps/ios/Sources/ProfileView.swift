@@ -105,7 +105,7 @@ struct SettingsView: View {
             .padding(.bottom, 24)
         }
         .background(Color.zBg)
-        .zEdgeFades()
+        .zEdgeFades(bottom: nil)
         .sheet(item: $legal) { LegalView(doc: $0) }
         .onAppear {
             // 驗證用：ZIWEI_LEGAL=privacy／terms／delete／license 直接打開那份條款

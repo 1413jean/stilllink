@@ -142,7 +142,7 @@
 | `FilterChip` | `Components.swift` | 篩選膠囊（分類、標籤）：選到是主文字色底反白字、沒選淺灰底，可帶數量；高 34、觸控補到 44 |
 | `ZForm` | `Styles.swift` | 系統 Form 換成 App 色系（暖白底、淺灰卡片）；設定、表單一律用它 |
 | `.zSwitch()` | `Styles.swift` | 開關用主色（按鈕、選單是主文字色） |
-| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 照 Claude／Instagram：頂部蓋狀態列＋往下 24pt，**漸進模糊**（`VariableBlur`：系統導覽列邊緣效果用的 variableBlur 濾鏡，未公開 API，找不到就只剩漸層不會閃退；半徑 12，邊緣最糊往下平順到 0）＋同底色漸層 100%→0%，沒有交界線。導覽列按鈕底下內容直接穿過。底部同樣是漸進模糊＋漸層（安全區＋56，所有命盤 88 蓋到新增按鈕）。遮罩曲線往內要很緩（1 → 0.55 → 0.25 → 0.08 → 0），不然模糊開始處看得出線。會順便關掉系統捲動邊緣效果 |
+| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 照 Claude／Instagram：頂部蓋狀態列＋往下 24pt，**漸進模糊**（`VariableBlur`：系統導覽列邊緣效果用的 variableBlur 濾鏡，未公開 API，找不到就只剩漸層不會閃退；半徑 12，邊緣最糊往下平順到 0）＋同底色漸層 100%→0%，沒有交界線。導覽列按鈕底下內容直接穿過。底部同樣是漸進模糊＋漸層（安全區＋56，所有命盤 88 蓋到新增按鈕）；彈出視窗（sheet）底部不淡出，用 `.zEdgeFades(bottom: nil)`（ZForm 已內建）。遮罩曲線往內要很緩（1 → 0.55 → 0.25 → 0.08 → 0），不然模糊開始處看得出線。會順便關掉系統捲動邊緣效果 |
 | `AvatarView`／`AvatarPicker` | `AvatarView.swift` | 頭貼（沒有就預設人像）；可點的版本從相簿選、裁正方形 256px |
 | `Thumbnails.image(_:maxPixel:)` | `ChartRecords.swift` | ImageIO 讀縮圖＋快取；列表、格子裡的圖一律用它，不要整張解碼 |
 | `PersonRowSkeleton`、`CloudSync.refreshWithSkeleton(_:)` | `PeopleList.swift`、`CloudSync.swift` | 下拉更新：`.refreshable { await CloudSync.refreshWithSkeleton($flag) }`，flag 為 true 時列表換成骨架（至少 0.6 秒） |

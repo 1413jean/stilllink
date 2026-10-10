@@ -26,7 +26,7 @@ struct LegalView: View {
                 .padding(.vertical, 16)
             }
             .background(Color.zBg)
-            .zEdgeFades()
+            .zEdgeFades(bottom: nil)
             .zSheetBar(doc.rawValue, done: { dismiss() })
         }
         .tint(Color.zText)
