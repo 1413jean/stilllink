@@ -212,11 +212,18 @@ struct StarDetailView: View {
     let key: String
     let palaceName: String
     var onBack: () -> Void
+    /// false：標題列交給外面（iOS 用系統導覽列：返回、標題、編輯），這裡只畫內容
+    var showHeader = true
 
     var body: some View {
         let n = notes.note(key)
         let pk = StarNotes.palaceKey(palaceName.count > 2 ? String(palaceName.dropFirst()) : palaceName)   // 「年疾厄」→ 疾
         VStack(alignment: .leading, spacing: 20) {
+            if !showHeader {
+                let tl = StarNotes.tagline(n)
+                if !tl.isEmpty { Text(tl).zText(.callout).foregroundStyle(Color.zText3) }
+            }
+            if showHeader {
             HStack(spacing: 8) {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.zText2)
@@ -234,6 +241,7 @@ struct StarDetailView: View {
                     Image(systemName: "square.and.pencil").font(Font.zBody).foregroundStyle(Color.zText2)
                 }
                 .buttonStyle(.plain).help("編輯筆記")
+            }
             }
             if let t = n.palaces[pk], !t.isEmpty {
                 VStack(alignment: .leading, spacing: 7) {

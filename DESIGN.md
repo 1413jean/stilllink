@@ -44,11 +44,13 @@
 - 中宮：`centerTitle`、`centerBody`、`centerSmall`、`pillar`
 
 ## 顏色（`Color.z*`，每個都有淺色和深色兩組值）
+- Mac 和 iOS 共用同一套（`Theme.swift`）。來源：App 圖示（B 發光紫微藍版）。中性色是照 Moonly 的近中性炭灰 `🎨/night`（100–1000，只帶一點冷調、不要藍；900＝`#222328`、1000＝`#18191D`），藍色只留在圖示上，主色是四角星橘延伸的 `🎨/star`（400＝`#F59457`、500＝`#E8743F`、600＝`#C95A2A`）。舊的 `ink`／`terracotta` 色階留在 Figma，語意 token 已不再指向它們。
 - 底色：`zBg` 主區、`zSide` 側欄、`zCard` 卡片。
 - 線條：`zLine` 一般邊線、`zGrid` 盤面格線。
 - 文字：`zText` 主要、`zText2` 次要、`zText3` 輔助。
 - 狀態：`zHover` 滑過、`zSel` 選取。
-- 強調：`zAccent`，陶土橘（淺色 `#D36540`／深色 `#E08458`）。整個 app 的 tint 也是它，主要按鈕、開關、送出鈕、選取色都用同一個顏色。
+- 強調：`zAccent`，星橘（淺色 `#C95A2A` star/600／深色 `#F59457` star/400）。整個 app 的 tint 也是它，主要按鈕、開關、送出鈕、選取色都用同一個顏色。
+- `zDanger`：錯誤、失敗狀態（同化忌紅 `mJi`）。狀態文字平常用灰（`zText2`），主色只給可以按的東西。
 - `zOnColor` 是色塊上的文字顏色，`zShadow` 是浮層陰影。
 
 ### 命盤用色
@@ -126,3 +128,29 @@
   - 備註新增和刪除有過場動畫。
   - 按鈕按下會縮到 0.97。
 - 系統開啟「減少動態效果」時，所有動畫改成瞬間切換。
+
+## iOS 元件（`apps/ios/Sources`）
+
+新畫面先找這張表；同樣的東西不要在各頁自己畫一次。要新做的元件，做完補進來。
+
+| 元件 | 檔案 | 用途 |
+|---|---|---|
+| `.buttonStyle(.capsule(_:fill:floating:))` | `Components.swift` | 膠囊按鈕。`.primary` 黑底白字（主要動作）、`.secondary` 淺灰底（取消）、`.outline` 卡片底＋細框；高度一律 48；`fill` 撐滿寬、`floating` 浮起陰影 |
+| `.zFloatingCapsule()` | `Components.swift` | 浮在盤面上的膠囊底（`zRaised`＋`zRaisedLine`＋陰影） |
+| `Platform.haptic(_:)` | `Platform.swift` | 震動：`.success` 儲存／新增完成、`.error` 沒填完就按儲存或讀取失敗、`.alignment` 刻度、`.levelChange` 切層級；跟著設定的「震動」開關 |
+| `FilterChip` | `Components.swift` | 篩選膠囊（分類、標籤）：選到是主文字色底反白字、沒選淺灰底，可帶數量；高 34、觸控補到 44 |
+| `ZForm` | `Styles.swift` | 系統 Form 換成 App 色系（暖白底、淺灰卡片）；設定、表單一律用它 |
+| `.zSwitch()` | `Styles.swift` | 開關用主色（按鈕、選單是主文字色） |
+| `.zEdgeFades()`／`EdgeFade` | `Styles.swift` | 狀態列、導覽列下緣：底色漸層 100%→0%＋漸進模糊；底部只有底色漸層（不加模糊）；會順便關掉系統捲動邊緣效果 |
+| `AvatarView`／`AvatarPicker` | `AvatarView.swift` | 頭貼（沒有就預設人像）；可點的版本從相簿選、裁正方形 256px |
+| `Thumbnails.image(_:maxPixel:)` | `ChartRecords.swift` | ImageIO 讀縮圖＋快取；列表、格子裡的圖一律用它，不要整張解碼 |
+| `PersonRow` | `PeopleList.swift` | 命盤列表的一列（頭貼、姓名性別、生日） |
+| `SidebarGlyph` | `SidebarView.swift` | 側欄按鈕的三條線 |
+| `NotesBar`／`NotesSheet`／`NoteEditor` | `NotesPanel.swift` | 底部宮位摘要、半頁星曜筆記、筆記編輯 |
+| `ChartRecords` | `ChartRecords.swift` | 運限表下的備註與照片（照片存前壓成 1600px／JPEG 0.72） |
+| `HepanSheet`／`BaoshuSheet`／`PillarSearchSheet` | `QuickTools.swift` | 合盤、報數、四柱反查 |
+| `MutagenStrip` | 共用 `ChartBoard.swift` | iPhone 四化方塊（固定大小、對齊自己的星、最多疊蓋前一個 6 成、每顆星最多 4 格） |
+| `StarLayout` | 共用 `ChartBoard.swift` | iPhone／Mac 盤面差異（`compact`、欄寬、角落圓角） |
+| `BoardSkeleton`／`PeriodTableSkeleton`／`SkeletonBar` | 共用 `Views/Skeleton.swift` | 載入骨架 |
+
+**規則**：按鈕高度 48、觸控目標 ≥44；顏色、字級照上面的 token；照片一律先壓縮再存。

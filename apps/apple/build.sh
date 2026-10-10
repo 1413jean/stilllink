@@ -85,7 +85,14 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
-codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+# 簽章：有 Apple 開發者憑證就用它（鑰匙圈用「開發者＋App」認人，重編／更新後不會再跳鑰匙圈密碼）；沒有才用臨時簽章
+# 臨時簽章（-）是用整個程式的指紋認人，每次編譯指紋都變，登入資訊存在鑰匙圈時每次重開都要輸入密碼
+SIGN_ID=$(security find-identity -v -p codesigning 2>/dev/null | grep -E '"(Developer ID Application|Apple Development):' | head -1 | sed -E 's/.*"(.*)"/\1/')
+if [ -n "$SIGN_ID" ]; then
+  codesign --force --deep --sign "$SIGN_ID" "$APP" >/dev/null 2>&1 || codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+else
+  codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+fi
 echo "built $APP（$CHANNEL $VER build $BUILD）"
 
 # 裝到「應用程式」資料夾（測試版、正式版各裝各的）

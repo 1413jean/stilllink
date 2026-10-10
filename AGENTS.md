@@ -42,6 +42,16 @@ apps/apple/
 DESIGN.md                  設計規範
 ```
 
+### iOS 版（`apps/ios`，分支 `ios`）
+
+- 外框用系統元件（TabView 此刻／命盤／設定、List、Form、searchable、swipeActions），**盤面 `ChartBoard`、運限表 `PeriodTable`、引擎、`Store`、`Theme` 直接引用 `apps/apple` 同一份檔案**。共用清單在 `apps/ios/build.sh` 和 `project.yml`，兩邊要一起改。
+- 共用檔案不能直接用 AppKit：Mac／iOS 不同的地方收在 `Platform.swift`，或用 `#if os(macOS)`。改完共用檔案，Mac（`./build.sh beta`）和 iOS（`apps/ios/build.sh check`）都要編過。
+- `ZType` 在 iOS 用 Figma Typography 的 iOS 模式字級（粗＝Semibold）。
+- 建置：`apps/ios/build.sh`（`check` 只型別檢查、`run` 裝進模擬器）。用 swiftc 直接編，不需要 Xcode 的 iOS 元件；要上實機才需要 `build.sh xcode`（要先在 Xcode 裝 iOS 平台元件、登入開發者帳號）。
+- **裝新版一律用 `apps/ios/deploy.sh`**（預設裝 iPhone；`sim` 模擬器、`both` 兩個都裝），只印一行結果。小改動不用每次截圖驗證，Jean 會在手機上看。
+- 裝到 Jean 的 iPhone：`cd apps/ios && xcodegen generate && xcodebuild -project StillLink.xcodeproj -scheme StillLink -destination 'id=00008150-001971140A80401C' -derivedDataPath build/dd -allowProvisioningUpdates build`，再 `xcrun devicectl device install app --device 00008150-001971140A80401C build/dd/Build/Products/Debug-iphoneos/StillLink.app`。Team 是 Jean 的 Personal Team（`project.yml` 的 `DEVELOPMENT_TEAM`），免費帳號 **7 天後失效要重裝**。Xcode 27 的模擬器 App 叫 DeviceHub（`Xcode.app/Contents/Applications/DeviceHub.app`）。
+- 驗證：`SIMCTL_CHILD_ZIWEI_DATA_DIR=<暫存> xcrun simctl launch "iPhone 17 Pro" app.stilllink.ios.beta`，再 `xcrun simctl io … screenshot`。`ZIWEI_TAB=people|settings`、`ZIWEI_ROUTE=姓名`、`ZIWEI_NEW=1`、`ZIWEI_LEVEL` 可用。App 啟動約 5–10 秒（載入排盤引擎），截圖要等。
+
 ## 3. 分支與版本
 
 | 分支 | 用途 |
@@ -83,6 +93,7 @@ DESIGN.md                  設計規範
 | `ZIWEI_PICK=宮位編號`（＋`ZIWEI_PICK_DELAY=秒`） | 當成使用者點了那一宮（延後點：錄動畫時先開始錄） |
 | `ZIWEI_PALACE_DUMP="年,月,日,時,分,f"`＋`ZIWEI_BENCH=檔案` | 列出每一宮所有星曜（主／輔／雜／長生），查「空宮是不是真的空」 |
 | `ZIWEI_CLAMP_T=秒` | 夾宮框線樣式的能量流定格在第幾秒（截圖看動畫中間的樣子） |
+| `ZIWEI_SKELETON=1` | 停在手動更新（⌘R／下拉）的骨架畫面：側欄、盤面、運限表、iPhone 列表 |
 | `ZIWEI_NEW=1`、`ZIWEI_EDIT` | 直接開新增／編輯命盤 |
 | `ZIWEI_SETTINGS=區段` | 直接開到設定某一節 |
 | `ZIWEI_SETTINGS_QUERY=文字` | 設定窗打開時直接搜尋 |
@@ -101,6 +112,9 @@ DESIGN.md                  設計規範
 | `ZIWEI_CURSOR_DUMP=資料夾` | 把各工具游標存成 PNG |
 | `ZIWEI_BENCH=檔案` ＋ `ZIWEI_REDRAW_BENCH=1` | 量整張盤重畫 10 次的時間寫到檔案（改盤面後確認沒變慢；目前約 80ms） |
 | `ZIWEI_NOTES`、`ZIWEI_STAR_DETAIL` | 開星曜筆記頁 |
+| `ZIWEI_SCROLL=1` | iOS：命盤頁、所有命盤一打開就捲到底（所有命盤會順便收起分類列），看捲動後頂端的樣子 |
+| `ZIWEI_LEGAL=privacy／terms／delete／license` | iOS：「我的」頁打開時直接開那份條款 |
+| `ZIWEI_PICK_BENCH=1` ＋ `ZIWEI_BENCH=檔案` | iOS：輪流點 12 宮 24 次，量每次選宮到排版完的時間（改盤面後確認點宮位沒變慢；2026-10 約 13ms，模擬器） |
 
 要測新畫面就照這個模式自己加一個 `ZIWEI_*`，並補進這張表。
 

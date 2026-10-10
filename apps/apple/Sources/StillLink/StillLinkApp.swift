@@ -30,12 +30,30 @@ struct StillLinkApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("新增命盤") { NotificationCenter.default.post(name: .newChart, object: nil) }
                     .keyboardShortcut("n")
+                Divider()
+                SyncNowCommand()
             }
             CommandGroup(replacing: .help) {
                 Button("新功能…") { NotificationCenter.default.post(name: .openWhatsNew, object: nil) }
                 Button("回報問題…") { ReportState.shared.show() }
             }
         }
+    }
+}
+
+/// 檔案選單「立即同步」（⌘R）：跟下拉更新一樣走 CloudSync.refresh()（進骨架）；沒登入時灰掉
+private struct SyncNowCommand: View {
+    @ObservedObject private var account = Account.shared
+    var body: some View {
+        Button("立即同步") {
+            // 進骨架 → 同步 → 淡入新資料；骨架本身就是回饋，只有失敗才跳提示
+            Task {
+                await CloudSync.shared.refresh()
+                if CloudSync.shared.lastError != nil { Toast.show("同步失敗，請到設定 → 帳號與同步重試") }
+            }
+        }
+        .keyboardShortcut("r")
+        .disabled(!account.isSignedIn)
     }
 }
 
@@ -106,7 +124,7 @@ struct RootView: View {
 
     var body: some View {
         main
-        .onChange(of: route) { r in
+        .onChange(of: route) { _, r in
             guard let r else { return }
             if stepping { stepping = false; return }
             if history.indices.contains(cursor), history[cursor] == r { return }
@@ -187,7 +205,9 @@ struct RootView: View {
             // 視窗最小寬度：側欄收起後，命盤區最少保留這麼寬（再窄右側面板會暫時藏起來）
             .frame(minWidth: 640)
             // 換頁不做淡入淡出（兩張命盤同時繪製很重），新頁先出骨架再填資料
-            .animation(nil, value: route)   // macOS 13 沒有 transaction(value:)
+            .transaction(value: route) { $0.animation = nil }
+            // 標題列底下墊背景色：系統標題列是比 zBg 亮的灰藍（#323536），TopFade 淡出時會從下半段透出來、在標題列底部硬切成一條亮帶
+            .background(Color.zBg.ignoresSafeArea(edges: .top))
             .overlay(alignment: .top) { TopFade(color: .zBg, height: 80) }
         }
         .toolbarBackground(.hidden, for: .windowToolbar)

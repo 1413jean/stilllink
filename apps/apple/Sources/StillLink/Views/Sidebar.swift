@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 /// Claude／Codex 式側欄：平面列、圓角選取底色、小灰字分組標題、分組像 Codex 的資料夾
 struct Sidebar: View {
     @EnvironmentObject var store: Store
+    @ObservedObject private var sync = CloudSync.shared
     @Binding var route: Route?
     var onNew: () -> Void
     @State private var searching = false
@@ -85,37 +86,44 @@ struct Sidebar: View {
                         .zInput(.small, style: .filled, icon: "magnifyingglass")
                     }
 
-                    let pinned = store.sorted(store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID })
-                    if !pinned.isEmpty {
-                        SectionLabel("釘選").padding(.top, 18)
-                        ForEach(pinned) { p in personRow(p, indent: false) }
-                    }
+                    // 手動更新中（⌘R、下拉）：命盤列表換成骨架，同步完再淡入
+                    if sync.refreshing {
+                        SectionLabel("命盤").padding(.top, 18)
+                        ForEach(0..<7, id: \.self) { i in ListRowSkeleton(index: i, avatar: 18).frame(height: 30).padding(.horizontal, 10) }
+                            .transition(.opacity)
+                    } else {
+                        let pinned = store.sorted(store.people.filter { $0.pinned && matches($0) && $0.id != store.selfID })
+                        if !pinned.isEmpty {
+                            SectionLabel("釘選").padding(.top, 18)
+                            ForEach(pinned) { p in personRow(p, indent: false) }
+                        }
 
-                    SectionLabel("命盤", action: onNew, sort: $store.sortMode).padding(.top, 18)
-                    ForEach(groupNames, id: \.self) { g in
-                        let list = store.sorted(store.people.filter { !$0.pinned && $0.group == g && matches($0) && $0.id != store.selfID })
-                        if !list.isEmpty {
-                            FolderRow(name: g, count: list.count, open: !collapsed.contains(g),
-                                      onAdd: { NotificationCenter.default.post(name: .newChart, object: g) }) {
-                                withAnimation(Motion.base) {
-                                    if collapsed.contains(g) { collapsed.remove(g) } else { collapsed.insert(g) }
+                        SectionLabel("命盤", action: onNew, sort: $store.sortMode).padding(.top, 18)
+                        ForEach(groupNames, id: \.self) { g in
+                            let list = store.sorted(store.people.filter { !$0.pinned && $0.group == g && matches($0) && $0.id != store.selfID })
+                            if !list.isEmpty {
+                                FolderRow(name: g, count: list.count, open: !collapsed.contains(g),
+                                          onAdd: { NotificationCenter.default.post(name: .newChart, object: g) }) {
+                                    withAnimation(Motion.base) {
+                                        if collapsed.contains(g) { collapsed.remove(g) } else { collapsed.insert(g) }
+                                    }
                                 }
-                            }
-                            .opacity(dragKey == "g:" + g ? 0.35 : 1)
-                            .modifier(DropMarker(key: "g:" + g, line: dropLine))
-                            .onDrag { beginDrag("g:" + g) } preview: { DragPreview(icon: "folder", title: g) }
-                            .onDrop(of: [.text], delegate: RowDrop(key: "g:" + g, dragKey: $dragKey, line: $dropLine,
-                                                                  accepts: { _ in true }, perform: drop))
-                            if !collapsed.contains(g) {
-                                ForEach(list) { p in
-                                    personRow(p, indent: true)
-                                        .transition(.opacity.combined(with: .offset(y: -4)))
+                                .opacity(dragKey == "g:" + g ? 0.35 : 1)
+                                .modifier(DropMarker(key: "g:" + g, line: dropLine))
+                                .onDrag { beginDrag("g:" + g) } preview: { DragPreview(icon: "folder", title: g) }
+                                .onDrop(of: [.text], delegate: RowDrop(key: "g:" + g, dragKey: $dragKey, line: $dropLine,
+                                                                      accepts: { _ in true }, perform: drop))
+                                if !collapsed.contains(g) {
+                                    ForEach(list) { p in
+                                        personRow(p, indent: true)
+                                            .transition(.opacity.combined(with: .offset(y: -4)))
+                                    }
                                 }
                             }
                         }
                     }
                     // 空狀態：還沒有任何命盤
-                    if groupNames.isEmpty {
+                    if groupNames.isEmpty && !sync.refreshing {
                         Text("還沒有命盤，按 ＋ 新增")
                             .font(Font.zCaption).foregroundStyle(Color.zText3)
                             .padding(.horizontal, 10).padding(.top, 4)
@@ -562,5 +570,53 @@ private struct MenuRow: View {
         }
         .buttonStyle(QuickRowStyle())
         .focusable(false)
+    }
+}
+
+/// 按住滑鼠往下拖更新（命盤區任何地方，像手機手指下拉）：觸控板兩指下拉不好拉，Jean 決定只留這種
+/// 跟宮位的點擊／長按同時聽（simultaneousGesture）：宮位那邊拖開 6pt 就自己取消，不會又選宮又更新
+/// 只有往下為主的拖曳才算；內容跟著往下彈（阻尼 0.4、最多 70pt），拖超過 110pt 放開就更新
+struct DragToRefresh: ViewModifier {
+    var enabled: Bool
+    @ObservedObject private var sync = CloudSync.shared
+    @ObservedObject private var account = Account.shared
+    @State private var dy: CGFloat = 0
+    private let trigger: CGFloat = 110
+    func body(content: Content) -> some View {
+        let on = enabled && account.isSignedIn && !sync.refreshing
+        content
+            .offset(y: min(70, dy * 0.4))
+            .overlay(alignment: .top) {
+                // 內容往下移了 min(70, dy×0.4)：箭頭放在拉開的空隙正中間
+                if dy > 8 {
+                    RefreshArrow(progress: dy / trigger, armed: dy > trigger)
+                        .offset(y: min(70, dy * 0.4) / 2 - RefreshArrow.size / 2)
+                }
+            }
+            .simultaneousGesture(DragGesture(minimumDistance: 12)
+                .onChanged { v in
+                    guard on, v.translation.height > abs(v.translation.width) else { return }
+                    dy = max(0, v.translation.height)
+                }
+                .onEnded { _ in
+                    let fire = on && dy > trigger
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dy = 0 }
+                    if fire { Task { await sync.refresh() } }
+                }, including: on ? .all : .subviews)
+    }
+}
+
+/// 下拉更新的箭頭：拉的時候 ↓ 慢慢浮現，拉夠了變 ↻
+struct RefreshArrow: View {
+    static let size: CGFloat = 16
+    var progress: CGFloat
+    var armed: Bool
+    var body: some View {
+        Image(systemName: armed ? "arrow.clockwise" : "arrow.down")
+            .font(Font.zIconBold).foregroundStyle(Color.zText3)
+            .frame(width: Self.size, height: Self.size)
+            .opacity(min(1, progress))
+            .animation(Motion.fast, value: armed)
+            .allowsHitTesting(false)
     }
 }

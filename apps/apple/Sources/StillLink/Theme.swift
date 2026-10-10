@@ -1,30 +1,37 @@
 import SwiftUI
-import AppKit
 
 /// 設計 token：Claude／Codex 式的暖白與暖黑，亮暗各一組
 extension Color {
     static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
+        #if os(macOS)
         Color(nsColor: NSColor(name: nil) { ap in
             let hex = ap.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
             return NSColor(srgbRed: CGFloat((hex >> 16) & 0xff) / 255, green: CGFloat((hex >> 8) & 0xff) / 255,
                            blue: CGFloat(hex & 0xff) / 255, alpha: 1)
         })
+        #else
+        Color(uiColor: UIColor { t in
+            let hex = t.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: CGFloat((hex >> 16) & 0xff) / 255, green: CGFloat((hex >> 8) & 0xff) / 255,
+                           blue: CGFloat(hex & 0xff) / 255, alpha: 1)
+        })
+        #endif
     }
 
-    static let zBg = dynamic(0xFAF9F6, 0x1C1B19)        // 暗色底：Stillink DS bg-inverse
-    static let zCard = dynamic(0xFFFFFF, 0x262522)
-    static let zSide = dynamic(0xF8F8F6, 0x161513)      // 側欄：Claude 式很淺的暖白
-    static let zLine = dynamic(0xE7E5DF, 0x34332F)
-    static let zRaised = dynamic(0xFFFFFF, 0x35332F)    // 浮在盤面上的卡片（備註）：深色模式比 zCard 亮一階才分得出來
-    static let zRaisedLine = dynamic(0xE2DFD8, 0x4C4A45) // 浮起卡片的細框
-    static let zGrid = dynamic(0xCFCCC4, 0x46443F)
-    static let zText = dynamic(0x1C1B19, 0xECEAE4)      // 主文字：同 DS 黑
-    static let zText2 = dynamic(0x5C5A54, 0xA6A39C)     // DS ui-primary
-    static let zText3 = dynamic(0x9C9A93, 0x7A7872)
-    static let zHover = dynamic(0xF1F0ED, 0x2C2B28)
-    static let zSel = dynamic(0xEDEDEA, 0x33322E)       // 選取列：淺灰
-    static let zAccent = dynamic(0xD36540, 0xE08458)   // 陶土橘：2.1.4 調深一點點（原 D96B43／EC9473 太亮、看不清楚）
-    static let zToastAction = dynamic(0xEDB096, 0xB04F2F)   // 提示條上的按鈕：提示條是反色（淺色模式深底、深色模式淺底），橘色要跟著反過來挑才看得清楚
+    static let zBg = dynamic(0xF8F8F9, 0x191A1B)        // night/100／1000
+    static let zCard = dynamic(0xFFFFFF, 0x242425)
+    static let zSide = dynamic(0xF4F4F5, 0x141415)      // 側欄：比主區再淺／深一階
+    static let zLine = dynamic(0xE7E7E8, 0x303032)
+    static let zRaised = dynamic(0xFFFFFF, 0x2C2C2E)    // 浮在盤面上的卡片（備註）：深色模式比 zCard 亮一階才分得出來
+    static let zRaisedLine = dynamic(0xDFDFE1, 0x3C3C3E) // 浮起卡片的細框
+    static let zGrid = dynamic(0xCDCDCF, 0x424244)
+    static let zText = dynamic(0x1E1F20, 0xEDEDEE)      // 主文字：近黑／近白
+    static let zText2 = dynamic(0x58585B, 0xABACAE)     // night/700／500
+    static let zText3 = dynamic(0x919194, 0x77777A)
+    static let zHover = dynamic(0xF1F1F2, 0x282829)
+    static let zSel = dynamic(0xEBEBEC, 0x2F2F31)       // 選取列：淺灰
+    static let zAccent = dynamic(0xC95A2A, 0xF59457)   // 星橘：淺色用 star/600（淺底上 star/500 太亮看不清楚），深色用圖示的星色 star/400
+    static let zToastAction = dynamic(0xFBBF97, 0xC95A2A)   // 提示條上的按鈕：提示條是反色（淺色模式深底、深色模式淺底），橘色要跟著反過來挑才看得清楚
 
     // 命盤（照文墨天機）
     static let wmRed = dynamic(0xD0102A, 0xFF6B76)
@@ -33,8 +40,8 @@ extension Color {
     static let wmGreen = dynamic(0x1F8A3A, 0x5BCB8A)
     static let wmBlack = dynamic(0x1C1B19, 0xECEAE4)
     static let wmEarth = dynamic(0xB5701A, 0xE0A84A)
-    static let wmSF = dynamic(0xF2F1EE, 0x3E3C37)       // 三方四正：淺暖灰（跟側欄同一家）
-    static let wmSel = dynamic(0xFBF0EC, 0x392C26)      // 選取宮：主色 10% 淡底
+    static let wmSF = dynamic(0xF0F0F1, 0x272728)       // 三方四正：淺灰（跟側欄同一家）
+    static let wmSel = dynamic(0xFCEFE7, 0x2E2523)      // 選取宮：主色 10% 淡底
 
     static let mLu = dynamic(0x1F8A3A, 0x4FBF7E)
     static let mQuan = dynamic(0x7B48C8, 0xA987EC)
@@ -47,7 +54,7 @@ extension Color {
     /// 運限四化色：大限綠、流年藍、流月琥珀、流日洋紅、流時灰
     static let scopeColors: [Color] = [
         dynamic(0x1F8A3A, 0x4FBF7E), dynamic(0x1F5FBF, 0x6AA2F5), dynamic(0xC27A12, 0xE8A84A),
-        dynamic(0xB8357A, 0xE877B4), dynamic(0x6B6963, 0xA6A39C),
+        dynamic(0xB8357A, 0xE877B4), dynamic(0x69696B, 0xABACAE),
     ]
 }
 
@@ -69,7 +76,7 @@ extension Color {
     /// 運限四化方塊底色：大限、流年、流月、流日、流時
     static let fScopes: [Color] = [
         dynamic(0x1F8A3A, 0x2F6B45), dynamic(0x1F5FBF, 0x335B99), dynamic(0xC27A12, 0x8E6224),
-        dynamic(0xB8357A, 0x8A3C66), dynamic(0x6B6963, 0x5A5955),
+        dynamic(0xB8357A, 0x8A3C66), dynamic(0x69696B, 0x58585B),
     ]
 }
 
@@ -87,6 +94,7 @@ extension ZW.Wuxing {
 
 extension Color {
     /// 色塊上的文字（四化方塊、強調色按鈕）
+    static var zDanger: Color { mJi }                  // 錯誤、失敗狀態：跟化忌同一個紅（不另開新色）
     static let zOnColor = Color.white
     /// 彈窗背景模糊上的暗化
     static let zScrim = Color.black.opacity(0.12)
@@ -110,8 +118,29 @@ enum ZType: String, CaseIterable {
     case caption2 = "body/body.caption.2"
     case eyebrow = "label/label.eyebrow"
 
-    /// （字級, 行高, 粗體, 字距）— macOS 模式
+    /// （字級, 行高, 粗體, 字距）— Mac 用 macOS 模式、iPhone／iPad 用 iOS 模式（Figma Typography 兩個 mode）
     var spec: (size: CGFloat, lineHeight: CGFloat, strong: Bool, tracking: CGFloat) {
+        #if os(iOS)
+        switch self {
+        case .titleLarge: (34, 41, true, 0)
+        case .title1: (28, 34, true, 0)
+        case .title2: (22, 28, true, 0)
+        case .title3: (20, 25, true, 0)
+        case .headline: (17, 22, true, 0)
+        case .body: (17, 22, false, 0)
+        case .bodyStrong: (17, 22, true, 0)
+        case .callout: (16, 21, false, 0)
+        case .calloutStrong: (16, 21, true, 0)
+        case .subheadline: (15, 20, false, 0)
+        case .subheadlineStrong: (15, 20, true, 0)
+        case .footnote: (13, 18, false, 0)
+        case .footnoteStrong: (13, 18, true, 0)
+        case .caption1: (12, 16, false, 0)
+        case .caption1Strong: (12, 16, true, 0)
+        case .caption2: (11, 13, false, 0)
+        case .eyebrow: (11, 13, true, 1.4)
+        }
+        #else
         switch self {
         case .titleLarge: (32, 38, true, 0)
         case .title1: (22, 28, true, 0)
@@ -131,8 +160,29 @@ enum ZType: String, CaseIterable {
         case .caption2: (9, 12, false, 0)
         case .eyebrow: (10, 12, true, 1.4)
         }
+        #endif
     }
+    /// 「粗」在 macOS 是 Medium、iOS 是 Semibold（Figma 變數 font/weight/strong 依模式不同）
+    #if os(iOS)
+    var font: Font { Font.system(textStyle, weight: spec.strong ? .semibold : .regular) }
+    /// 對應的 Dynamic Type 文字樣式（預設大小跟上面的 iOS 字級一樣）
+    var textStyle: Font.TextStyle {
+        switch self {
+        case .titleLarge: .largeTitle
+        case .title1: .title
+        case .title2: .title2
+        case .title3: .title3
+        case .headline, .body, .bodyStrong: .body
+        case .callout, .calloutStrong: .callout
+        case .subheadline, .subheadlineStrong: .subheadline
+        case .footnote, .footnoteStrong: .footnote
+        case .caption1, .caption1Strong: .caption
+        case .caption2, .eyebrow: .caption2
+        }
+    }
+    #else
     var font: Font { .system(size: spec.size, weight: spec.strong ? .medium : .regular) }
+    #endif
 }
 
 extension View {
@@ -172,7 +222,12 @@ extension Font {
 
 /// 命盤字級：跟著盤面大小縮放，fs 是宮位基準字級（主星大小）
 enum ChartType {
+    #if os(iOS)
+    /// iPhone 宮格窄（約 98pt），用寬度算會落到最小值；照文墨天機手機版約 11pt
     static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
+    #else
+    static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
+    #endif
 
     static func star(_ fs: CGFloat) -> CGFloat { fs }                       // 主星、輔星
     static func adj(_ fs: CGFloat) -> CGFloat { max(10.5, fs * 0.94) }      // 雜曜：跟主星差一點點就好
@@ -180,9 +235,17 @@ enum ChartType {
     static func tag(_ fs: CGFloat) -> CGFloat { max(9, fs * 0.8) }         // 四化方塊、運限宮名、自化
     static func gods(_ fs: CGFloat) -> CGFloat { fs * 0.74 }                // 博士／將前／歲前
     static func ages(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.58) }        // 流年／小限歲數
+    #if os(iOS)
+    static func range(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.74) }      // 大限歲數（iPhone 宮格窄：三位數歲數會把天干地支擠出去，小一階）
+    #else
     static func range(_ fs: CGFloat) -> CGFloat { fs * 0.88 }               // 大限歲數
+    #endif
     static func palace(_ fs: CGFloat) -> CGFloat { fs }                     // 宮名
+    #if os(iOS)
+    static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.12 }              // 宮干支（iPhone 宮格窄，小一階才放得下身宮章）
+    #else
     static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.3 }               // 宮干支
+    #endif
     static func centerTitle(_ fs: CGFloat) -> CGFloat { fs * 1.15 }
     static func centerBody(_ fs: CGFloat) -> CGFloat { fs * 0.9 }
     static func centerSmall(_ fs: CGFloat) -> CGFloat { fs * 0.75 }

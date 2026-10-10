@@ -14,6 +14,17 @@ struct ReleaseNote: Identifiable {
 
 enum Changelog {
     static let notes: [ReleaseNote] = [
+        ReleaseNote(version: "2.4.0", date: "2026 年 10 月 10 日", major: true,
+            new: [
+                "帳號與同步：可以用 Apple 或 Google 登入，命盤、備註、照片、頭貼和設定會自動同步，換電腦或用手機版登入同一個帳號就看得到",
+                "手動更新：在命盤上按住往下拖、或按 ⌘R，會跟雲端同步一次（更新時先顯示載入畫面，完成後淡入新資料）",
+            ],
+            improved: [
+                "整體配色換成更沉穩的炭灰色，主色改成跟 App 圖示同色的星橘",
+                "視窗頂端的漸層修掉了一條比背景亮的色帶，淡出更自然",
+                "設定 → 帳號與同步會顯示最後同步時間，同步失敗才用紅字提示並可以重試",
+                "重新安裝或更新後不會再一直要求輸入鑰匙圈密碼",
+            ]),
         ReleaseNote(version: "2.3.5", date: "2026 年 10 月 9 日",
             improved: [
                 "換上新的 App 圖示：夜空藍底＋星橘四角星",

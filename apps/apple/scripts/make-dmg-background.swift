@@ -1,4 +1,4 @@
-// DMG 視窗背景：暖白底、圓潤的主色箭頭、幾顆小星星、底下一行提示
+// DMG 視窗背景：淺灰底（同 zBg 淺色）、圓潤的主色箭頭、幾顆小星星、底下一行提示
 // 用法：swift scripts/make-dmg-background.swift <輸出資料夾>  → background.png（660×540）＋ background@2x.png
 import AppKit
 
@@ -30,7 +30,7 @@ func render(scale: CGFloat, to path: String) {
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
 
     // 底色
-    rgb(0xF5F1EA).setFill()
+    rgb(0xF8F8FA).setFill()
     NSRect(x: 0, y: 0, width: W, height: H).fill()
 
     // 箭頭：兩個圖示中間（Finder 座標 y 由上往下，這裡由下往上）
@@ -44,13 +44,13 @@ func render(scale: CGFloat, to path: String) {
     arrow.lineWidth = 9
     arrow.lineCapStyle = .round
     arrow.lineJoinStyle = .round
-    rgb(0xD96B43).setStroke()
+    rgb(0xC95A2A).setStroke()
     arrow.stroke()
 
     // 小星星點綴
-    rgb(0xD96B43, 0.55).setFill()
+    rgb(0xC95A2A, 0.55).setFill()
     sparkle(CGPoint(x: 326, y: midY + 52), 9, 1.6).fill()
-    rgb(0xD96B43, 0.35).setFill()
+    rgb(0xC95A2A, 0.35).setFill()
     sparkle(CGPoint(x: 350, y: midY + 40), 5, 1).fill()
     sparkle(CGPoint(x: 304, y: midY - 46), 6, 1.1).fill()
 
@@ -58,12 +58,12 @@ func render(scale: CGFloat, to path: String) {
     let para = NSMutableParagraphStyle(); para.alignment = .center
     let attrs: [NSAttributedString.Key: Any] = [
         .font: NSFont.systemFont(ofSize: 13, weight: .regular),
-        .foregroundColor: rgb(0x9C9A93),
+        .foregroundColor: rgb(0x8E9098),
         .paragraphStyle: para,
     ]
     NSString(string: "把 \(appName) 拖到 Applications 就安裝好了").draw(in: NSRect(x: 0, y: H - 290, width: W, height: 20), withAttributes: attrs)
     // 分隔線＋安裝說明提示（說明檔放在下面）
-    rgb(0xE4DED3).setFill()
+    rgb(0xE6E6EA).setFill()
     NSRect(x: 60, y: H - 305, width: W - 120, height: 1).fill()
     NSString(string: "第一次打開被擋下？請看這份說明").draw(in: NSRect(x: 0, y: H - 340, width: W, height: 20), withAttributes: attrs)
 

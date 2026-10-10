@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 /// 照文墨天機排的十二宮盤面（純 SwiftUI 繪製）
 struct ChartBoard: View, Equatable {
@@ -13,6 +12,10 @@ struct ChartBoard: View, Equatable {
     var onResetLevel: () -> Void = {}
     /// 選取的宮位變了（nil＝取消選取），給右側星曜筆記用
     var onSelect: (Int?) -> Void = { _ in }
+    /// 外圈留給自化箭頭的寬度（iPhone 螢幕窄，傳小一點）
+    var margin: CGFloat = 14
+    /// true＝整張盤（含外圈）放在一張卡片裡（Mac）；false＝不要外框卡片，只有十二宮格本身圓角＋細框（iPhone）
+    var outerCard = true
 
     /// 只有資料真的換了才重畫（點運限表時，盤面不會先拿舊資料多畫一次）
     static func == (a: ChartBoard, b: ChartBoard) -> Bool {
@@ -21,7 +24,7 @@ struct ChartBoard: View, Equatable {
     /// 「此刻」盤每分鐘換一次鐘錶時間，但盤面用不到它（只有換時辰才變）：不要因此整盤重畫
     /// （每分鐘整盤重畫，在部分外接螢幕上會留下綠色殘點）
     private static func samePerson(_ a: Person, _ b: Person) -> Bool {
-        guard a.id == NowChart.id, b.id == NowChart.id else { return a == b }
+        guard a.id == Person.nowID, b.id == Person.nowID else { return a == b }
         var x = a, y = b
         x.clock = nil; y.clock = nil
         return x == y
@@ -49,23 +52,27 @@ struct ChartBoard: View, Equatable {
         let sf = cleared ? [] : ZW.sanFang(selected)
         let clamps = settings.showClamp && !cleared ? ZW.clamps(chart, horo: model.horo, center: selected, level: settings.clampByScope ? level : 0, hepan: hepan) : []
         GeometryReader { geo in
-            let m: CGFloat = 14 * zoom   // 外圈留給自化箭頭；縮小一點讓宮格大一點
+            let m: CGFloat = margin * zoom   // 外圈留給自化箭頭；縮小一點讓宮格大一點
             let cw = (geo.size.width - m * 2) / 4
             let ch = (geo.size.height - m * 2) / 4
             let fs = ChartType.base(cellWidth: cw / zoom) * zoom
             let lsf = locked.map(ZW.sanFang) ?? []
+            // 12 宮共用：選到的宮飛出去的星、轉宮的太極（不要在每一宮各算一次）
+            let fly: [String: Mutagen] = cleared ? [:] : Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a })
+            let tj = effectiveTaiji(selected, chart)
             ZStack(alignment: .topLeading) {
                 ForEach(0..<12, id: \.self) { i in
                     let (r, c) = ZW.grid[i]
                     PalaceCell(model: model, index: i, level: level, layers: layers, fs: fs, hepan: hepan,
                                selected: !cleared && selected == i, inSF: sf.contains(i) && selected != i,
                                isLocked: locked == i, inLockedSF: lsf.contains(i) && locked != i,
-                               taijiLabel: effectiveTaiji(selected, chart).map { ZW.transferredName(taiji: $0, index: i, chart: chart, names: scopeNames) },
-                               flyStars: cleared ? [:] : Dictionary(model.flying[selected].map { ($0.star, $0.m) }, uniquingKeysWith: { a, _ in a }))
+                               taijiLabel: tj.map { ZW.transferredName(taiji: $0, index: i, chart: chart, names: scopeNames) },
+                               flyStars: fly)
                         .frame(width: cw, height: ch, alignment: .top)
-                        .clipped()
+                        .clipShape(StarLayout.cornerShape(r: r, c: c, rounded: !outerCard))
                         .contentShape(Rectangle())
                         // 長按或點兩下：鎖定／解除；點一下：選宮位（單擊不等雙擊判定，選取不會慢半拍）
+                        #if os(macOS)
                         // 用 DragGesture 自己計時：原本 LongPressGesture.exclusively(before: TapGesture) 在新版 macOS 上
                         // 鬆開時長按不會「失敗」，點一下永遠輪不到（只剩長按有反應）
                         .gesture(DragGesture(minimumDistance: 0)
@@ -84,6 +91,11 @@ struct ChartBoard: View, Equatable {
                                 p.work.cancel(); press = nil
                                 tapPalace(i, selected: selected, chart: chart)
                             })
+                        #else
+                        // iPhone：DragGesture 會搶走捲動，照原本長按＋點擊
+                        .gesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in toggleLock(i, chart) }
+                            .exclusively(before: TapGesture().onEnded { tapPalace(i, selected: selected, chart: chart) }))
+                        #endif
                         .contextMenu {
                             // 轉宮中（右鍵指定或點宮位產生的 X之Y）都可以取消
                             let transferring = effectiveTaiji(selected, chart) != nil
@@ -97,7 +109,28 @@ struct ChartBoard: View, Equatable {
                         .enterFromBelow(appeared, index: r * 4 + c)
                         .modifier(ClampSqueeze(on: !clamps.isEmpty, index: i, selected: selected, amount: squeeze))
                         .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
-                    if settings.showSelf { selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m) }
+                }
+                // 沒有外框卡片時：宮格四角修成圓角（蓋掉方格露出的角）＋細框
+                if !outerCard {
+                    let gw = geo.size.width - m * 2, gh = geo.size.height - m * 2
+                    GridCorners(radius: 12)
+                        .fill(Color.zBg, style: FillStyle(eoFill: true))
+                        .frame(width: gw, height: gh)
+                        .offset(x: m, y: m)
+                        .allowsHitTesting(false)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.zLine)
+                        .frame(width: gw, height: gh)
+                        .offset(x: m, y: m)
+                        .allowsHitTesting(false)
+                }
+                // 自化箭頭蓋在宮位上面（壓在宮格邊上時不被隔壁宮位擋住）
+                if settings.showSelf {
+                    ForEach(0..<12, id: \.self) { i in
+                        let (r, c) = ZW.grid[i]
+                        selfArrows(model.selfs[i], r: r, c: c, cw: cw, ch: ch, m: m)
+                    }
+                    .allowsHitTesting(false)
                 }
                 // 夾宮提示：選到的宮位被左右鄰宮夾時，交界線上各壓一個指向它的雙箭頭；換宮位就重播
                 if !clamps.isEmpty {
@@ -128,15 +161,48 @@ struct ChartBoard: View, Equatable {
             .coordinateSpace(name: "board")
             .environment(\.starHover, { info in setHover(info) })
         }
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
+        .background {
+            if outerCard {
+                RoundedRectangle(cornerRadius: 12).fill(Color.zCard)
+            } else {
+                GeometryReader { g in
+                    let m = margin * zoom
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.zCard)
+                        .frame(width: g.size.width - m * 2, height: g.size.height - m * 2)
+                        .offset(x: m, y: m)
+                }
+            }
+        }
+        .overlay { if outerCard { RoundedRectangle(cornerRadius: 12).stroke(Color.zLine) } }
         .onAppear {
             appeared = true; sel = focusIndex; onSelect(focusIndex)
+            #if os(iOS)
+            Sound.warmUp(settings)
+            #endif
             // 驗證用：ZIWEI_PICK=宮位編號 直接當成使用者點了那一宮
             if let v = ProcessInfo.processInfo.environment["ZIWEI_PICK"].flatMap(Int.init) {
                 let wait = ProcessInfo.processInfo.environment["ZIWEI_PICK_DELAY"].flatMap(Double.init) ?? 1.2   // 錄動畫時延後點，先開始錄
                 DispatchQueue.main.asyncAfter(deadline: .now() + wait) { userPicked = true; sel = v; onSelect(v) }
             }
+            #if os(iOS)
+            // 點宮位自測：ZIWEI_PICK_BENCH=1＋ZIWEI_BENCH=檔案 → 輪流點 12 宮，量每次選宮到整個畫面排版完花多久
+            if ProcessInfo.processInfo.environment["ZIWEI_PICK_BENCH"] != nil,
+               let path = ProcessInfo.processInfo.environment["ZIWEI_BENCH"] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                    guard let win = UIApplication.shared.connectedScenes.compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first else { return }
+                    var times: [Double] = []
+                    for k in 0..<24 {
+                        let t = Date()
+                        userPicked = true; sel = k % 12
+                        RunLoop.main.run(until: Date().addingTimeInterval(0.001))
+                        win.layoutIfNeeded()
+                        times.append(Date().timeIntervalSince(t) * 1000)
+                    }
+                    let st = times.sorted()
+                    try? String(format: "pick x24  median %.0fms  min %.0fms  max %.0fms", st[12], st[0], st[23]).write(toFile: path, atomically: true, encoding: .utf8)
+                }
+            }
+            #endif
         }
         .onChange(of: cleared ? -1 : (sel ?? model.chart.soulIndex)) { v in
             onSelect(v < 0 ? nil : v)
@@ -145,7 +211,7 @@ struct ChartBoard: View, Equatable {
                   !ZW.clamps(model.chart, horo: model.horo, center: v, level: settings.clampByScope ? level : 0, hepan: hepan).isEmpty else { return }
             withAnimation(.easeIn(duration: 0.09)) { squeeze = 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
-                withAnimation(.spring(response: 0.36, dampingFraction: 0.28)) { squeeze = 0 }   // 阻尼低：碰到後往外彈過頭再晃回來
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.36)) { squeeze = 0 }   // 碰到後往外彈一點再回來（2026-10 Jean：彈跳小一點）
             }
         }
         // 切換大限／流年…時，自動選到那一層的命宮（大命、流命…），本命就回命宮
@@ -180,7 +246,7 @@ struct ChartBoard: View, Equatable {
     /// 點一下宮位：選取；同一宮在系統雙擊間隔內點第二下＝鎖定；再點一次已選的宮位＝取消選取
     private func tapPalace(_ i: Int, selected: Int, chart: Chart) {
         let now = Date()
-        if let (j, t) = lastTap, j == i, now.timeIntervalSince(t) < NSEvent.doubleClickInterval {
+        if let (j, t) = lastTap, j == i, now.timeIntervalSince(t) < Platform.doubleTapInterval {
             lastTap = nil
             withAnimation(Motion.snap) { cleared = false; sel = i }
             toggleLock(i, chart)
@@ -230,7 +296,7 @@ struct ChartBoard: View, Equatable {
     }
 
     private func toggleLock(_ i: Int, _ chart: Chart) {
-        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+        Platform.haptic(.levelChange)
         withAnimation(Motion.snap) {
             if locked != nil {
                 locked = nil
@@ -326,6 +392,10 @@ private struct PalaceCell: View {
     /// 流月：這一宮是流年的哪個農曆月＋月干。流年斗君＝子斗順數到流年地支，從那宮起正月順排；月干用五虎遁由流年天干推
     private var monthLabel: String? {
         guard level >= 2 else { return nil }   // 選到流年以後才顯示
+        #if os(iOS)
+        // iPhone 宮格窄：選到流月以後，同一個位置改放「月X」宮名（照文墨天機），兩個疊在一起會重疊
+        guard level == 2 else { return nil }
+        #endif
         let b = ZW.branches
         guard let dou = b.firstIndex(of: model.bazi.ziDou),
               let yb = b.firstIndex(of: model.horo.yearly.branch),
@@ -347,8 +417,11 @@ private struct PalaceCell: View {
             // 第一行：左上合盤宮名（合命、合兄…）、右上地理方位
             // 來因也放這一行（放底部會跟運限宮名、干支擠在一起）
             let hn = hepan?.palaceName(at: p.branch)
-            if hn != nil || settings.showCompass || laiyin {
+            // iPhone 小限疊盤：小限宮名放第一行左上（放左下會跟往左疊的月X、日X 擠在一起、歪掉）
+            let minorTop = minor && StarLayout.compact
+            if hn != nil || settings.showCompass || laiyin || minorTop {
                 HStack(spacing: 3) {
+                    if minorTop { tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor) }
                     if let hn { Text(hn).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmEarth) }
                     if laiyin {
                         Text("來因").font(ChartType.font(ChartType.meta(fs), .semibold)).foregroundStyle(Color.zOnColor)
@@ -363,6 +436,31 @@ private struct PalaceCell: View {
                 }
                 .lineLimit(1)
             }
+            #if os(iOS)
+            // iPhone 照文墨天機：星曜只看寬度決定字級（一排、同字級、欄距 0），
+            // 四化方塊從星名底下往下掛進宮格中間的空白，不佔版面高度、不會因為高度不夠把整排縮小；
+            // 底部（神煞、運限宮名、干支）固定貼在宮格最下面
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: fs * 2.7)   // 星名兩字＋亮度
+                .zIndex(1)   // 往下掛的四化方塊畫在最上層，不被神煞、運限宮名蓋住
+                .overlay(alignment: .topLeading) {
+                    GeometryReader { g in
+                        let c = fitChoice(p, horo: horo, minor: minor, w: g.size.width, h: .infinity)
+                        let f = fs * c.0
+                        VStack(alignment: .leading, spacing: 2) {
+                            starFlow(p: p, horo: horo, minor: minor, f: f, adjF: StarLayout.adjBase(fs) * c.1, wrap: c.2)
+                                .fixedSize(horizontal: false, vertical: true)
+                            // 四化方塊照文墨天機固定大小（不跟著星名縮），從各自的星底下往下排
+                            MutagenStrip(columns: mutagenColumns(p, horo, minor: minor),
+                                         starWidth: c.2 ? 0 : StarLayout.columnWidth(f),
+                                         size: fs * StarLayout.boxBase, maxWidth: g.size.width)
+                        }
+                        .frame(width: g.size.width, alignment: .topLeading)
+                    }
+                }
+            Spacer(minLength: 0)
+            #else
             HStack(alignment: .top, spacing: 3) {
                 // 放不下時先縮雜曜，再一起縮主星與四化，選第一個塞得下的
                 // 先試「主星和雜曜同一排」：放不下就先縮雜曜、再一起縮；真的縮到底還放不下才換第二排
@@ -372,10 +470,28 @@ private struct PalaceCell: View {
             }
             .frame(minHeight: fs * 2.4, alignment: .top)   // 星曜區至少留一行主星的高度，不會被下方擠到消失
             .layoutPriority(-1)
+            #endif
+            // 流曜（大祿、年鸞…）與合祿／合羊／合陀：照文墨天機放在運限宮名上面、靠右，
+            // 不跟本命星曜搶同一排（擠在右上角會讓主星被迫換行）；大限的排最右邊，一排 6 個
+            let extra = extraStars(p, horo)
+            if !extra.isEmpty {
+                VStack(alignment: .trailing, spacing: 3) {
+                    let list = Array(extra.reversed())
+                    ForEach(Array(stride(from: 0, to: list.count, by: 6)), id: \.self) { k in
+                        HStack(alignment: .top, spacing: 1) {
+                            ForEach(Array(list[k..<min(k + 6, list.count)]), id: \.0) { name, color in
+                                VerticalText(name, size: ChartType.adj(fs) * 0.76, color: color)   // 流曜是輔助資訊，比雜曜小一點
+                            }
+                        }
+                    }
+                }
+                .fixedSize()
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
             HStack(alignment: .bottom, spacing: 2) {
                 VStack(alignment: .leading, spacing: 0) {
                     // 小限宮名、轉宮名疊在流月上面（左下這一欄），不會擠歪中間的宮名
-                    if minor {
+                    if minor && !StarLayout.compact {
                         tagLine("小" + String(horo.age.palaceNames[index].prefix(1)), .minorColor)
                     }
                     // 小限疊盤關著時：小限命宮標一個橫的小框「小限」，放在轉宮名上面
@@ -392,12 +508,14 @@ private struct PalaceCell: View {
                     }
                     // 流月（同文墨天機，例：冬月庚）：寫在神煞欄最上面
                     if let monthLabel { Text(monthLabel).foregroundStyle(Color.wmEarth) }
-                    if settings.showShensha {
+                    // iPhone 選到大限以後：神煞（將軍、劫煞…）收起來，空間留給運限宮名、小限
+                    if settings.showShensha && !(StarLayout.compact && level >= 1) {
                     Text(p.boshi).foregroundStyle(Color.wmGreen)
                     Text(p.jiangqian)
                     Text(p.suiqian)
                     }
                 }
+                .padding(.bottom, StarLayout.compact ? CGFloat(min(3, max(0, level - 2))) * TextMeasure.size("月", ChartType.tag(fs), bold: true).height : 0)
                 .fixedSize()   // 這一欄不被右邊的宮名擠扁
                 .font(ChartType.font(ChartType.gods(fs)))
                 .foregroundStyle(Color.zText)
@@ -416,10 +534,15 @@ private struct PalaceCell: View {
                     }
                     // 選到大限以後：改寫「這個大限裡、流年走到這一宮的那一年」（例：2034年38歲），像文墨天機
                     if level >= 1, let ya = decadeYearAge {
+                        #if os(iOS)
+                        // iPhone 宮格窄：照文墨天機不寫（流年、歲數在下面的運限表看得到），把空間留給星曜
+                        EmptyView()
+                        #else
                         Text("\(String(ya.year))年\(ya.age)歲")
                             .font(ChartType.font(ChartType.range(fs)))
                             .foregroundStyle(Color.zText2)
                             .lineLimit(1).fixedSize()
+                        #endif
                     } else {
                         Text("\(p.range[0])~\(p.range[1])")
                             .font(curDecade ? ChartType.font(ChartType.range(fs)).italic() : ChartType.font(ChartType.range(fs)))
@@ -442,7 +565,8 @@ private struct PalaceCell: View {
                             tagLine(t.0, t.1).alignmentGuide(.nameCenter) { $0[HorizontalAlignment.center] }
                         }
                         // 本命宮名跟上面的運限宮名（年命、大兄…）同樣大小、粗細
-                        Text(p.name).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmRed)
+                        Text(StarLayout.compact && level >= 1 && p.isBody && settings.showBody && taijiLabel == nil ? String(p.name.prefix(1)) + "|身" : p.name)
+                            .font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(Color.wmRed)
                             .lineLimit(1).fixedSize()
                             .alignmentGuide(.nameCenter) { $0[HorizontalAlignment.center] }
                     }
@@ -462,7 +586,8 @@ private struct PalaceCell: View {
                 Spacer(minLength: 0)
                 // 身宮、來因放在天干地支左邊並排（往上疊會太高，把星曜區擠沒）
                 HStack(alignment: .bottom, spacing: 2) {
-                    if p.isBody && settings.showBody {
+                    // iPhone 開轉宮時收起身宮：轉宮名已經佔一行，身宮框再撐寬格子會讓整排寬度跳動
+                    if p.isBody && settings.showBody && !(StarLayout.compact && (level >= 1 || taijiLabel != nil)) {
                         VerticalText("身宮", size: ChartType.tag(fs), color: .wmRed)
                             .padding(.vertical, 3).padding(.horizontal, 1)
                             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.wmRed))
@@ -472,7 +597,7 @@ private struct PalaceCell: View {
                     // 用 overlay 不佔版面高度（星曜區不會被擠小），那個角落平常是空的；每排 3 個、由右往左、比雜曜小一點
                     VStack(spacing: 0) {
                         // 長生十二神：自己一個開關（預設關）
-                        if settings.showChangsheng {
+                        if settings.showChangsheng && !(StarLayout.compact && level >= 1) {
                             VerticalText(p.changsheng, size: ChartType.meta(fs), color: .zText2)
                                 .padding(.bottom, 2)
                         }
@@ -531,6 +656,26 @@ extension PalaceCell {
         Text(t).font(ChartType.font(ChartType.tag(fs), .semibold)).foregroundStyle(c).lineLimit(1).fixedSize()
     }
 
+    /// 每一層一個固定位置（沒有四化就空著），一眼看出是疊在第幾層
+    func mutagenSlots(_ s: Star, _ horo: Horoscope) -> [(Mutagen?, Color)] {
+        layers.map { lv in
+            let m: Mutagen? = lv == 0 ? Mutagen(rawValue: s.mutagen) : ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name)
+            return (m, lv == 0 ? Color.fBirth : Color.fScopes[lv - 1])
+        }
+    }
+
+    /// iPhone：這一宮每顆星的四化方塊（照星曜順序，一層一格），給 MutagenStrip 畫
+    func mutagenColumns(_ p: Palace, _ horo: Horoscope, minor: Bool) -> [[(String, Color)?]] {
+        let showMinor = minor && settings.showMinorMutagen
+        // 每顆星最多 4 格：開小限、合盤時，運限層少顯示幾層（留最近的），不然一路疊到底看不懂
+        let keep = max(1, min(layers.count, 4 - (showMinor ? 1 : 0) - (hepan != nil ? 1 : 0)))
+        return p.stars.map { s in
+            MutagenStrip.boxes(slots: Array(mutagenSlots(s, horo).suffix(keep)),
+                               minor: showMinor ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
+                               hepan: hepan?.mutagen(star: s.name))
+        }
+    }
+
     /// 宮內的流曜（大限、流年）和合盤星
     func extraStars(_ p: Palace, _ horo: Horoscope) -> [(String, Color)] {
         var out: [(String, Color)] = []
@@ -548,18 +693,26 @@ extension PalaceCell {
     func fittedStars(p: Palace, horo: Horoscope, minor: Bool) -> some View {
         GeometryReader { g in
             let c = fitChoice(p, horo: horo, minor: minor, w: g.size.width, h: g.size.height)
-            starFlow(p: p, horo: horo, minor: minor, f: fs * c.0, adjF: ChartType.adj(fs) * c.1, wrap: c.2)
+            starFlow(p: p, horo: horo, minor: minor, f: fs * c.0, adjF: StarLayout.adjBase(fs) * c.1, wrap: c.2)
+                // 量出來跟實際排版差一點點時，多出來的寬度往右溢（被裁掉的是最後的雜曜），不要置中把左邊的主星切掉
+                .frame(width: g.size.width, height: g.size.height, alignment: .topLeading)
         }
     }
 
+    #if os(iOS)
+    /// iPhone 照文墨天機：所有星曜同一個字級、整排一起縮，永遠不換行（Jean：寧願字窄一點小一點）
+    private static let fitCandidates: [(CGFloat, CGFloat, Bool)] =
+        [1.0, 0.93, 0.86, 0.8, 0.74, 0.68, 0.63, 0.58, 0.54, 0.5, 0.46].map { ($0, $0, false) }
+    #else
     // 星曜一律不換行（Jean：寧願變小）：放不下就一階一階縮——先縮雜曜、主星縮得慢，主星最小 70%、雜曜最小 46%
     private static let fitCandidates: [(CGFloat, CGFloat, Bool)] =
         [(1.0, 1.0), (1.0, 0.9), (1.0, 0.82), (0.94, 0.76), (0.9, 0.7), (0.86, 0.64),
          (0.82, 0.58), (0.78, 0.54), (0.74, 0.5), (0.7, 0.46)].map { ($0.0, $0.1, false) }
+    #endif
 
     private func fitChoice(_ p: Palace, horo: Horoscope, minor: Bool, w: CGFloat, h: CGFloat) -> (CGFloat, CGFloat, Bool) {
         for c in Self.fitCandidates {
-            let items = itemSizes(p, horo: horo, minor: minor, f: fs * c.0, adjF: ChartType.adj(fs) * c.1)
+            let items = itemSizes(p, horo: horo, minor: minor, f: fs * c.0, adjF: StarLayout.adjBase(fs) * c.1)
             if Self.fits(items, w: w, h: h, wrap: c.2) { return c }
         }
         return Self.fitCandidates.last!
@@ -578,15 +731,15 @@ extension PalaceCell {
             }
             if showMinorMutagen, ZW.mutagen(in: horo.age.mutagen, star: star.name) != nil { n += 1 }
             if hepan?.mutagen(star: star.name) != nil { n += 1 }
-            let size: CGFloat = n > 3 ? 1.06 : 1.22
+            let size = StarLayout.boxScale(n)
             let name = TextMeasure.size(VerticalText.join(star.name), ChartType.star(f), bold: star.type == "major")
-            let bright = TextMeasure.size(star.brightness.isEmpty ? " " : star.brightness, ChartType.meta(f))
+            let bright = TextMeasure.size(star.brightness.isEmpty ? " " : star.brightness, StarLayout.compact ? f * 0.68 : ChartType.meta(f))
             let boxes = n > 0 ? CGFloat(n) * f * size + CGFloat(n - 1) : 0
-            out.append(CGSize(width: max(f * 1.18, n > 0 ? f * size : 0), height: name.height + 2 + 0.5 + bright.height + 0.5 + boxes))
+            out.append(CGSize(width: max(StarLayout.columnWidth(f), n > 0 ? f * size : 0), height: name.height + 2 + 0.5 + bright.height + 0.5 + boxes))
         }
         let adj = settings.showAdj ? p.adj : []
-        for s in adj where ZW.keyAdjective.contains(s.name) { out.append(TextMeasure.size(VerticalText.join(s.name), ChartType.star(f))) }
-        for s in adj where !ZW.keyAdjective.contains(s.name) { out.append(TextMeasure.size(VerticalText.join(s.name), adjF)) }
+        for s in adj where ZW.keyAdjective.contains(s.name) { out.append(StarLayout.column(TextMeasure.size(VerticalText.join(s.name), ChartType.star(f)), f)) }
+        for s in adj where !ZW.keyAdjective.contains(s.name) { out.append(StarLayout.column(TextMeasure.size(VerticalText.join(s.name), adjF), adjF)) }
         return out
     }
 
@@ -594,14 +747,14 @@ extension PalaceCell {
     private static func fits(_ items: [CGSize], w: CGFloat, h: CGFloat, wrap: Bool) -> Bool {
         let tol: CGFloat = 0.5
         if !wrap {
-            let width = items.reduce(0) { $0 + $1.width } + CGFloat(max(0, items.count - 1))
+            let width = items.reduce(0) { $0 + $1.width } + StarLayout.gap * CGFloat(max(0, items.count - 1))
             return width <= w + tol && (items.map(\.height).max() ?? 0) <= h + tol
         }
         var x: CGFloat = 0, y: CGFloat = 0, lineH: CGFloat = 0
         for it in items {
             if x > 0 && x + it.width > w + tol { x = 0; y += lineH + 4; lineH = 0 }
             if it.width > w + tol { return false }
-            x += it.width + 1; lineH = max(lineH, it.height)
+            x += it.width + StarLayout.gap; lineH = max(lineH, it.height)
         }
         return y + lineH <= h + tol
     }
@@ -609,9 +762,9 @@ extension PalaceCell {
     @ViewBuilder
     func starFlow(p: Palace, horo: Horoscope, minor: Bool, f: CGFloat, adjF: CGFloat, wrap: Bool) -> some View {
         if wrap {
-            FlowLayout(spacing: 1, lineSpacing: 4) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
+            FlowLayout(spacing: StarLayout.gap, lineSpacing: 4) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
         } else {
-            HStack(alignment: .top, spacing: 1) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
+            HStack(alignment: .top, spacing: StarLayout.gap) { starItems(p: p, horo: horo, minor: minor, f: f, adjF: adjF) }
                 .fixedSize()
         }
     }
@@ -626,19 +779,19 @@ extension PalaceCell {
                            minor: showMinorMutagen ? ZW.mutagen(in: horo.age.mutagen, star: s.name) : nil,
                            hepanMut: hepan?.mutagen(star: s.name),
                            // 每一層一個固定位置（沒有四化就空著），一眼看出是疊在第幾層
-                           slots: layers.map { lv in
-                               let m: Mutagen? = lv == 0 ? Mutagen(rawValue: s.mutagen) : ZW.mutagen(in: horo.scope(lv).mutagen, star: s.name)
-                               return (m, lv == 0 ? Color.fBirth : Color.fScopes[lv - 1])
-                           })
+                           slots: mutagenSlots(s, horo),
+                           showBoxes: !StarLayout.compact)
             }
             // 重要雜曜（紅鸞、天喜、咸池、天姚、天刑）用主星字級排在前面，其他雜曜小字
             let adj = settings.showAdj ? p.adj : []
             ForEach(adj.filter { ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
                 VerticalText(s.name, size: ChartType.star(f), color: settings.tone(.misc).color)
+                    .frame(width: StarLayout.columnWidth(f))
                     .starHoverArea(s.name, palace: p.name)
             }
             ForEach(adj.filter { !ZW.keyAdjective.contains($0.name) }, id: \.name) { s in
                 VerticalText(s.name, size: adjF, color: settings.tone(.misc).color)
+                    .frame(width: StarLayout.columnWidth(adjF))
                     .starHoverArea(s.name, palace: p.name)
             }
     }
@@ -654,40 +807,38 @@ private struct StarColumn: View {
     let minor: Mutagen?  // 小限四化
     var hepanMut: Mutagen? = nil   // 合盤：對方年干的四化
     let slots: [(Mutagen?, Color)]  // 目前顯示的每一層（由小到大）：這顆星在那一層的四化，沒有就 nil
+    var showBoxes = true            // false：只畫星名＋亮度，四化方塊由 MutagenStrip 統一畫（iPhone）
 
     var body: some View {
         let tone = settings.starTone(type: star.type)
         let list = boxes
-        let size: CGFloat = list.count > 3 ? 1.06 : 1.22   // 四化方塊放大一點，比星名更醒目
+        let size = StarLayout.boxScale(list.count)   // Mac 四化方塊放大一點比星名醒目；iPhone 跟一欄一樣寬（照文墨天機）
         // 星名下同一直排：生年 → 大限 → 流年 → 小限 → 流月…（最多三層＋小限）
         VStack(spacing: 0.5) {
             VerticalText(star.name, size: ChartType.star(fs), color: fly != nil ? .zOnColor : tone.color,
                          weight: star.type == "major" ? .semibold : .regular)
                 .padding(.vertical, 1)
-                .frame(width: fs * 1.18)
+                .frame(width: StarLayout.columnWidth(fs))
                 .background(fly?.fill ?? .clear)
                 // 滑鼠停在星名上：回報位置給盤面顯示小卡
                 .starHoverArea(star.name, palace: palaceName)
             Text(star.brightness.isEmpty ? " " : star.brightness)
-                .font(ChartType.font(ChartType.meta(fs)))
+                // iPhone：亮度跟著星名一起縮（meta 有最小 8pt，星多縮小時亮度會把主星那欄撐寬、間距不一致）
+                .font(ChartType.font(StarLayout.compact ? fs * 0.68 : ChartType.meta(fs)))
                 .foregroundStyle(Color.zText2)
+                .lineLimit(1)
+            if showBoxes {
             VStack(spacing: 1) {
                 ForEach(Array(list.enumerated()), id: \.offset) { _, b in
                     if let b { box(b.0, fill: b.1, size: size) } else { Color.clear.frame(width: fs * size, height: fs * size) }
                 }
             }
+            }
         }
-        .frame(minWidth: fs * 1.18)
+        .frame(minWidth: StarLayout.columnWidth(fs))
     }
 
-    /// 方塊清單：每一層固定一格（沒有四化的層留空白，最後面的空白不用留），再接小限、合盤
-    private var boxes: [(String, Color)?] {
-        var b: [(String, Color)?] = slots.map { m, c in m.map { ($0.rawValue, c) } }
-        while let last = b.last, last == nil { b.removeLast() }
-        if let minor { b.append((minor.rawValue, .fMinor)) }
-        if let hepanMut { b.append((hepanMut.rawValue, .fHepan)) }   // 合四化放最後（方塊用 fHepan，比文字用的 wmEarth 沉）
-        return b
-    }
+    private var boxes: [(String, Color)?] { MutagenStrip.boxes(slots: slots, minor: minor, hepan: hepanMut) }
 
     private func box(_ t: String, fill: Color, size: CGFloat = 1.12) -> some View {
         Text(t)
@@ -821,7 +972,8 @@ private struct CenterInfo: View {
                     }
                 }
 
-                // 點選宮位的宮干飛化（一行）
+                // 點選宮位的宮干飛化（一行）；iPhone 中宮窄，照文墨天機不寫
+                if !StarLayout.compact {
                 HStack(spacing: 6) {
                     Text("\(chart.palaces[selected].name)\(chart.palaces[selected].stem)干：")
                         .font(ChartType.font(ChartType.centerSmall(fs))).foregroundStyle(Color.zText2)
@@ -831,13 +983,14 @@ private struct CenterInfo: View {
                     }
                 }
                 .lineLimit(1).minimumScaleFactor(0.7)
+                }
                 HStack(spacing: 4) {
                     ForEach(Mutagen.allCases, id: \.self) { m in
                         Text(m.rawValue).font(ChartType.font(ChartType.centerSmall(fs))).foregroundStyle(Color.zOnColor)
                             .padding(.horizontal, 3).background(m.fill)
                     }
                     Text("自化：↑離心 ↓向心").font(ChartType.font(ChartType.meta(fs))).foregroundStyle(Color.zText3)
-                    if let taiji {
+                    if let taiji, !StarLayout.compact {
                         Button(action: onClearTaiji) {
                             Label("轉宮：\(chart.palaces[taiji].name)為命", systemImage: "xmark")
                                 .font(ChartType.font(ChartType.meta(fs)))
@@ -848,7 +1001,7 @@ private struct CenterInfo: View {
                         .buttonStyle(.plain)
                         .padding(.leading, 4)
                     }
-                    if level > 0 {
+                    if level > 0 && !StarLayout.compact {
                         Button(action: onResetLevel) {
                             Label("回本命盤", systemImage: "arrow.uturn.backward")
                                 .font(ChartType.font(ChartType.meta(fs)))
@@ -858,6 +1011,18 @@ private struct CenterInfo: View {
                         .buttonStyle(.plain)
                         .padding(.leading, 4)
                     }
+                }
+                // iPhone 中宮窄：轉宮另起一行（跟四化圖例擠同一排會被擠成直的）
+                if let taiji, StarLayout.compact {
+                    Button(action: onClearTaiji) {
+                        Label("轉宮：\(chart.palaces[taiji].name)為命", systemImage: "xmark")
+                            .font(ChartType.font(ChartType.meta(fs)))
+                            .foregroundStyle(Color.zAccent)
+                            .lineLimit(1).fixedSize()
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .background(Capsule().fill(Color.zAccent.opacity(0.12)))
+                    }
+                    .buttonStyle(.plain)
                 }
                 // 層級開關：本・限・年・月・日・時（最多同時顯示三層），旁邊小限另外開關；跟中宮資訊一起置中
                 if level >= 1 { layerBar.padding(.top, fs * 0.5) }
@@ -1002,16 +1167,16 @@ enum TextMeasure {
         let key = "\(s)|\(pt)|\(bold)"
         if let v = cache[key] { return v }
         // 跟 ChartType.font 一樣的粗細（粗體實際用 medium）
-        let font = NSFont.systemFont(ofSize: pt, weight: bold ? .medium : .regular)
+        let font = PlatformFont.systemFont(ofSize: pt, weight: bold ? .medium : .regular)
         let r = (s as NSString).boundingRect(with: CGSize(width: 10_000, height: 10_000),
-                                             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font])
+                                             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font], context: nil)
         let v = CGSize(width: ceil(r.width), height: ceil(r.height))
         cache[key] = v
         return v
     }
 }
 
-/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 24pt 再彈回；被夾的宮位本身不動
+/// 夾宮的「撞一下」：兩個鄰宮往被夾的宮位撞進來 20pt 再彈回；被夾的宮位本身不動
 private struct ClampSqueeze: ViewModifier {
     let on: Bool
     let index: Int
@@ -1021,6 +1186,116 @@ private struct ClampSqueeze: ViewModifier {
     func body(content: Content) -> some View {
         let isNeighbor = on && (index == (selected + 11) % 12 || index == (selected + 1) % 12)
         let d = isNeighbor ? ClampOverlay.side(selected: selected, neighbor: index) : (dx: 0, dy: 0)
-        return content.offset(x: -d.dx * 24 * amount, y: -d.dy * 24 * amount)
+        return content.offset(x: -d.dx * 20 * amount, y: -d.dy * 20 * amount)
+    }
+}
+
+/// 宮格四個角：整個矩形挖掉一個圓角矩形（even-odd 填色），用頁面底色蓋住方格露出的角
+private struct GridCorners: Shape {
+    let radius: CGFloat
+    func path(in r: CGRect) -> Path {
+        var p = Path(r)
+        p.addRoundedRect(in: r, cornerSize: CGSize(width: radius, height: radius), style: .continuous)
+        return p
+    }
+}
+
+/// 星曜一欄的寬度與欄距：Mac 每欄多留一點（1.18 倍字寬、欄距 1）；
+/// iPhone 照文墨天機一欄剛好一個字寬、欄距 0，雜曜跟主星同一個字級
+enum StarLayout {
+    #if os(iOS)
+    /// iPhone：照文墨天機的精簡版面
+    static let compact = true
+    static let gap: CGFloat = 0
+    static func columnWidth(_ f: CGFloat) -> CGFloat { f }   // 一欄剛好一個字寬，主星跟雜曜之間沒有空隙
+    static func adjBase(_ fs: CGFloat) -> CGFloat { ChartType.star(fs) }
+    #else
+    static let compact = false
+    static let gap: CGFloat = 1
+    static func columnWidth(_ f: CGFloat) -> CGFloat { f * 1.18 }
+    static func adjBase(_ fs: CGFloat) -> CGFloat { ChartType.adj(fs) }
+    #endif
+    /// 角落宮位：靠宮格外角的那個角切成圓角（跟宮格外框同半徑）
+    static func cornerShape(r: Int, c: Int, rounded: Bool) -> UnevenRoundedRectangle {
+        let k: CGFloat = rounded ? 12 : 0
+        return UnevenRoundedRectangle(topLeadingRadius: r == 0 && c == 0 ? k : 0, bottomLeadingRadius: r == 3 && c == 0 ? k : 0,
+                                      bottomTrailingRadius: r == 3 && c == 3 ? k : 0, topTrailingRadius: r == 0 && c == 3 ? k : 0,
+                                      style: .continuous)
+    }
+    /// iPhone 四化方塊的固定大小（相對宮格基準字級，不跟著星名縮）
+    static let boxBase: CGFloat = 1.15
+    /// 四化方塊相對字級的大小（n＝這顆星有幾個方塊）
+    static func boxScale(_ n: Int) -> CGFloat {
+        #if os(iOS)
+        1.0
+        #else
+        n > 3 ? 1.06 : 1.22
+        #endif
+    }
+    /// 雜曜量出來的大小換成一欄的寬度（跟畫出來的 frame 一致，量和畫才不會差一點）
+    static func column(_ s: CGSize, _ f: CGFloat) -> CGSize { CGSize(width: max(s.width, columnWidth(f)), height: s.height) }
+}
+
+/// 四化方塊列（iPhone，照文墨天機）：方塊固定大小、不跟著星名縮小。
+/// 每顆星的方塊從那顆星底下往下疊（一層一格，沒有四化的層留空）；
+/// 方塊比欄寬、相鄰兩顆都有時稍微疊在一起（最多蓋掉前一個約一半，字要露得出來），不整個挪到別顆星底下。
+struct MutagenStrip: View {
+    let columns: [[(String, Color)?]]   // 每顆星（照星曜順序）的方塊；空陣列＝這顆星沒有
+    let starWidth: CGFloat              // 一顆星的欄寬（0＝星曜換行了，方塊直接從左邊依序排）
+    let size: CGFloat
+    let maxWidth: CGFloat
+
+    /// 方塊清單：每一層固定一格（沒有四化的層留空白，最後面的空白不用留），再接小限、合盤
+    static func boxes(slots: [(Mutagen?, Color)], minor: Mutagen?, hepan: Mutagen?) -> [(String, Color)?] {
+        var b: [(String, Color)?] = slots.map { m, c in m.map { ($0.rawValue, c) } }
+        while let last = b.last, last == nil { b.removeLast() }
+        if let minor { b.append((minor.rawValue, .fMinor)) }
+        if let hepan { b.append((hepan.rawValue, .fHepan)) }   // 合四化放最後（方塊用 fHepan，比文字用的 wmEarth 沉）
+        return b
+    }
+
+    var body: some View {
+        let placed = placement
+        let height = placed.map { CGFloat($0.boxes.count) * (size + 1) }.max() ?? 0
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(placed.enumerated()), id: \.offset) { _, it in
+                VStack(spacing: 1) {
+                    ForEach(Array(it.boxes.enumerated()), id: \.offset) { _, b in
+                        if let b {
+                            Text(b.0)
+                                .font(ChartType.font(size * 0.8))
+                                .foregroundStyle(Color.zOnColor)
+                                .frame(width: size, height: size)
+                                .background(b.1)
+                        } else {
+                            Color.clear.frame(width: size, height: size)
+                        }
+                    }
+                }
+                .offset(x: it.x)
+            }
+        }
+        .frame(width: maxWidth, height: height, alignment: .topLeading)
+        .allowsHitTesting(false)
+    }
+
+    /// 每顆星方塊的 x：對齊自己的星；疊到前一顆時往右挪到最多蓋掉它一半；不超出宮格
+    private var placement: [(x: CGFloat, boxes: [(String, Color)?])] {
+        var out: [(x: CGFloat, boxes: [(String, Color)?])] = []
+        var seq: CGFloat = 0
+        var prev: CGFloat?
+        for (i, col) in columns.enumerated() where !col.isEmpty {
+            var x: CGFloat
+            if starWidth > 0 {
+                x = CGFloat(i) * starWidth
+                if let prev { x = max(x, prev + size * 0.4) }   // 疊多一點，方塊靠近自己的星
+                x = min(x, max(0, maxWidth - size))
+                prev = x
+            } else {
+                x = seq; seq += size + 1
+            }
+            out.append((x, col))
+        }
+        return out
     }
 }
