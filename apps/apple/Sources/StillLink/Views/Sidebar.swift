@@ -589,12 +589,9 @@ struct PullToRefresh: ViewModifier {
                     else if armed && y <= 2 { armed = false; Task { await sync.refresh() } }
                 }
                 .overlay(alignment: .top) {
+                    // 內容頂端原本在捲動區往下 14pt（ChartScreen 的 padding），被拉開 pull 那麼多：箭頭放在空隙正中間
                     if pull > 4 && !sync.refreshing {
-                        Image(systemName: armed ? "arrow.clockwise" : "arrow.down")
-                            .font(Font.zIconBold).foregroundStyle(Color.zText3)
-                            .opacity(min(1, pull / 60))
-                            .padding(.top, 10)
-                            .allowsHitTesting(false)
+                        RefreshArrow(progress: pull / 60, armed: armed).offset(y: 14 + pull / 2 - RefreshArrow.size / 2)
                     }
                 }
         } else {
@@ -617,12 +614,10 @@ struct DragToRefresh: ViewModifier {
         content
             .offset(y: min(70, dy * 0.4))
             .overlay(alignment: .top) {
+                // 內容往下移了 min(70, dy×0.4)：箭頭放在拉開的空隙正中間（跟兩指下拉同一個位置算法）
                 if dy > 8 {
-                    Image(systemName: dy > trigger ? "arrow.clockwise" : "arrow.down")
-                        .font(Font.zIconBold).foregroundStyle(Color.zText3)
-                        .opacity(min(1, dy / trigger))
-                        .offset(y: min(70, dy * 0.4) / 2 - 14)
-                        .allowsHitTesting(false)
+                    RefreshArrow(progress: dy / trigger, armed: dy > trigger)
+                        .offset(y: min(70, dy * 0.4) / 2 - RefreshArrow.size / 2)
                 }
             }
             .simultaneousGesture(DragGesture(minimumDistance: 12)
@@ -635,5 +630,20 @@ struct DragToRefresh: ViewModifier {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dy = 0 }
                     if fire { Task { await sync.refresh() } }
                 }, including: on ? .all : .subviews)
+    }
+}
+
+/// 下拉更新的箭頭（兩指下拉、按住拖共用）：拉的時候 ↓ 慢慢浮現，拉夠了變 ↻
+struct RefreshArrow: View {
+    static let size: CGFloat = 16
+    var progress: CGFloat
+    var armed: Bool
+    var body: some View {
+        Image(systemName: armed ? "arrow.clockwise" : "arrow.down")
+            .font(Font.zIconBold).foregroundStyle(Color.zText3)
+            .frame(width: Self.size, height: Self.size)
+            .opacity(min(1, progress))
+            .animation(Motion.fast, value: armed)
+            .allowsHitTesting(false)
     }
 }
