@@ -94,6 +94,7 @@ extension ZW.Wuxing {
 
 extension Color {
     /// 色塊上的文字（四化方塊、強調色按鈕）
+    static var zDanger: Color { mJi }                  // 錯誤、失敗狀態：跟化忌同一個紅（不另開新色）
     static let zOnColor = Color.white
     /// 彈窗背景模糊上的暗化
     static let zScrim = Color.black.opacity(0.12)

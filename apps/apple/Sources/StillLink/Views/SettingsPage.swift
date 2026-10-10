@@ -238,11 +238,11 @@ struct SettingsPage: View {
             note("登入後，命盤、備註、照片、頭貼和設定會自動同步到你的帳號，換電腦或用手機版登入同一個帳號就能看到。")
             if let ses = account.session {
                 row("目前帳號", [ses.email, ses.provider.map { $0 == "apple" ? "Apple" : $0 == "google" ? "Google" : $0 }].compactMap { $0 }.joined(separator: " · ")) {
-                    HStack { Spacer(); Label("已登入", systemImage: "checkmark.icloud").font(Font.zCallout).foregroundStyle(Color.zAccent) }
+                    HStack { Spacer(); SyncStatusLabel(sync: sync) }
                 }
                 // 登入後自動同步（開 App、回到前景、改資料後幾秒），平常不用顯示；失敗才出現讓人重試
                 if let e = sync.lastError {
-                    row("同步失敗", e) {
+                    row("重新同步", e) {
                         HStack { Spacer(); Button { Task { await sync.syncNow() } } label: { Label(sync.syncing ? "同步中…" : "重試", systemImage: "arrow.triangle.2.circlepath") }
                             .buttonStyle(ZSecondaryButton(small: true)).disabled(sync.syncing) }
                     }
@@ -732,5 +732,31 @@ struct SettingMenu: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
+    }
+}
+
+/// 帳號列右邊的同步狀態：平常是灰字「已同步 · 剛剛」讓人安心；同步中顯示「同步中…」；失敗才用紅字
+/// （主色星橘留給可以按的東西，狀態不用它）
+private struct SyncStatusLabel: View {
+    @ObservedObject var sync: CloudSync
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { ctx in
+            let (text, icon, color): (String, String, Color) =
+                sync.syncing ? ("同步中…", "arrow.triangle.2.circlepath.icloud", Color.zText2)
+                : sync.lastError != nil ? ("同步失敗", "exclamationmark.icloud", Color.zDanger)
+                : sync.lastSync.map { ("已同步 · \(Self.ago($0, now: ctx.date))", "checkmark.icloud", Color.zText2) }
+                    ?? ("等待第一次同步", "icloud", Color.zText3)
+            Label(text, systemImage: icon).font(Font.zCallout).foregroundStyle(color)
+                .contentTransition(.opacity).animation(Motion.fast, value: text)
+        }
+    }
+    /// 剛剛／3 分鐘前／2 小時前／10月9日
+    static func ago(_ d: Date, now: Date) -> String {
+        let s = now.timeIntervalSince(d)
+        if s < 60 { return "剛剛" }
+        if s < 3600 { return "\(Int(s / 60)) 分鐘前" }
+        if s < 86400 { return "\(Int(s / 3600)) 小時前" }
+        let c = Calendar.current.dateComponents([.month, .day], from: d)
+        return "\(c.month ?? 0)月\(c.day ?? 0)日"
     }
 }
