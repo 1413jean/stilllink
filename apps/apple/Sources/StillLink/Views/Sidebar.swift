@@ -133,7 +133,6 @@ struct Sidebar: View {
                 .padding(.top, 6)
                 .padding(.bottom, 12)
             }
-            .modifier(PullToRefresh())
             AccountBar()
         }
         .dimmedBlur()
