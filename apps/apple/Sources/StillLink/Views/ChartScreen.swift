@@ -1,20 +1,5 @@
 import SwiftUI
 
-/// 運限選擇（預設大限）：level 0 本命、1 大限、2 流年、3 流月、4 流日、5 流時；年月日都是農曆
-struct Pick: Equatable, Hashable {
-    var level = 1
-    var year: Int
-    var lm: Int
-    var ld: Int
-    var hour: Int
-
-    static func today() -> Pick {
-        let c = Calendar.current.dateComponents([.year, .month, .day, .hour], from: Date())
-        let l = Lunar.toLunar(c.year!, c.month!, c.day!)
-        return Pick(year: l.year, lm: l.month, ld: l.day, hour: SolarTime.shichen(c.hour!) % 12)
-    }
-}
-
 /// 首頁：以當下時間排盤（不存檔）
 struct NowChart: View {
     @AppStorage("nowGender") private var gender: Gender = .male
@@ -30,7 +15,7 @@ struct NowChart: View {
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
     }
 
-    static let id = UUID(uuidString: "00000000-0000-0000-0000-00000000A0A0")!
+    static let id = Person.nowID
 }
 
 /// 盤面寬度上限（約文墨天機的比例）
@@ -387,62 +372,6 @@ private struct AIComposer: View {
         .background(RoundedRectangle(cornerRadius: 18).fill(Color.zCard))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.zLine))
         .shadow(color: Color.zShadow, radius: 18, y: 6)
-    }
-}
-
-/// 載入中的盤面骨架
-struct BoardSkeleton: View {
-    var body: some View {
-        GeometryReader { geo in
-            let m: CGFloat = 18
-            let cw = (geo.size.width - m * 2) / 4
-            let ch = (geo.size.height - m * 2) / 4
-            ZStack(alignment: .topLeading) {
-                ForEach(0..<12, id: \.self) { i in
-                    let (r, c) = ZW.grid[i]
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 4) {
-                            ForEach(0..<4, id: \.self) { _ in RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 0.09, height: ch * 0.28) }
-                        }
-                        Spacer()
-                        RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 0.55, height: 8)
-                        HStack {
-                            RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 0.22, height: ch * 0.18)
-                            Spacer()
-                            RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 0.12, height: ch * 0.24)
-                        }
-                    }
-                    .padding(8)
-                    .frame(width: cw, height: ch)
-                    .overlay(Rectangle().stroke(Color.zLine, lineWidth: 0.5))
-                    .offset(x: m + CGFloat(c) * cw, y: m + CGFloat(r) * ch)
-                }
-                VStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 4).fill(Color.zHover).frame(width: cw * 0.7, height: 16)
-                    ForEach(0..<4, id: \.self) { _ in RoundedRectangle(cornerRadius: 3).fill(Color.zHover).frame(width: cw * 1.2, height: 9) }
-                }
-                .frame(width: cw * 2, height: ch * 2)
-                .offset(x: m + cw, y: m + ch)
-            }
-        }
-        .shimmer()
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.zCard))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
-    }
-}
-
-extension View {
-    /// 骨架的呼吸動畫
-    func shimmer() -> some View { modifier(Shimmer()) }
-}
-
-private struct Shimmer: ViewModifier {
-    @State private var on = false
-    func body(content: Content) -> some View {
-        content
-            .opacity(on ? 0.55 : 1)
-            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: on)
-            .onAppear { on = true }
     }
 }
 

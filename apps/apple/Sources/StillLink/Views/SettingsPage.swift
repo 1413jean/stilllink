@@ -11,6 +11,9 @@ struct SettingsPage: View {
     @State private var doc: LegalDoc?        // 關於 → 隱私權政策／使用條款／刪除資料
     @State private var nameDraft = ""
     @State private var confirmErase = false
+    @ObservedObject private var account = Account.shared
+    @ObservedObject private var sync = CloudSync.shared
+    @State private var confirmDeleteAccount = false
     @ObservedObject private var updater = AppUpdater.shared
 
     /// 設定窗開著時，盤面上的捲動攔截（運限表）要讓開
@@ -232,19 +235,51 @@ struct SettingsPage: View {
             }
             toggle("在側欄顯示我的命盤", "關閉後側欄不會出現「我」", $store.showSelfInSidebar, last: true)
         case .account:
-            note("登入後，命盤、備註、照片、頭貼和設定都會存在你的帳號，換電腦或之後用手機版登入同一個帳號就能看到。")
-            row("目前狀態", "尚未登入，資料只存在這台 Mac") {
-                HStack { Spacer(); Label("本機", systemImage: "laptopcomputer").font(Font.zCallout).foregroundStyle(Color.zText2) }
+            note("登入後，命盤、備註、照片、頭貼和設定會自動同步到你的帳號，換電腦或用手機版登入同一個帳號就能看到。")
+            if let ses = account.session {
+                row("目前帳號", [ses.email, ses.provider.map { $0 == "apple" ? "Apple" : $0 == "google" ? "Google" : $0 }].compactMap { $0 }.joined(separator: " · ")) {
+                    HStack { Spacer(); Label("已登入", systemImage: "checkmark.icloud").font(Font.zCallout).foregroundStyle(Color.zAccent) }
+                }
+                // 登入後自動同步（開 App、回到前景、改資料後幾秒），平常不用顯示；失敗才出現讓人重試
+                if let e = sync.lastError {
+                    row("同步失敗", e) {
+                        HStack { Spacer(); Button { Task { await sync.syncNow() } } label: { Label(sync.syncing ? "同步中…" : "重試", systemImage: "arrow.triangle.2.circlepath") }
+                            .buttonStyle(ZSecondaryButton(small: true)).disabled(sync.syncing) }
+                    }
+                }
+                row("登出", "只登出這台 Mac；本機的命盤保留，之後再登入會自動合併") {
+                    HStack { Spacer(); Button("登出") { account.signOut(); Toast.show("已登出") }.buttonStyle(ZSecondaryButton(small: true)) }
+                }
+                row("刪除帳號", "連同雲端上的命盤、照片一起刪除；這台 Mac 上的資料保留", last: true) {
+                    HStack { Spacer(); Button(role: .destructive) { confirmDeleteAccount = true } label: { Label("刪除帳號…", systemImage: "trash") }
+                        .buttonStyle(ZSecondaryButton(small: true)) }
+                }
+                Color.clear.frame(height: 0)
+                    .alert("刪除帳號？", isPresented: $confirmDeleteAccount) {
+                        Button("取消", role: .cancel) {}
+                        Button("刪除帳號與雲端資料", role: .destructive) {
+                            Task {
+                                do { try await account.deleteAccount(); Toast.show("帳號已刪除") }
+                                catch { Toast.show((error as? LocalizedError)?.errorDescription ?? "刪除失敗") }
+                            }
+                        }
+                    } message: {
+                        Text("雲端上的命盤、照片會一起刪除，無法復原。")
+                    }
+            } else {
+                row("目前狀態", "尚未登入，資料只存在這台 Mac") {
+                    HStack { Spacer(); Label("本機", systemImage: "laptopcomputer").font(Font.zCallout).foregroundStyle(Color.zText2) }
+                }
+                row("使用 Apple 登入", "Sign in with Apple") {
+                    HStack { Spacer(); Button { signIn(.apple) } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
+                        .buttonStyle(ZSecondaryButton(small: true)).disabled(account.signingIn) }
+                }
+                row("使用 Google 登入", "Google 帳號", last: true) {
+                    HStack { Spacer(); Button { signIn(.google) } label: { Label("使用 Google 登入", systemImage: "g.circle") }
+                        .buttonStyle(ZSecondaryButton(small: true)).disabled(account.signingIn) }
+                }
+                if !CloudConfig.isConfigured { note("雲端同步還在準備中：登入按鈕先放好，資料目前都存在本機，不會遺失。") }
             }
-            row("使用 Apple 登入", "Sign in with Apple") {
-                HStack { Spacer(); Button { Toast.show("雲端同步還在準備中，資料目前存在本機") } label: { Label("使用 Apple 登入", systemImage: "apple.logo") }
-                    .buttonStyle(ZSecondaryButton(small: true)) }
-            }
-            row("使用 Google 登入", "Google 帳號", last: true) {
-                HStack { Spacer(); Button { Toast.show("雲端同步還在準備中，資料目前存在本機") } label: { Label("使用 Google 登入", systemImage: "g.circle") }
-                    .buttonStyle(ZSecondaryButton(small: true)) }
-            }
-            note("雲端同步還在準備中：登入按鈕先放好，資料目前都存在本機，不會遺失。")
         case .chart:
             row("安星派別", "影響部分雜曜與流曜的安法") {
                 SettingSegment(options: [(.standard, "斗數全書"), (.zhongzhou, "中州派")], selection: s.algorithm)
@@ -495,6 +530,15 @@ struct SettingsPage: View {
 
     private func note(_ t: String) -> some View {
         SettingNote(text: t)
+    }
+
+    private func signIn(_ p: Account.Provider) {
+        guard CloudConfig.isConfigured else { Toast.show("雲端同步還在準備中，資料目前存在本機"); return }
+        Task {
+            do { try await account.signIn(p); Toast.show("已登入，正在同步") }
+            catch Account.Failure.cancelled {}
+            catch { Toast.show((error as? LocalizedError)?.errorDescription ?? "登入失敗") }
+        }
     }
 
     private func row<C: View>(_ t: String, _ n: String, last: Bool = false, @ViewBuilder _ control: () -> C) -> some View {

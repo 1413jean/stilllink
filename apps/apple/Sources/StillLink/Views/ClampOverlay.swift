@@ -14,6 +14,7 @@ struct ClampOverlay: View {
     @State private var shown = false     // 衝到交界線上了
     @State private var snapped = false   // 吸附：變色、彈一下、震波
     @State private var ring = false      // 震波擴散
+    @State private var rest = false      // 撞完一陣子：iPhone 上淡下來，不擋字
 
     private var color: Color { clamps.contains { !$0.good } ? Color.mJi : Color.mLu }
 
@@ -33,6 +34,9 @@ struct ClampOverlay: View {
                 withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) { snapped = true }   // 阻尼高：吸附時只輕輕一彈，不晃
                 withAnimation(.easeOut(duration: 0.55)) { ring = true }
             }
+            if StarLayout.compact {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { withAnimation(.easeOut(duration: 0.4)) { rest = true } }
+            }
         }
     }
 
@@ -51,7 +55,8 @@ struct ClampOverlay: View {
         let cy = d.dy < 0 ? s.minY : d.dy > 0 ? s.maxY : s.midY
         // 箭頭方向：從鄰宮指向被夾的宮位（右＝0°）
         let angle = atan2(-d.dy, -d.dx) * 180 / .pi
-        let h = max(16, fs * 1.2), w = h * 1.55
+        // iPhone 宮格窄：箭頭小一點（約七成），撞完淡成半透明、底色也拿掉，下面的字透得出來
+        let h = StarLayout.compact ? max(12, fs * 0.9) : max(16, fs * 1.2), w = h * 1.55
         let slide: CGFloat = shown ? 0 : (d.dx != 0 ? cw : ch) * 0.18    // 從鄰宮裡面衝過來
         let tint = snapped ? color : Color.zText3                          // 吸附前是灰的
         return ZStack {
@@ -64,12 +69,12 @@ struct ClampOverlay: View {
                 .font(.system(size: h * 0.55, weight: .bold))
                 .foregroundStyle(tint)
                 .frame(width: w, height: h)
-                .background(Capsule().fill(Color.zCard))
-                .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 1))
+                .background(Capsule().fill(Color.zCard).opacity(rest ? 0 : 1))
+                .overlay(Capsule().stroke(tint.opacity(0.35), lineWidth: 1).opacity(rest ? 0 : 1))
                 .scaleEffect(snapped ? 1 : 0.94)
         }
         .rotationEffect(.degrees(angle))
-        .opacity(shown ? 1 : 0)
+        .opacity(shown ? (rest ? 0.45 : 1) : 0)
         .offset(x: cx - w / 2 + d.dx * slide, y: cy - h / 2 + d.dy * slide)
     }
 }
@@ -78,6 +83,24 @@ struct ClampOverlay: View {
 /// 從被夾的宮位那一側出發，兩道光像彗星一樣沿外框往兩邊跑（前端亮、尾巴淡、光往內暈一點），在對面會合後淡掉，
 /// 最後只留一條淡淡的靜止框線。只在開頭約 1 秒重畫，跑完就停（不一直動、不耗電）；「減少動態效果」時直接顯示框線
 struct ClampFrameOverlay: View {
+    static let strength: Double = 0.55       // 光跑完留下的靜止框整體濃淡（越小越淡）
+    /// 多邊形轉角用切線圓弧修圓，每個角的半徑由 radius(角的位置) 決定（0＝直角；邊太短時自動縮小）
+    static func rounded(_ pts: [CGPoint], radius: (CGPoint) -> CGFloat) -> Path {
+        var path = Path()
+        guard pts.count > 2 else { path.addLines(pts); path.closeSubpath(); return path }
+        let n = pts.count
+        let mid = CGPoint(x: (pts[n - 1].x + pts[0].x) / 2, y: (pts[n - 1].y + pts[0].y) / 2)
+        path.move(to: mid)
+        for i in 0..<n {
+            let a = pts[i], b = pts[(i + 1) % n], prev = pts[(i - 1 + n) % n]
+            let shortest = min(hypot(a.x - prev.x, a.y - prev.y), hypot(b.x - a.x, b.y - a.y))
+            let r = min(radius(a), shortest / 2)
+            if r > 0 { path.addArc(tangent1End: a, tangent2End: b, radius: r) } else { path.addLine(to: a) }
+        }
+        path.closeSubpath()
+        return path
+    }
+
     let clamps: [Clamp]
     let selected: Int
     let m: CGFloat, cw: CGFloat, ch: CGFloat
@@ -86,8 +109,7 @@ struct ClampFrameOverlay: View {
 
     // 動態參數
     static let duration: Double = 0.95       // 兩道光跑到對面會合的秒數
-    static let tail: CGFloat = 0.2           // 彗星尾巴長度（外框周長的比例）
-    static let strength: Double = 0.55       // 整體濃淡（越小越淡）
+    static let tail: CGFloat = 0.15          // 彗星尾巴長度（外框周長的比例）
 
     @State private var start = Date()
     @State private var done = false
@@ -103,10 +125,15 @@ struct ClampFrameOverlay: View {
                 let freeze = ProcessInfo.processInfo.environment["ZIWEI_CLAMP_T"].flatMap(Double.init)   // 驗證用：定格在第幾秒
                 let t = freeze ?? (done || Motion.reduce ? Self.duration : tl.date.timeIntervalSince(start))
                 let p = min(1, max(0, t / Self.duration))
+                // 靜止的淡框：光跑過去之後才慢慢浮出來
+                // 只有剛好落在宮格外角的轉角修圓（跟 iPhone 宮格外框同半徑），其他轉角維持直角
+                let outer = [CGPoint(x: m, y: m), CGPoint(x: m + cw * 4, y: m), CGPoint(x: m, y: m + ch * 4), CGPoint(x: m + cw * 4, y: m + ch * 4)]
+                let frame = Self.rounded(poly) { pt in
+                    StarLayout.compact && outer.contains { abs($0.x - pt.x) < 0.5 && abs($0.y - pt.y) < 0.5 } ? 12 : 0
+                }
+                // 光跑完留下的靜止框：要看得出來（比一般格線粗、深）
                 let k = Self.strength
-                // 光跑完留下的靜止框：光跑過去之後才慢慢浮出來，要看得出來（比一般格線粗、深）
-                var frame = Path(); frame.addLines(poly); frame.closeSubpath()
-                ctx.stroke(frame, with: .color(color.opacity(0.9 * k * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1.8, lineJoin: .miter))
+                ctx.stroke(frame, with: .color(color.opacity(0.9 * k * min(1, p * 1.4))), style: StrokeStyle(lineWidth: 1.8, lineJoin: .round))
                 guard p < 1 else { return }
                 let track = Track(poly)
                 let s0 = track.nearest(to: center)                       // 從被夾的宮位那一側出發
@@ -124,8 +151,8 @@ struct ClampFrameOverlay: View {
                         // 光比靜止框亮很多：外層寬光暈往兩側暈開，內層亮線
                         var glow = ctx
                         glow.addFilter(.blur(radius: 6))
-                        glow.stroke(seg, with: .color(color.opacity(0.7 * w * fade)), style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                        ctx.stroke(seg, with: .color(color.opacity(w * fade)), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+                        glow.stroke(seg, with: .color(color.opacity(0.45 * w * fade)), style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))   // 特效收斂一點
+                        ctx.stroke(seg, with: .color(color.opacity(0.85 * w * fade)), style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
                     }
                 }
             }

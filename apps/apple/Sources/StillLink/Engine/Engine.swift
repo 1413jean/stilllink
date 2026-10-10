@@ -99,6 +99,7 @@ final class Engine: @unchecked Sendable {
                 }
                 ctx.evaluateScript(src, withSourceURL: url)
             }
+            _apply(ZSettings.stored())
         }
     }
 
@@ -158,15 +159,22 @@ final class Engine: @unchecked Sendable {
 
     /// 套用命盤設定：同步到 iztro、本地四化表，並清掉快取
     func configure(_ s: ZSettings) {
+        queue.sync { _apply(s) }
+    }
+
+    private func _apply(_ s: ZSettings) {
         var cfg = s.iztroConfig
         cfg["fixLeap"] = s.leapSplit
         let json = String(data: try! JSONSerialization.data(withJSONObject: cfg), encoding: .utf8)!
-        queue.sync {
-            ZW.stemMutagen = s.stemMutagen
-            _ = _call("zwConfig", [json])
-            chartCache = [:]
-            horoCache = [:]
-        }
+        ZW.stemMutagen = s.stemMutagen
+        _ = _call("zwConfig", [json])
+        chartCache = [:]
+        horoCache = [:]
+    }
+
+    /// 在背景先把引擎建起來（載 iztro 要一點時間），主執行緒不用等；畫面先顯示骨架
+    static func preload() {
+        DispatchQueue.global(qos: .userInitiated).async { _ = Engine.shared }
     }
 
     /// 開 app 時把所有人的命盤先算好

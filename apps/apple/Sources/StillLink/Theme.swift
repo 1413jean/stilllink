@@ -1,14 +1,21 @@
 import SwiftUI
-import AppKit
 
 /// 設計 token：Claude／Codex 式的暖白與暖黑，亮暗各一組
 extension Color {
     static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
+        #if os(macOS)
         Color(nsColor: NSColor(name: nil) { ap in
             let hex = ap.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
             return NSColor(srgbRed: CGFloat((hex >> 16) & 0xff) / 255, green: CGFloat((hex >> 8) & 0xff) / 255,
                            blue: CGFloat(hex & 0xff) / 255, alpha: 1)
         })
+        #else
+        Color(uiColor: UIColor { t in
+            let hex = t.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: CGFloat((hex >> 16) & 0xff) / 255, green: CGFloat((hex >> 8) & 0xff) / 255,
+                           blue: CGFloat(hex & 0xff) / 255, alpha: 1)
+        })
+        #endif
     }
 
     static let zBg = dynamic(0xF8F8F9, 0x191A1B)        // night/100／1000
@@ -110,8 +117,29 @@ enum ZType: String, CaseIterable {
     case caption2 = "body/body.caption.2"
     case eyebrow = "label/label.eyebrow"
 
-    /// （字級, 行高, 粗體, 字距）— macOS 模式
+    /// （字級, 行高, 粗體, 字距）— Mac 用 macOS 模式、iPhone／iPad 用 iOS 模式（Figma Typography 兩個 mode）
     var spec: (size: CGFloat, lineHeight: CGFloat, strong: Bool, tracking: CGFloat) {
+        #if os(iOS)
+        switch self {
+        case .titleLarge: (34, 41, true, 0)
+        case .title1: (28, 34, true, 0)
+        case .title2: (22, 28, true, 0)
+        case .title3: (20, 25, true, 0)
+        case .headline: (17, 22, true, 0)
+        case .body: (17, 22, false, 0)
+        case .bodyStrong: (17, 22, true, 0)
+        case .callout: (16, 21, false, 0)
+        case .calloutStrong: (16, 21, true, 0)
+        case .subheadline: (15, 20, false, 0)
+        case .subheadlineStrong: (15, 20, true, 0)
+        case .footnote: (13, 18, false, 0)
+        case .footnoteStrong: (13, 18, true, 0)
+        case .caption1: (12, 16, false, 0)
+        case .caption1Strong: (12, 16, true, 0)
+        case .caption2: (11, 13, false, 0)
+        case .eyebrow: (11, 13, true, 1.4)
+        }
+        #else
         switch self {
         case .titleLarge: (32, 38, true, 0)
         case .title1: (22, 28, true, 0)
@@ -131,8 +159,29 @@ enum ZType: String, CaseIterable {
         case .caption2: (9, 12, false, 0)
         case .eyebrow: (10, 12, true, 1.4)
         }
+        #endif
     }
+    /// 「粗」在 macOS 是 Medium、iOS 是 Semibold（Figma 變數 font/weight/strong 依模式不同）
+    #if os(iOS)
+    var font: Font { Font.system(textStyle, weight: spec.strong ? .semibold : .regular) }
+    /// 對應的 Dynamic Type 文字樣式（預設大小跟上面的 iOS 字級一樣）
+    var textStyle: Font.TextStyle {
+        switch self {
+        case .titleLarge: .largeTitle
+        case .title1: .title
+        case .title2: .title2
+        case .title3: .title3
+        case .headline, .body, .bodyStrong: .body
+        case .callout, .calloutStrong: .callout
+        case .subheadline, .subheadlineStrong: .subheadline
+        case .footnote, .footnoteStrong: .footnote
+        case .caption1, .caption1Strong: .caption
+        case .caption2, .eyebrow: .caption2
+        }
+    }
+    #else
     var font: Font { .system(size: spec.size, weight: spec.strong ? .medium : .regular) }
+    #endif
 }
 
 extension View {
@@ -172,7 +221,12 @@ extension Font {
 
 /// 命盤字級：跟著盤面大小縮放，fs 是宮位基準字級（主星大小）
 enum ChartType {
+    #if os(iOS)
+    /// iPhone 宮格窄（約 98pt），用寬度算會落到最小值；照文墨天機手機版約 11pt
     static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
+    #else
+    static func base(cellWidth cw: CGFloat) -> CGFloat { max(11, min(15.5, cw / 11.5)) }
+    #endif
 
     static func star(_ fs: CGFloat) -> CGFloat { fs }                       // 主星、輔星
     static func adj(_ fs: CGFloat) -> CGFloat { max(10.5, fs * 0.94) }      // 雜曜：跟主星差一點點就好
@@ -180,9 +234,17 @@ enum ChartType {
     static func tag(_ fs: CGFloat) -> CGFloat { max(9, fs * 0.8) }         // 四化方塊、運限宮名、自化
     static func gods(_ fs: CGFloat) -> CGFloat { fs * 0.74 }                // 博士／將前／歲前
     static func ages(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.58) }        // 流年／小限歲數
+    #if os(iOS)
+    static func range(_ fs: CGFloat) -> CGFloat { max(8, fs * 0.74) }      // 大限歲數（iPhone 宮格窄：三位數歲數會把天干地支擠出去，小一階）
+    #else
     static func range(_ fs: CGFloat) -> CGFloat { fs * 0.88 }               // 大限歲數
+    #endif
     static func palace(_ fs: CGFloat) -> CGFloat { fs }                     // 宮名
+    #if os(iOS)
+    static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.12 }              // 宮干支（iPhone 宮格窄，小一階才放得下身宮章）
+    #else
     static func ganzhi(_ fs: CGFloat) -> CGFloat { fs * 1.3 }               // 宮干支
+    #endif
     static func centerTitle(_ fs: CGFloat) -> CGFloat { fs * 1.15 }
     static func centerBody(_ fs: CGFloat) -> CGFloat { fs * 0.9 }
     static func centerSmall(_ fs: CGFloat) -> CGFloat { fs * 0.75 }

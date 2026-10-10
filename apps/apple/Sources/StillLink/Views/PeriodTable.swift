@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 /// 文墨天機下方的運限表：大限／流年小限／流月／流日／流時
 struct PeriodTable: View {
@@ -51,7 +53,7 @@ struct PeriodTable: View {
             }
             HStack(spacing: 0) {
                 head("流日")
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 10), spacing: 0) {
+                LazyVGrid(columns: dayColumns, spacing: 0) {
                     ForEach(1...30, id: \.self) { d in
                         cell(ZW.lunarDays[d - 1], j1.map { ZW.ganzhi(ZW.dayIndex(jdn: $0 + d - 1)) }, group: "day", on: d == pick.ld && pick.level >= 4, minW: 0) {
                             pick.level = (d == pick.ld && pick.level == 4) ? 3 : 4; pick.ld = d
@@ -77,15 +79,42 @@ struct PeriodTable: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.zLine))
     }
 
+    /// 表格字級：Mac 照原本；iPhone 的設計系統字級大一號，表格裡降一階才放得下、不會壓迫
+    #if os(iOS)
+    /// iPhone：比設計系統最小字再小一階（11／10／9），一樣跟著動態字體放大；放大到格子放不下就「…」
+    static let headFont = Font(UIFontMetrics(forTextStyle: .caption2).scaledFont(for: .systemFont(ofSize: 11, weight: .semibold)))
+    static let mainFont = Font(UIFontMetrics(forTextStyle: .caption2).scaledFont(for: .systemFont(ofSize: 10)))
+    static let subFont = Font(UIFontMetrics(forTextStyle: .caption2).scaledFont(for: .systemFont(ofSize: 9)))
+    /// 格子寬度固定（字變大時不撐寬，改成截斷）
+    static let cellWidth: CGFloat = 52
+    #else
+    static let headFont = Font.zCalloutStrong
+    static let mainFont = Font.zCaption
+    static let subFont = Font.zMicro
+    #endif
+
+    /// 流日格子：Mac 一排 10 天；iPhone 字級大一號放不下，照寬度自動分欄（約 6 欄 × 5 行），一樣填滿整列
+    private var dayColumns: [GridItem] {
+        #if os(iOS)
+        [GridItem(.adaptive(minimum: 44), spacing: 0)]
+        #else
+        Array(repeating: GridItem(.flexible(), spacing: 0), count: 10)
+        #endif
+    }
+
     private func jdnOf(_ y: Int, _ m: Int) -> Int? {
         Lunar.toSolar(y, m, 1).map { ZW.jdn($0.0, $0.1, $0.2) }
     }
 
     private func head(_ t: String) -> some View {
         Text(t)
-            .font(Font.zCalloutStrong)
+            .font(PeriodTable.headFont)
             .multilineTextAlignment(.center)
+            #if os(iOS)
+            .frame(width: 40)
+            #else
             .frame(width: 52)
+            #endif
             .frame(maxHeight: .infinity)
             .background(Color.zHover)
     }
@@ -113,12 +142,17 @@ struct PeriodTable: View {
             action()   // 選取底色直接跳過去：盤面同時要重畫，滑動動畫會被卡住，看起來反而頓
         } label: {
             VStack(spacing: 1) {
-                Text(main).font(Font.zCaption)
-                if let sub { Text(sub).font(Font.zMicro).opacity(0.7) }
-                if let extra { Text(extra).font(Font.zMicro).foregroundStyle(on ? Color.zBg : Color.minorColor) }
+                Text(main).font(PeriodTable.mainFont).lineLimit(1)
+                if let sub { Text(sub).font(PeriodTable.subFont).opacity(0.7).lineLimit(1) }
+                if let extra { Text(extra).font(PeriodTable.subFont).lineLimit(1).foregroundStyle(on ? Color.zBg : Color.minorColor) }
             }
             .foregroundStyle(on ? Color.zBg : Color.zText)
+            #if os(iOS)
+            .frame(width: minW == 0 ? nil : PeriodTable.cellWidth)
+            .frame(maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 26 : 32)
+            #else
             .frame(minWidth: minW, maxWidth: minW == 0 ? .infinity : nil, minHeight: sub == nil ? 28 : 36)
+            #endif
             .padding(.horizontal, 4)
             .background {
                 if on { Rectangle().fill(Color.zText) }
@@ -127,9 +161,11 @@ struct PeriodTable: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressStyle())
+        .id(on ? AnyHashable("sel") : AnyHashable(group + main))
     }
 }
 
+#if os(macOS)
 /// 可以左右捲的一列（運限表用）
 /// - hover 到這一列時左右出現箭頭按鈕：點一下捲 6 成寬，長按持續捲
 /// - 滑鼠按住左右拖；觸控板左右滑、Shift＋滾輪也可以
@@ -276,3 +312,19 @@ struct PanRow<Content: View>: View {
         }
     }
 }
+#else
+/// iOS：可以左右滑的一列就是原生橫向 ScrollView（手指滑、慣性、回彈都交給系統）
+struct PanRow<Content: View>: View {
+    @Binding var panning: Bool
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 0) { content } }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                // 打開時把選到的格子（例：今天、目前大限）捲進畫面
+                .onAppear { proxy.scrollTo("sel", anchor: .center) }
+        }
+    }
+}
+#endif

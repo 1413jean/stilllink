@@ -1,12 +1,16 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 /// 動態設計 token（參考 GSAP 的原則：out 系 easing、短時長、清單錯開、只動 transform／opacity）
 /// 系統「減少動態效果」打開時，全部改成瞬間切換。
 enum Motion {
     /// 設定裡的「介面動畫」開關
     static var userEnabled = true
-    static var reduce: Bool { !userEnabled || NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+    static var reduce: Bool { !userEnabled || Platform.reduceMotion }
 
     /// hover、按壓等即時回饋（≈ power1.out 0.15s）
     static var fast: Animation? { reduce ? nil : .timingCurve(0.25, 0.46, 0.45, 0.94, duration: 0.15) }
@@ -69,6 +73,12 @@ struct PressStyle: ButtonStyle {
     }
 }
 
+/// 頂部／底部淡出曲線（ease-out）：TopFade 的底色漸層和背景模糊遮罩用同一組，兩層一起消失（Mac、iPhone 共用）
+enum FadeCurve {
+    static let alphas: [CGFloat] = [1, 0.8, 0.45, 0.15, 0]
+    static let stops: [CGFloat] = [0, 0.25, 0.55, 0.8, 1]
+}
+
 /// 視窗頂端（工具列）漸層：底色 100% → 0%，整條寬度
 struct TopFade: View {
     let color: Color   // 背景色：疊在模糊上面做漸層
@@ -81,7 +91,7 @@ struct TopFade: View {
         ZStack {
             BackdropBlur(fadeFromTop: edge == .top)
             // 底色跟背景模糊用同一條緩和曲線一起淡出（BackdropBlur 的 fadeStops），兩層同步、沒有交界
-            LinearGradient(stops: zip(BackdropBlur.fadeAlphas, BackdropBlur.fadeStops).map { .init(color: color.opacity($0), location: $1) },
+            LinearGradient(stops: zip(FadeCurve.alphas, FadeCurve.stops).map { .init(color: color.opacity($0), location: $1) },
                            startPoint: start, endPoint: end)
         }
             .frame(height: height)
@@ -93,10 +103,8 @@ struct TopFade: View {
 /// 背景模糊：把視窗裡在它後面的內容模糊化（NSVisualEffectView，within window）
 /// fadeFromTop：true＝上面 100% 往下淡到 0；false＝上面 0 往下到 100%；nil＝整片
 /// 漸層用圖層遮罩（CAGradientLayer）；maskImage 和 SwiftUI .mask 都會讓模糊整片消失
+#if os(macOS)
 struct BackdropBlur: NSViewRepresentable {
-    /// 淡出曲線（ease-out）：TopFade 的底色漸層也用同一組，模糊和顏色一起消失
-    static let fadeAlphas: [CGFloat] = [1, 0.8, 0.45, 0.15, 0]
-    static let fadeStops: [CGFloat] = [0, 0.25, 0.55, 0.8, 1]
     var fadeFromTop: Bool? = nil
     var material: NSVisualEffectView.Material = .headerView
 
@@ -110,8 +118,8 @@ struct BackdropBlur: NSViewRepresentable {
             gradient.frame = bounds
             // 圖層座標原點在左下：startPoint y=1 是上面
             // 緩和曲線（ease-out）：邊緣不會有一條明顯的界線
-            gradient.colors = BackdropBlur.fadeAlphas.map { NSColor.black.withAlphaComponent($0).cgColor }
-            gradient.locations = BackdropBlur.fadeStops.map { NSNumber(value: Double($0)) }
+            gradient.colors = FadeCurve.alphas.map { NSColor.black.withAlphaComponent($0).cgColor }
+            gradient.locations = FadeCurve.stops.map { NSNumber(value: Double($0)) }
             gradient.startPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
             gradient.endPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
             layer?.mask = gradient
@@ -132,6 +140,57 @@ struct BackdropBlur: NSViewRepresentable {
         v.needsLayout = true
     }
 }
+#else
+/// iOS：UIVisualEffectView，漸層一樣用圖層遮罩（UIKit 圖層原點在左上，方向跟 Mac 相反）
+struct BackdropBlur: UIViewRepresentable {
+    var fadeFromTop: Bool? = nil
+    var material: UIBlurEffect.Style = .headerView
+    /// 漸進模糊的起點半徑（邊緣最模糊、往內到 0）；系統材質的半徑大約 24，所以這裡只用來決定遮罩是線性的
+    var radius: CGFloat = 0
+
+    final class View: UIVisualEffectView {
+        var fadeFromTop: Bool?
+        // UIVisualEffectView 不能直接用 layer.mask（模糊會整塊照畫、邊緣變成一條硬線）；要用 mask view
+        private let maskHost = GradientMask()
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            guard let top = fadeFromTop else { mask = nil; return }
+            maskHost.frame = bounds
+            maskHost.set(top: top)
+            if mask !== maskHost { mask = maskHost }
+        }
+    }
+
+    /// 漸層遮罩：邊緣 100% → 往內 0%（緩和曲線，看不出分界）
+    final class GradientMask: UIView {
+        override class var layerClass: AnyClass { CAGradientLayer.self }
+        func set(top: Bool) {
+            let g = layer as! CAGradientLayer
+            g.colors = [1, 0.85, 0.55, 0.25, 0].map { UIColor.black.withAlphaComponent($0).cgColor }
+            g.locations = [0, 0.3, 0.6, 0.85, 1]
+            g.startPoint = CGPoint(x: 0.5, y: top ? 0 : 1)
+            g.endPoint = CGPoint(x: 0.5, y: top ? 1 : 0)
+        }
+    }
+
+    func makeUIView(context: Context) -> View {
+        let v = View(effect: UIBlurEffect(style: material))
+        v.fadeFromTop = fadeFromTop
+        return v
+    }
+    func updateUIView(_ v: View, context: Context) {
+        v.effect = UIBlurEffect(style: material)
+        v.fadeFromTop = fadeFromTop
+        v.setNeedsLayout()
+    }
+}
+
+/// 跟 Mac 版同名的材質，共用程式不用改
+extension UIBlurEffect.Style {
+    static var headerView: Self { .systemUltraThinMaterial }   // 最淡的模糊：顏色交給上面的同底色漸層，不要材質自己的深色
+    static var hudWindow: Self { .systemMaterial }
+}
+#endif
 
 // MARK: Snackbar 提示
 
